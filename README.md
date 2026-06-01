@@ -6,7 +6,7 @@ Sifra AI is a full-stack AI-powered fitness platform that combines Computer Visi
 
 ##  Features
 
-### 🎯 AI Pose Detection & Form Analysis
+###  AI Pose Detection & Form Analysis
 - Real-time body landmark detection using MediaPipe
 - Exercise posture analysis
 - Joint angle calculations
