@@ -37,24 +37,6 @@ Provides real-time coaching such as:
 
 Creates an experience similar to a personal trainer.
 
-###  AI Nutrition Analysis
-- Upload food images
-- Food recognition
-- Calorie estimation
-- Macronutrient analysis
-- Daily nutrition tracking
-
-###  Smart Fitness Dashboard
-Track:
-
-- Workout history
-- Rep statistics
-- Accuracy scores
-- Daily calorie intake
-- Protein consumption
-- Weight progression
-- BMI trends
-
 ###  AI Fitness Assistant
 Ask questions like:
 
