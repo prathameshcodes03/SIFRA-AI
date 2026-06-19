@@ -3,6 +3,7 @@ import { Link,Route,Routes,Navigate } from 'react-router-dom'
 import Landing_Page from './pages/Landing_Page'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
+import Register from './pages/Register'
 
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
   <Route path='/' element = {<Navigate to ='Landing_Page'/>}/>
   <Route path="/Landing_Page" element={<Landing_Page />} />
     <Route path="/Login" element={<Login />} />
+        <Route path="/Register" element={<Register />} />
        <Route path='*' element={<NotFound/>}/>
   </Routes>
  
