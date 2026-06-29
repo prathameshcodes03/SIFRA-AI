@@ -1,10 +1,99 @@
-import React from 'react'
+
 import Login_Background from '../assets/Images/Login_Background.png'
+import React, { useState } from "react";
+import axios from "axios";
 import { Link } from 'react-router-dom'
 import Login from './Login'
 
 const Register = () => {
-   return (
+  
+
+const [message, setMessage] = useState("");
+const [messageType, setMessageType] = useState(""); 
+
+const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    age: "",
+    gender: "",
+    weight: "",
+});
+
+const [loading, setLoading] = useState(false);
+
+
+
+
+const handleChange = (e) => {
+    setFormData({
+        ...formData,
+        [e.target.name]: e.target.value,
+    });
+};
+
+
+
+const handleRegister = async (e) => {
+    e.preventDefault();
+
+    try {
+
+        setLoading(true);
+        setMessage("");
+
+        const response = await axios.post(
+            "http://localhost:3000/api/auth/register",
+            formData
+        );
+
+        if (response.data.token) {
+            localStorage.setItem("token", response.data.token);
+        }
+
+        setMessage(response.data.message);
+        setMessageType("success");
+
+        setFormData({
+            fullName: "",
+            email: "",
+            password: "",
+            age: "",
+            gender: "",
+            weight: "",
+        });
+
+    } catch (error) {
+
+        setMessage(
+            error.response?.data?.message ||
+            "Registration Failed"
+        );
+
+        setMessageType("error");
+
+    } finally {
+
+        setLoading(false);
+
+    }
+};
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  return (
+
+
+
       <section
         className="h-screen w-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
         style={{
@@ -49,7 +138,7 @@ const Register = () => {
 
 
             
-
+<form onSubmit={handleRegister}>
 
 
       <div className="relative mt-10">
@@ -58,6 +147,9 @@ const Register = () => {
             <input
               type="name"
               placeholder="Full Name "
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
               className="
               w-[20rem]
               h-14
@@ -88,6 +180,11 @@ const Register = () => {
             <input
               type="email"
               placeholder="Email Address"
+              name="email"
+
+            value={formData.email}
+
+            onChange={handleChange}
               className="
               w-[20rem]
               h-14
@@ -116,6 +213,9 @@ const Register = () => {
             <input
               type="password"
               placeholder="Password"
+             name="password"
+            value={formData.password}
+            onChange={handleChange}
               className="
               w-[20rem]
               h-14
@@ -145,6 +245,9 @@ const Register = () => {
             <input
               type="number"
               placeholder="Age"
+              name="age"
+            value={formData.age}
+            onChange={handleChange}
               className="
               w-[20rem]
               h-14
@@ -174,6 +277,9 @@ const Register = () => {
             <input
               type="text"
               placeholder="Gender"
+             name="gender"
+          value={formData.gender}
+          onChange={handleChange}
               className="
               w-[20rem]
               h-14
@@ -206,6 +312,9 @@ const Register = () => {
             <input
               type="number"
               placeholder="Weight"
+            name="weight"
+          value={formData.weight}
+          onChange={handleChange}
               className="
               w-[20rem]
               h-14
@@ -228,8 +337,18 @@ const Register = () => {
           </div>
 
 
-          
-
+                          
+                {message && (
+                    <p
+                        className={`text-center text-sm font-medium mt-4 ${
+                            messageType === "success"
+                                ? "text-green-400"
+                                : "text-red-400"
+                        }`}
+                    >
+                        {message}
+                    </p>
+                )}
 
 
           
@@ -244,6 +363,8 @@ const Register = () => {
     
   
           <button
+
+          disabled={loading}
             className="
             group
             relative
@@ -265,7 +386,8 @@ const Register = () => {
             hover:shadow-[0_0_30px_rgba(168,85,247,0.6)]
             "
           >
-            <span className="relative z-10">Create Account</span>
+
+             {loading ? "Creating..." : "Create Account"}
   
             <span
               className="
@@ -318,6 +440,9 @@ const Register = () => {
               ></span>
             </Link>
           </div>
+
+
+          </form>
   
           
         </div>

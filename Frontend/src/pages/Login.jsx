@@ -1,9 +1,104 @@
-import React from 'react'
+import {useState} from 'React';
 import Login_Background from '../assets/Images/Login_Background.png'
 import { Link } from 'react-router-dom'
 import Register from '../pages/Register.jsx'
+import Dashboard from '../pages/Dashboard.jsx'
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+
+
+const navigate = useNavigate();
+
+const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+});
+
+const [loading, setLoading] = useState(false);
+
+const [message, setMessage] = useState("");
+
+const [messageType, setMessageType] = useState("");
+
+
+
+
+const handleChange = (e) => {
+    setFormData({
+        ...formData,
+        [e.target.name]: e.target.value,
+    });
+};
+
+
+
+
+const handleLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+
+        setLoading(true);
+
+        setMessage("");
+
+        const response = await axios.post(
+    "http://localhost:3000/api/auth/login",
+    formData,
+    {
+        withCredentials: true,
+    }
+);
+
+        setMessage(response.data.message);
+        setMessageType("success");
+
+       
+
+        localStorage.setItem(
+            "user",
+            JSON.stringify(response.data.user)
+        );
+
+        setTimeout(() => {
+            navigate("/Dashboard");
+        }, 1000);
+
+    } catch (error) {
+
+        setMessage(
+            error.response?.data?.message ||
+            "Login Failed"
+        );
+
+        setMessageType("error");
+
+    } finally {
+
+        setLoading(false);
+
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return (
     <section
       className="h-screen w-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
@@ -12,6 +107,8 @@ const Login = () => {
       }}
     >
 
+
+<form onSubmit={handleLogin}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"></div>
 
   
@@ -62,6 +159,9 @@ const Login = () => {
           <input
             type="email"
             placeholder="Email Address"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
             className="
             w-[20rem]
             h-14
@@ -90,6 +190,9 @@ const Login = () => {
           <input
             type="password"
             placeholder="Password"
+             name="password"
+            value={formData.password}
+            onChange={handleChange}
             className="
             w-[20rem]
             h-14
@@ -112,9 +215,28 @@ const Login = () => {
         </div>
 
 
+
+        {message && (
+    <p
+        className={`text-center mt-4 text-sm font-medium ${
+            messageType === "success"
+                ? "text-green-400"
+                : "text-red-400"
+        }`}
+    >
+        {message}
+    </p>
+)}
+
+
+
+
+
   
 
         <button
+        disabled={loading}
+
           className="
           group
           relative
@@ -136,7 +258,11 @@ const Login = () => {
           hover:shadow-[0_0_30px_rgba(168,85,247,0.6)]
           "
         >
-          <span className="relative z-10">Sign In</span>
+          <span className="relative z-10">
+
+        {loading ? "Signing In..." : "Sign In"}
+
+    </span>
 
           <span
             className="
@@ -195,9 +321,14 @@ const Login = () => {
           </Link>
         </div>
 
-        
       </div>
+
+    
+
+      </form>
+        
     </section>
+
   )
 }
 
