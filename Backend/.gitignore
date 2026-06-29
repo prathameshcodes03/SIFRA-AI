@@ -1,1 +1,12 @@
+# Node modules
+**/node_modules/
+
+# Environment files
+**/.env
+
+# macOS
 .DS_Store
+
+# Build
+Frontend/dist/
+Backend/dist/
