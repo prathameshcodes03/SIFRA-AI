@@ -92,8 +92,14 @@ const protectRoute = (req, res, next) => {
     }
 };
 
+
+
+
+
+
 module.exports = {
     validateRegisterUser,
     validateLoginUser,
-    protectRoute
+    protectRoute,
+   
 };
