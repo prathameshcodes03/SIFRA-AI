@@ -40,10 +40,10 @@ const DashNavbar = () => {
 
     }, []);
 
-    const handleLogout = async () => {
+    const handleLogout = async (e) => {
 
         try {
-
+            e.preventDefault()
             await axios.post(
                 "http://localhost:3000/api/auth/logout",
                 {},
