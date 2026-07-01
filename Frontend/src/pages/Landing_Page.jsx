@@ -145,7 +145,7 @@ const Landing_Page = () => {
 
           <div className="text-center">
 
-            <h1 className="text-7xl font-bold inline-block bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[ #ef4444] bg-clip-text text-transparent mb-6">
+            <h1 className="text-7xl font-bold inline-block bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444] bg-clip-text text-transparent mb-6">
 
               Voice Coaching
 

@@ -1,11 +1,14 @@
 import React from 'react'
-import DashSidevbar from '../components/Dashboard/DashSidevbar'
+import DashSidebar from '../components/Dashboard/DashSidebar'
+import DashNavbar from '../components/Dashboard/DashNavbar'
 
 const Dashboard = () => {
   return (
     <section className='h-screen w-screen bg-[#05050A]'>
+            <DashNavbar/>
 
-        <DashSidevbar/>
+        <DashSidebar/>
+  
 
 
 

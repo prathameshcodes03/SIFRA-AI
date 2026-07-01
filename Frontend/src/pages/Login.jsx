@@ -5,8 +5,38 @@ import Register from '../pages/Register.jsx'
 import Dashboard from '../pages/Dashboard.jsx'
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../Context/AuthContext";
 
 const Login = () => {
+
+  const { login } = useAuth();
+
+  const handleLogout = async () => {
+
+    try {
+
+        await axios.post(
+            "http://localhost:3000/api/auth/logout",
+            {},
+            {
+                withCredentials: true,
+            }
+        );
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+
+        navigate("/Login");
+
+    } catch (error) {
+
+        console.log(error);
+
+    }
+
+};
+
+
 
 
 const navigate = useNavigate();
@@ -34,33 +64,30 @@ const handleChange = (e) => {
 
 
 
-
 const handleLogin = async (e) => {
     e.preventDefault();
 
     try {
 
         setLoading(true);
-
         setMessage("");
 
         const response = await axios.post(
-    "http://localhost:3000/api/auth/login",
-    formData,
-    {
-        withCredentials: true,
-    }
-);
+            "http://localhost:3000/api/auth/login",
+            formData,
+            {
+                withCredentials: true,
+            }
+        );
+
+
+        login(
+            response.data.user,
+            response.data.token
+        );
 
         setMessage(response.data.message);
         setMessageType("success");
-
-       
-
-        localStorage.setItem(
-            "user",
-            JSON.stringify(response.data.user)
-        );
 
         setTimeout(() => {
             navigate("/Dashboard");
