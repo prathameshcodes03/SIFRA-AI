@@ -5,6 +5,10 @@ import NotFound from './pages/NotFound'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import Profile from './pages/Profile'
+import Workout from './pages/Workout'
+import Setting from './pages/Setting'
+import Progress from './pages/Progress'
 
 
 function App() {
@@ -17,6 +21,10 @@ function App() {
     <Route path="/Login" element={<Login />} />
         <Route path="/Register" element={<Register />} />
         <Route path="/Dashboard" element={<Dashboard />} />
+         <Route path="/Workout" element={<Workout/>} />
+          <Route path="/Progress" element={<Progress/>} />
+           <Route path="/Profile" element={<Profile />} />
+            <Route path="/Setting" element={<Setting />} />
        <Route path='*' element={<NotFound/>}/>
   </Routes>
  

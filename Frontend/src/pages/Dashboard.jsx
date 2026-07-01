@@ -1,10 +1,22 @@
 import React from 'react'
+import DashSidevbar from '../components/Dashboard/DashSidevbar'
 
 const Dashboard = () => {
   return (
-    <div>
+    <section className='h-screen w-screen bg-[#05050A]'>
+
+        <DashSidevbar/>
+
+
+
+
+
+
+
+
+
       
-    </div>
+    </section>
   )
 }
 
