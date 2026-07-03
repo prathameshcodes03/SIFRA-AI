@@ -1,15 +1,83 @@
-import React from 'react'
+import {React,useRef,useLayoutEffect,videoRef} from 'react'
+import gsap from "gsap";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Talking from '../assets/Videos/Talking.mp4'
 import Pushups from '../assets/Videos/Pushups.mp4'
 import SifraTrainer from '../assets/Videos/SifraTrainer.mp4'
 import Speaking from '../assets/Audio/Speaking.mp3'
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
+
 
 
 
 
 const Landing_Page = () => {
+
+const featuresRef = useRef(null);
+const slide1Ref = useRef(null);
+const slide2Ref = useRef(null);
+const slide3Ref = useRef(null);
+
+
+useLayoutEffect(() => {
+  const ctx = gsap.context(() => {
+
+    const slides = gsap.utils.toArray(".feature-slide");
+
+    gsap.set(slides, {
+      opacity: 0,
+      y: 80,
+    });
+
+    gsap.set(slides[0], {
+      opacity: 1,
+      y: 0,
+    });
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: featuresRef.current,
+        start: "top top",
+        end: "+=220%",  
+        pin: true,
+        scrub: 0.6,     
+        anticipatePin: 1,
+      },
+    });
+
+    slides.forEach((slide, i) => {
+      if (i === 0) return;
+
+      tl.to(slides[i - 1], {
+        opacity: 0,
+        y: -60,
+        duration: 1,
+        ease: "power2.out",
+      });
+
+      tl.to(
+        slide,
+        {
+          opacity: 1,
+          y: 0,
+          duration: 1,
+          ease: "power2.out",
+        },
+        "<0.15"
+      );
+    });
+
+  }, featuresRef);
+
+  return () => ctx.revert();
+}, []);
+
+
+
+
   return (
     <div className='min-h-screen w-full overflow-x-hidden bg-[#05050A]'>
       <Navbar />
@@ -41,54 +109,82 @@ const Landing_Page = () => {
           </div>
         </section>
 
-        <section className="relative h-[300vh]" id='features'>
-          <div className="sticky top-0 h-screen w-full overflow-hidden">
-            <video
-              src={Pushups}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/60"></div>
-          </div>
 
-          <div className="absolute top-0 left-0 w-full">
-            <div className="flex h-screen items-center justify-center px-5 text-center">
-              <div className="max-w-5xl">
-                <h1 className="mb-5 inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.35rem,9vw,5rem)] font-bold leading-tight text-transparent">
-                  98% Form Accuracy
-                </h1>
-                <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3.6vw,1.6rem)] font-medium leading-relaxed text-transparent">
-                  Real-time AI posture analysis powered by MediaPipe.
-                </p>
-              </div>
-            </div>
 
-            <div className="flex h-screen items-center justify-center px-5 text-center">
-              <div className="max-w-5xl">
-                <h1 className="mb-5 inline-block bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-[clamp(2.35rem,9vw,5rem)] font-bold leading-tight text-transparent">
-                  Smart Rep Counting
-                </h1>
-                <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3.6vw,1.6rem)] font-medium leading-relaxed text-transparent">
-                  Automatically tracks every pushup and workout session.
-                </p>
-              </div>
-            </div>
+<section id="features" ref={featuresRef} className="relative h-screen">
 
-            <div className="flex h-screen items-center justify-center px-5 text-center">
-              <div className="max-w-5xl">
-                <h1 className="mb-5 inline-block bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444] bg-clip-text text-[clamp(2.35rem,9vw,5rem)] font-bold leading-tight text-transparent">
-                  Voice Coaching
-                </h1>
-                <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3.6vw,1.6rem)] font-medium leading-relaxed text-transparent">
-                  Get instant feedback just like a real trainer.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+
+  <div className="sticky top-0 h-screen overflow-hidden">
+
+    <video
+      ref={videoRef}
+      src={Pushups}
+      autoPlay
+      loop
+      muted
+      playsInline
+      className="h-full w-full object-cover"
+    />
+
+    <div className="absolute inset-0 bg-black/50" />
+
+  </div>
+
+
+  <div className="absolute inset-0">
+
+
+    <div className="feature-slide absolute inset-0 flex items-center justify-center px-6">
+      <div className="max-w-5xl text-center">
+
+        <h1 className="mb-6 inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.5rem,8vw,5rem)] font-bold leading-tight text-transparent">
+          98% Form Accuracy
+        </h1>
+
+        <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3vw,1.7rem)] font-medium leading-relaxed text-transparent">
+          Real-time AI posture analysis powered by MediaPipe.
+        </p>
+
+      </div>
+    </div>
+
+   
+    <div className="feature-slide absolute inset-0 flex items-center justify-center px-6">
+      <div className="max-w-5xl text-center">
+
+        <h1 className="mb-6 inline-block bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-[clamp(2.5rem,8vw,5rem)] font-bold leading-tight text-transparent">
+          Smart Rep Counting
+        </h1>
+
+        <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3vw,1.7rem)] font-medium leading-relaxed text-transparent">
+          Automatically tracks every pushup and workout session.
+        </p>
+
+      </div>
+    </div>
+
+   
+    <div className="feature-slide absolute inset-0 flex items-center justify-center px-6">
+      <div className="max-w-5xl text-center">
+
+        <h1 className="mb-6 inline-block bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444] bg-clip-text text-[clamp(2.5rem,8vw,5rem)] font-bold leading-tight text-transparent">
+          Voice Coaching
+        </h1>
+
+        <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3vw,1.7rem)] font-medium leading-relaxed text-transparent">
+          Get instant feedback just like a real trainer.
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+
+
+
 
         <section
           id="trainer"
