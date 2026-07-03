@@ -11,215 +11,125 @@ import Speaking from '../assets/Audio/Speaking.mp3'
 
 const Landing_Page = () => {
   return (
-    <div className='h-full w-full bg-[#05050A]'>
-            <Navbar/>
+    <div className='min-h-screen w-full overflow-x-hidden bg-[#05050A]'>
+      <Navbar />
 
-
-
-           <section id="main" >
-
-             <section id="home" className='text-white h-screen w-screen pt-1'>
-
-
-
-                                                            <div className='ml-[50rem] mt-[10rem]'>
-                              <h1 className='text-5xl inline-block bg-gradient-to-r from-[#34d399] via-[ #06b6d4] to-[#3b82f6] bg-clip-text text-transparent'>
-                               Your AI Coach <br /> Every Rep Perfected.
-                              </h1>
-                            </div>
-
-                            <div className='mt-16 ml-[50rem]'>
-                              <p className='text-3xl inline-block bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-transparent'>
-                                Real time pose correction <br />
-                                rep counting and <br />
-                                personalised feedback.
-                              </p>
-                            </div>
-
-
-                            <div className='h-150 w-90 rounded-2xl ml-[10rem] mt-[-25rem]'>
-                              <video
-                                src={SifraTrainer}
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-
-
-             </section>
-
-
-
-
-
-
-               <section className="relative h-[300vh]" id='features'>
-
-      
-
- 
-
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
-
-        <video
-
-          src={Pushups}
-
-          autoPlay
-
-          loop
-
-          muted
-
-          playsInline
-
-          className="h-full w-full object-cover"
-
-        />
-
-      
-
-        <div className="absolute inset-0 bg-black/50"></div>
-
-      </div>
-
-
-
-
-
-
-
-
-      <div className="absolute top-0 left-0 w-full">
-
-        
-
-        <div className="h-screen flex items-center justify-center">
-
-          <div className="text-center">
-
-            <h1 className="text-7xl font-bold  inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-transparent  mb-6">
-
-              98% Form Accuracy
-
-            </h1>
-
-            <p className="text-2xl  bg-gradient-to-r from-[#f97316]  to-[#8b5cf6] bg-clip-text text-transparent">
-
-              Real-time AI posture analysis powered by MediaPipe.
-
-            </p>
-
+      <main id="main">
+        <section
+          id="home"
+          className='mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 py-12 text-white sm:px-8 md:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:px-10 lg:pb-30'
+        >
+          <div className='order-2 mx-auto w-full max-w-[22rem] overflow-hidden rounded-2xl shadow-[0_0_45px_rgba(52,211,153,0.18)] sm:max-w-[26rem] lg:order-1'>
+            <video
+              src={SifraTrainer}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="aspect-[3/5] h-auto w-full object-cover"
+            />
           </div>
 
-        </div>
-
-
-
-        <div className="h-screen flex items-center justify-center">
-
-          <div className="text-center">
-
-            <h1 className="text-7xl font-bold inline-block bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-transparent mb-6">
-
-              Smart Rep Counting
-
+          <div className='order-1 text-center lg:order-2 lg:text-left'>
+            <h1 className='inline-block max-w-3xl bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-[clamp(2.4rem,8vw,5rem)] font-bold leading-tight text-transparent'>
+              Your AI Coach <br className='hidden sm:block' /> Every Rep Perfected.
             </h1>
 
-            <p className="text-2xl bg-gradient-to-r from-[#f97316]  to-[#8b5cf6] bg-clip-text text-transparent">
-
-              Automatically tracks every pushup and workout session.
-
+            <p className='mt-6 inline-block max-w-2xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.25rem,4vw,2rem)] font-semibold leading-snug text-transparent sm:mt-8'>
+              Real time pose correction, rep counting and personalised feedback.
             </p>
+          </div>
+        </section>
 
+        <section className="relative h-[300vh]" id='features'>
+          <div className="sticky top-0 h-screen w-full overflow-hidden">
+            <video
+              src={Pushups}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/60"></div>
           </div>
 
-        </div>
+          <div className="absolute top-0 left-0 w-full">
+            <div className="flex h-screen items-center justify-center px-5 text-center">
+              <div className="max-w-5xl">
+                <h1 className="mb-5 inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.35rem,9vw,5rem)] font-bold leading-tight text-transparent">
+                  98% Form Accuracy
+                </h1>
+                <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3.6vw,1.6rem)] font-medium leading-relaxed text-transparent">
+                  Real-time AI posture analysis powered by MediaPipe.
+                </p>
+              </div>
+            </div>
 
-        {/* Block 3 */}
+            <div className="flex h-screen items-center justify-center px-5 text-center">
+              <div className="max-w-5xl">
+                <h1 className="mb-5 inline-block bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-[clamp(2.35rem,9vw,5rem)] font-bold leading-tight text-transparent">
+                  Smart Rep Counting
+                </h1>
+                <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3.6vw,1.6rem)] font-medium leading-relaxed text-transparent">
+                  Automatically tracks every pushup and workout session.
+                </p>
+              </div>
+            </div>
 
-        <div className="h-screen flex items-center justify-center">
+            <div className="flex h-screen items-center justify-center px-5 text-center">
+              <div className="max-w-5xl">
+                <h1 className="mb-5 inline-block bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444] bg-clip-text text-[clamp(2.35rem,9vw,5rem)] font-bold leading-tight text-transparent">
+                  Voice Coaching
+                </h1>
+                <p className="mx-auto max-w-3xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3.6vw,1.6rem)] font-medium leading-relaxed text-transparent">
+                  Get instant feedback just like a real trainer.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          <div className="text-center">
-
-            <h1 className="text-7xl font-bold inline-block bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444] bg-clip-text text-transparent mb-6">
-
-              Voice Coaching
-
+        <section
+          id="trainer"
+          className='mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 py-16 text-white sm:px-8 lg:grid-cols-2 lg:px-10 '
+        >
+          <div className='text-center lg:text-left'>
+            <h1 className='inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.4rem,8vw,5rem)] font-bold leading-tight text-transparent'>
+              Meet Your Ai <br className='hidden sm:block' /> Coach
             </h1>
 
-            <p className="text-2xl bg-gradient-to-r from-[#f97316]  to-[#8b5cf6] bg-clip-text text-transparent">
-
-              Get instant feedback just like a real trainer.
-
+            <p className='mt-6 inline-block max-w-2xl bg-gradient-to-r from-[#6366f1] to-[#ec4899] bg-clip-text text-[clamp(1.2rem,4vw,2rem)] font-semibold leading-snug text-transparent sm:mt-8'>
+              Your Personal Ai Trainer is here 24/7 to guide, support and push you to be best.
             </p>
 
+            <div className='mt-8 flex justify-center lg:justify-start'>
+              <button
+                onClick={() => {
+                  const audio = new Audio(Speaking);
+                  audio.play();
+                }}
+                className='w-full max-w-xs cursor-pointer rounded-2xl bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 px-6 py-3 font-semibold text-white shadow-[0_0_25px_rgba(168,85,247,0.4)] transition-all duration-300 hover:scale-105 sm:w-auto'
+              >
+                Listen to Sifra
+              </button>
+            </div>
           </div>
 
-        </div>
+          <div className='mx-auto w-full max-w-[22rem] overflow-hidden rounded-2xl shadow-[0_0_45px_rgba(236,72,153,0.18)] sm:max-w-[26rem]'>
+            <video
+              src={Talking}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="aspect-[3/5] h-auto w-full object-cover"
+            />
+          </div>
+        </section>
 
-      </div>
-
-    </section>
-
-
-
-                   <section id="trainer" className='text-white h-screen w-screen pt-1 '>
-
-                                                            <div className='ml-60 mt-[15rem]'>
-                              <h1 className='text-5xl inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-transparent'>
-                                Meet Your Ai <br /> Coach
-                              </h1>
-                            </div>
-
-                            <div className='mt-8 ml-60'>
-                              <p className='text-3xl inline-block bg-gradient-to-r from-[#6366f1] to-[#ec4899] bg-clip-text text-transparent'>
-                                Your Personal Ai Trainer is here <br />
-                                24/7 guide , support and <br />
-                                push you to be best.
-                              </p>
-
-                           
-                              <div className='mt-8'>
-                                <button
-                                  onClick={() => {
-                                    const audio = new Audio(Speaking);
-                                    audio.play();
-                                  }}
-                                  className='px-6 py-3 rounded-2xl text-white font-semibold cursor-pointer
-                                  bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500
-                                  hover:scale-105 transition-all duration-300
-                                  shadow-[0_0_25px_rgba(168,85,247,0.4)]'
-                                >
-                                  ▶ Listen to Sifra
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className='h-150 w-90 rounded-2xl ml-[60rem] mt-[-25rem]'>
-                              <video
-                                src={Talking}
-                                autoPlay
-                                loop
-                                muted
-                                playsInline
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-
-
-
-
-
-                   </section>
-
-
-                          <Footer/>
-
-           </section>
+        <Footer />
+      </main>
     </div>
   )
 }

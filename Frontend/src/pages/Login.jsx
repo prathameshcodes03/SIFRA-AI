@@ -1,4 +1,4 @@
-import {useState} from 'React';
+import {useState} from 'react';
 import Login_Background from '../assets/Images/Login_Background.png'
 import { Link } from 'react-router-dom'
 import Register from '../pages/Register.jsx'
