@@ -5,6 +5,7 @@ import WorkourBanner from '../components/Dashboard/WorkourBanner'
 import AccuracyCard from '../components/Dashboard/AccuracyCard'
 import WorkoutStreak from '../components/Dashboard/WorkoutStreak'
 import TodayWorkout from '../components/Dashboard/TodayWorkout'
+import Footer from '../components/Footer';
 
 const Dashboard = () => {
   return (
@@ -16,6 +17,10 @@ const Dashboard = () => {
         <AccuracyCard/>
         <WorkoutStreak/>
           <TodayWorkout/>
+
+         <div className='mt-[10rem]'>
+           <Footer/>
+         </div>
   
 
 
