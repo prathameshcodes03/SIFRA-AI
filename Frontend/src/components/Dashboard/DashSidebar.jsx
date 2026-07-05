@@ -38,7 +38,7 @@ const DashSidebar = () => {
 
   return (
 
-    <aside className='mt-[-8rem] h-screen w-60 bg-gradient-to-b from-[#08070f] via-[#0b0818] to-[#1a0d35]'>
+    <aside className='mt-[-8rem] h-screen w-[15rem] bg-gradient-to-b from-[#08070f] via-[#0b0818] to-[#1a0d35]'>
 
       <div className='flex flex-col justify-between flex-wrap'>
 
