@@ -28,3 +28,23 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+
+model Workout {
+
+  id        String   @id @default(uuid())
+
+  exercise  String
+
+  sets       Int
+
+  reps       Int
+
+  userId    String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+}
