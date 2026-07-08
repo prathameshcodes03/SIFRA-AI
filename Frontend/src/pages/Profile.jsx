@@ -22,7 +22,7 @@ const Profile = () => {
         <div className='flex  mx-[2.7rem] bg-[#2A194F] rounded-lg mt-4'>
 
           <div className='my-2 mx-4'>
-            <img src="https://i.pinimg.com/736x/c6/29/b7/c629b7a6697803a29bf9ae45e5e3be13.jpg" className='rounded-full h-60 w-60 border-2 border-purple-500' />
+            <img src="https://i.pinimg.com/736x/c6/29/b7/c629b7a6697803a29bf9ae45e5e3be13.jpg" className='cursor-pointer rounded-full h-60 w-60 border-2 border-purple-500' />
           </div>
 
           <div className='mt-10 ml-4 text-white'>
@@ -38,7 +38,7 @@ const Profile = () => {
           
           <div className='flex justify-between font-extrabold border-b border-white/30'>
             <h2 className='text-lg'>Personal Information</h2>
-            <h4>Edit Profile</h4>
+            <h4 className='cursor-pointer'>Edit Profile</h4>
           </div>
 
           <div className='flex justify-between border-b border-white/30 '>

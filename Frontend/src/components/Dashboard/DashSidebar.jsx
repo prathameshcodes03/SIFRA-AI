@@ -19,8 +19,8 @@ const DashSidebar = () => {
         navigate("/Workout");
         break;
 
-      case "Progress":
-        navigate("/Progress");
+      case "WorkoutPlan":
+        navigate("/WorkoutPlan");
         break;
 
       case "Profile":
@@ -66,7 +66,7 @@ const DashSidebar = () => {
             className={`flex items-center gap-2 mt-4 h-16 rounded-xl border cursor-pointer transition-all duration-300
             ${
               active === "Dashboard"
-                ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
+                 ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
                 : "bg-violet-500/15 border border-violet-400/20 hover:bg-violet-500/25 hover:scale-[1.02]"
             }`}
           >
@@ -108,20 +108,20 @@ const DashSidebar = () => {
 
        
           <div
-            onClick={() => handleNavigation("Progress")}
+            onClick={() => handleNavigation("WorkoutPlan")}
             className={`flex items-center gap-2 mt-4 h-16 rounded-xl border cursor-pointer transition-all duration-300
             ${
-              active === "Progress"
+              active === "WorkoutPlan"
                 ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
                 : "bg-violet-500/15 border border-violet-400/20 hover:bg-violet-500/25 hover:scale-[1.02]"
             }`}
           >
             <h3>
-              <i className="ml-8 text-white text-2xl fa-solid fa-arrow-trend-down"></i>
+              <i className="ml-8 text-white text-2xl fa-solid fa-calendar-check"></i>
             </h3>
 
             <span className='pt-[2rem] mt-[-2rem] text-1xl font-extrabold text-white cursor-pointer'>
-              Progress
+              WorkoutPlan
             </span>
           </div>
 

@@ -83,6 +83,8 @@ useLayoutEffect(() => {
       <Navbar />
 
       <main id="main">
+
+        
         <section
           id="home"
           className='mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 py-12 text-white sm:px-8 md:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:px-10 lg:pb-30'

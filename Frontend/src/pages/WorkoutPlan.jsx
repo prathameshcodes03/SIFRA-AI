@@ -2,6 +2,7 @@ import React from 'react'
 import Footer from '../components/Footer';
 import DashSidebar from '../components/Dashboard/DashSidebar'
 import DashNavbar from '../components/Dashboard/DashNavbar'
+import Exercises from '../components/Workout/Exercises';
 
 const Progress = () => {
   return (
@@ -9,7 +10,9 @@ const Progress = () => {
             <DashNavbar/>
         <DashSidebar/>
 
-        <div className='mt-[10rem]'>
+        <Exercises/>
+
+        <div className='mt-[30rem]'>
            <Footer/>
          </div>
 

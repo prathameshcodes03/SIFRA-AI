@@ -87,7 +87,7 @@ const DashNavbar = () => {
                                 onClick={() =>
                                     setShowDropdown(!showDropdown)
                                 }
-                                className="mt-2 border border-violet-400/20 rounded-full w-10 h-10 cursor-pointer bg-cover bg-center bg-no-repeat hover:ring-2 hover:ring-violet-500 transition-all duration-300"
+                                className="mt-2 border border-violet-400/20 rounded-full  w-10 h-10 cursor-pointer bg-cover bg-center bg-no-repeat hover:ring-2 hover:ring-violet-500 transition-all duration-300"
                                 style={{
                                     backgroundImage: `url(${Profile})`,
                                 }}
@@ -101,6 +101,7 @@ const DashNavbar = () => {
                                     right-0
                                     mt-3
                                     w-60
+                                    
                                     rounded-2xl
                                     bg-[#161225]/90
                                     backdrop-blur-xl

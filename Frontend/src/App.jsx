@@ -8,7 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import Workout from './pages/Workout'
 import Setting from './pages/Setting'
-import Progress from './pages/Progress'
+import WorkoutPlan from './pages/WorkoutPlan'
 
 
 function App() {
@@ -22,7 +22,7 @@ function App() {
         <Route path="/Register" element={<Register />} />
         <Route path="/Dashboard" element={<Dashboard />} />
          <Route path="/Workout" element={<Workout/>} />
-          <Route path="/Progress" element={<Progress/>} />
+          <Route path="/WorkoutPlan" element={<WorkoutPlan/>} />
            <Route path="/Profile" element={<Profile />} />
             <Route path="/Setting" element={<Setting />} />
        <Route path='*' element={<NotFound/>}/>
