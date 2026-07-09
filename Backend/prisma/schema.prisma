@@ -24,6 +24,8 @@ model User {
   gender    Gender
   weight    Float
 
+   workouts  Workout[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
