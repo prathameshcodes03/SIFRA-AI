@@ -1,33 +1,57 @@
-import React, { useState } from "react";
+import axios from "axios";
+import { useState } from "react";
 
-const Exercises = () => {
+const Exercises = ({ workouts, fetchWorkouts }) => {
 
   const [exerciseName, setExerciseName] = useState("");
   const [sets, setSets] = useState("");
   const [reps, setReps] = useState("");
 
-  const [exercises, setExercises] = useState([]);
-
-  const addExercise = () => {
+  const addExercise = async () => {
 
     if (!exerciseName || !sets || !reps) return;
 
-    const newExercise = {
-      id: Date.now(),
-      exercise: exerciseName,
-      sets: Number(sets),
-      reps: Number(reps),
-    };
+    try {
 
-    setExercises([...exercises, newExercise]);
+      await axios.post(
+        "http://localhost:3000/api/workouts",
+        {
+          exercise: exerciseName,
+          sets,
+          reps,
+        },
+        {
+          withCredentials: true,
+        }
+      );
 
-    setExerciseName("");
-    setSets("");
-    setReps("");
+      setExerciseName("");
+      setSets("");
+      setReps("");
+
+      fetchWorkouts();
+
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const deleteExercise = (id) => {
-    setExercises(exercises.filter((item) => item.id !== id));
+  const deleteExercise = async (id) => {
+
+    try {
+
+      await axios.delete(
+        `http://localhost:3000/api/workouts/${id}`,
+        {
+          withCredentials: true,
+        }
+      );
+
+      fetchWorkouts();
+
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -37,8 +61,6 @@ const Exercises = () => {
         Workout Plan
       </h2>
 
-      {/* Inputs */}
-
       <div className="grid grid-cols-4 gap-3">
 
         <input
@@ -46,7 +68,7 @@ const Exercises = () => {
           placeholder="Exercise"
           value={exerciseName}
           onChange={(e) => setExerciseName(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none"
+          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none cursor-pointer"
         />
 
         <input
@@ -54,7 +76,7 @@ const Exercises = () => {
           placeholder="Sets"
           value={sets}
           onChange={(e) => setSets(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none"
+          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none cursor-pointer"
         />
 
         <input
@@ -62,12 +84,13 @@ const Exercises = () => {
           placeholder="Reps"
           value={reps}
           onChange={(e) => setReps(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none"
+          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none cursor-pointer"
         />
 
         <button
           onClick={addExercise}
           className="
+          cursor-pointer
           rounded-xl
           bg-gradient-to-r
           from-violet-600
@@ -83,58 +106,66 @@ const Exercises = () => {
 
       </div>
 
-      {/* Exercise List */}
-
       <div className="mt-6 space-y-3">
 
-        {exercises.map((item) => (
+        {workouts.length === 0 ? (
 
-          <div
-            key={item.id}
-            className="
-            flex
-            justify-between
-            items-center
-            bg-white/5
-            border
-            border-white/10
-            rounded-xl
-            px-5
-            py-4
-            "
-          >
+          <div className="text-center text-gray-400 py-8">
+            No exercises added yet.
+          </div>
 
-            <div>
+        ) : (
 
-              <h3 className="text-white font-semibold">
-                {item.exercise}
-              </h3>
+          workouts.map((item) => (
 
-              <p className="text-gray-400">
-                {item.sets} Sets • {item.reps} Reps
-              </p>
+            <div
+              key={item.id}
+              className="
+              flex
+              justify-between
+              items-center
+              bg-white/5
+              border
+              border-white/10
+              rounded-xl
+              px-5
+              py-4
+              "
+            >
+
+              <div>
+
+                <h3 className="text-white font-semibold">
+                  {item.exercise}
+                </h3>
+
+                <p className="text-gray-400">
+                  {item.sets} Sets • {item.reps} Reps
+                </p>
+
+              </div>
+
+              <button
+                onClick={() => deleteExercise(item.id)}
+                className="
+                h-10
+                w-10
+                rounded-lg
+                bg-red-500/20
+                text-red-400
+                hover:bg-red-500
+                hover:text-white
+                duration-300
+                "
+              >
+                <i className="fa-solid fa-trash"></i>
+              </button>
 
             </div>
 
-            <button
-              onClick={() => deleteExercise(item.id)}
-              className="
-              h-10
-              w-10
-              rounded-lg
-              bg-red-500/20
-              text-red-400
-              hover:bg-red-500
-              hover:text-white
-              duration-300
-              "
-            >
-              <i className="fa-solid fa-trash"></i>
-            </button>
+          ))
 
-          </div>
-
-        ))}
+        )}
 
       </div>
 

@@ -4,7 +4,7 @@ import DashNavbar from '../components/Dashboard/DashNavbar'
 import WorkourBanner from '../components/Dashboard/WorkourBanner'
 import AccuracyCard from '../components/Dashboard/AccuracyCard'
 import WorkoutStreak from '../components/Dashboard/WorkoutStreak'
-import TodayWorkout from '../components/Dashboard/TodayWorkout'
+
 import Footer from '../components/Footer';
 
 const Dashboard = () => {
@@ -16,7 +16,7 @@ const Dashboard = () => {
         <WorkourBanner/>
         <AccuracyCard/>
         <WorkoutStreak/>
-          <TodayWorkout/>
+        
 
          <div className='mt-[10rem]'>
            <Footer/>
