@@ -1,7 +1,6 @@
-#  Sifra AI – Intelligent Fitness & Nutrition Coach
+#  Sifra AI – Intelligent Fitness
 
-Sifra AI is a full-stack AI-powered fitness platform that combines Computer Vision, Voice AI, and Nutrition Intelligence to create a personalized virtual fitness coach. The system analyzes exercise posture in real time, provides voice-based feedback, tracks workouts, estimates nutritional values from food images, and helps users achieve their fitness goals through data-driven insights.
-
+Sifra AI is a full-stack AI-powered fitness platform that combines Computer Vision, Voice AI, and Nutrition Intelligence to create a personalized virtual fitness coach. The system analyzes exercise posture in real time, provides voice-based feedback, tracks workouts.
 ---
 
 ##  Features
