@@ -1,85 +1,64 @@
-#  Sifra AI – Intelligent Fitness
+# Sifra AI – Intelligent Fitness Coach
 
-Sifra AI is a full-stack AI-powered fitness platform that combines Computer Vision, Voice AI, and Nutrition Intelligence to create a personalized virtual fitness coach. The system analyzes exercise posture in real time, provides voice-based feedback, tracks workouts.
----
+Sifra AI is a full-stack AI-powered fitness platform that combines Computer Vision, Real-Time Pose Estimation, Voice Coaching, and Workout Analytics to create a personalized virtual fitness coach.
 
-##  Features
-
-###  AI Pose Detection & Form Analysis
-- Real-time body landmark detection using MediaPipe
-- Exercise posture analysis
-- Joint angle calculations
-- Form correction suggestions
-- Injury prevention alerts
-- Workout accuracy scoring
-
-###  Automatic Rep Counter
-- Detects exercise movement cycles
-- Counts repetitions automatically
-- Supports:
-  - Squats
-  - Push-ups
-  - Lunges
-  - Deadlifts
-  - Shoulder Press
-- Stores workout history
-
-###  AI Voice Trainer
-Powered by ElevenLabs Voice AI.
-
-Provides real-time coaching such as:
-
-- "Go lower."
-- "Keep your back straight."
-- "Excellent form."
-- "15 reps completed."
-
-Creates an experience similar to a personal trainer.
-
-###  AI Fitness Assistant
-Ask questions like:
-
-- How many calories should I eat?
-- Create a muscle gain workout plan.
-- Suggest a high-protein meal.
-- How much protein do I need daily?
+The platform analyzes body posture in real time using MediaPipe, counts repetitions automatically, provides live voice feedback, and stores workout history for every user.
 
 ---
 
-##  System Architecture
+# Features
 
-```text
-Frontend (React)
-        │
-        ▼
-Node.js Backend API
-        │
-        ▼
-PostgreSQL Database
-        │
-        ▼
-Python AI Service
-        │
- ┌──────┴──────┐
- ▼             ▼
-MediaPipe    OpenCV
-        │
-        ▼
-Exercise Analysis
-        │
-        ▼
-ElevenLabs Voice Feedback
+## Authentication
+
+- Secure JWT Authentication
+- Login & Registration
+- Protected Routes
+- User-specific workout history
+
+---
+
+## Workout Planner
+
+Users can create their own workout plans.
+
+Features include:
+
+- Add Exercises
+- Update Exercises
+- Delete Exercises
+- Store workouts in PostgreSQL
+- User-specific workout plans
+
+Example:
+
+```
+Squats
+4 Sets × 12 Reps
+
+Pushups
+3 Sets × 15 Reps
+
+Shoulder Press
+4 Sets × 10 Reps
 ```
 
 ---
 
-##  How AI Pose Detection Works
+## AI Pose Detection
 
-Sifra AI uses MediaPipe Pose to detect 33 body landmarks in real time.
+Built using Google MediaPipe Tasks Vision.
 
-Examples:
+Features:
+
+- Live webcam feed
+- 33 Body Landmark Detection
+- Skeleton Visualization
+- Real-time pose tracking
+
+Detected landmarks include:
 
 - Nose
+- Eyes
 - Shoulders
 - Elbows
 - Wrists
@@ -87,207 +66,302 @@ Examples:
 - Knees
 - Ankles
 
-### Detection Pipeline
+---
+
+## Joint Angle Calculation
+
+Sifra AI calculates joint angles from MediaPipe landmarks.
+
+Example:
+
+```
+Hip
+ ●
+
+Knee
+ ●
+
+Ankle
+ ●
+```
+
+The angle at the knee is calculated mathematically using landmark coordinates.
+
+Angles monitored include:
+
+- Knee Angle
+- Hip Angle
+- Shoulder Angle
+- Elbow Angle
+- Back Angle
+
+These angles are used for exercise analysis.
+
+---
+
+## Automatic Rep Counter
+
+The application automatically counts repetitions using pose transitions.
+
+Supported exercises:
+
+- Squats
+- Push-ups
+- Lunges
+- Shoulder Press
+- Deadlifts (Planned)
+
+Example:
+
+```
+Rep 1
+
+Rep 2
+
+Rep 3
+```
+
+---
+
+## AI Voice Coach
+
+Provides live coaching while exercising.
+
+Examples:
+
+```
+Go Lower.
+```
+
+```
+Straighten your Back.
+```
+
+```
+Excellent Form.
+```
+
+```
+15 Reps Completed.
+```
+
+Voice feedback is generated intelligently using exercise state instead of repeating messages every frame.
+
+---
+
+## Workout Dashboard
+
+Displays:
+
+- Today's Workout
+- Total Exercises
+- Workout Progress
+- Workout History
+
+---
+
+# System Architecture
 
 ```text
-Webcam Feed
-      ↓
-OpenCV
-      ↓
-MediaPipe
-      ↓
-33 Body Landmarks
-      ↓
+            React Frontend
+                   │
+                   ▼
+         React Webcam Component
+                   │
+                   ▼
+         MediaPipe Pose Detection
+                   │
+                   ▼
+         33 Body Landmarks
+                   │
+                   ▼
+        Joint Angle Calculator
+                   │
+                   ▼
+         Exercise Logic Engine
+                   │
+         ┌─────────┴─────────┐
+         ▼                   ▼
+   Rep Counter        Voice Feedback
+         │                   │
+         └─────────┬─────────┘
+                   ▼
+            Express Backend
+                   │
+                   ▼
+             PostgreSQL DB
+```
+
+---
+
+# Pose Detection Pipeline
+
+```text
+Camera
+   │
+   ▼
+React Webcam
+   │
+   ▼
+MediaPipe Pose
+   │
+   ▼
+33 Landmarks
+   │
+   ▼
 Angle Calculation
-      ↓
-Form Analysis
-      ↓
+   │
+   ▼
+Exercise Detection
+   │
+   ▼
+Rep Counter
+   │
+   ▼
 Voice Feedback
 ```
 
 ---
 
-##  Joint Angle Mapping
+# Angle Detection
 
-MediaPipe returns coordinates for body joints.
+MediaPipe returns body coordinates.
 
 Example:
 
 ```text
-Hip = (x1, y1)
-Knee = (x2, y2)
-Ankle = (x3, y3)
+Hip    (x1,y1)
+
+Knee   (x2,y2)
+
+Ankle  (x3,y3)
 ```
 
-For a squat:
-
-```text
-Hip
-  \
-   \
-    Knee
-      \
-       \
-      Ankle
-```
-
-The knee becomes the central point used for angle calculation.
-
-### Squat Analysis
-
-| Position | Knee Angle |
-|----------|------------|
-| Standing | ~180° |
-| Half Squat | ~120° |
-| Deep Squat | ~90° |
-
-Sifra AI continuously evaluates:
+The application calculates:
 
 - Knee Angle
 - Hip Angle
-- Back Angle
-- Shoulder Angle
 - Elbow Angle
+- Shoulder Angle
 
-to determine exercise quality.
+These angles determine:
 
----
-
-##  Real-Time Coaching Example
-
-### Workout Started
-
-```text
-Welcome back.
-Today's workout consists of:
-
-15 Squats
-10 Push-ups
-20 Lunges
-```
-
-### During Workout
-
-```text
-Go lower.
-```
-
-```text
-Keep your back straight.
-```
-
-```text
-Excellent form.
-```
-
-### Workout Complete
-
-```text
-Workout completed.
-
-15 repetitions recorded.
-
-Workout Accuracy: 89%
-```
+- Exercise Stage
+- Rep Count
+- Form Accuracy
+- Voice Feedback
 
 ---
 
-##  Tech Stack
+# Exercise Analysis
 
-### Frontend
+Current implementation follows a rule-based AI engine.
+
+Example:
+
+```text
+If Knee Angle < 90°
+
+↓
+
+User reached squat depth
+```
+
+```text
+If Knee Angle > 165°
+
+↓
+
+Rep Completed
+```
+
+Future versions will integrate Machine Learning models for exercise classification and intelligent posture evaluation.
+
+---
+
+# Tech Stack
+
+## Frontend
 
 - React.js
 - Tailwind CSS
-- Framer Motion
 - React Router
 - Axios
+- React Webcam
 
-### Backend
+## Backend
 
 - Node.js
 - Express.js
 - JWT Authentication
 
-### Database
+## Database
 
 - PostgreSQL
+- Prisma ORM
 
-### AI & Computer Vision
+## AI & Computer Vision
 
-- Python
-- OpenCV
-- MediaPipe
-- NumPy
-- FastAPI
+- Google MediaPipe Tasks Vision
+- JavaScript
+- Angle Calculation Engine
 
-### Voice AI
+## Voice AI
 
-- ElevenLabs API
 - Web Speech API
-
-### Storage
-
-- Cloudinary
-
-### Deployment
-
-- Vercel
-- Render / Railway
-- PostgreSQL Cloud
+- ElevenLabs (Planned)
 
 ---
 
-##  Project Structure
+# Project Structure
 
 ```text
 sifra-ai/
-│
-├── client/
+
+├── Frontend/
 │   ├── src/
-│   ├── public/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── mediapipe/
+│   │   ├── services/
+│   │   └── App.jsx
+│   │
 │   └── package.json
 │
-├── server/
-│   ├── routes/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
+├── Backend/
+│   ├── src/
+│   │   ├── Controllers/
+│   │   ├── Routes/
+│   │   ├── Middlewares/
+│   │   ├── prisma/
+│   │   └── data/
+│   │
 │   └── package.json
-│
-├── ai-service/
-│   ├── pose_detection/
-│   ├── nutrition_analysis/
-│   ├── angle_calculations/
-│   ├── voice_assistant/
-│   └── main.py
-│
-├── database/
-│
-├── docs/
 │
 └── README.md
 ```
 
 ---
 
-##  Future Enhancements
+# Future Enhancements
 
-- AI-generated workout plans
-- Personalized meal recommendations
-- Wearable device integration
-- Live trainer mode
-- Community challenges
-- Fitness leaderboard
-- Mobile application
-- Exercise recognition using custom ML models
+- Machine Learning-based Exercise Classification
+- AI-generated Workout Plans
+- Personalized Nutrition Recommendations
+- Exercise Accuracy Score
+- Workout Performance Analytics
+- Wearable Device Integration
+- Mobile Application
+- Community Challenges
+- Cloud Deployment
 
 ---
 
-##  Why Sifra AI?
+# Why Sifra AI?
 
 Most fitness applications only record workouts.
 
-Sifra AI actively observes, analyzes, corrects, and guides users through their fitness journey using AI-powered posture analysis, nutrition intelligence, and voice coaching.
+Sifra AI actively observes, analyzes, corrects, and guides users through their workouts using Computer Vision, Pose Estimation, Voice Coaching, and Real-Time Exercise Analysis.
 
 The project demonstrates expertise in:
 
@@ -300,4 +374,3 @@ The project demonstrates expertise in:
 - Real-Time Systems
 - Voice AI
 - Cloud Deployment
-
