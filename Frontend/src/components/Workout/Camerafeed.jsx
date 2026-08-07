@@ -104,7 +104,7 @@ const Camerafeed = () => {
 
   return (
 
-    <div className="relative h-[35rem] w-[65rem] bg-[#11111B] rounded-2xl mt-[-43rem] ml-[20rem] overflow-hidden">
+    <div className="relative h-[31rem] w-[65rem] bg-[#11111B] rounded-2xl mt-[-37.5rem] ml-[18rem] overflow-hidden">
 
       {cameraOn ? (
         <>

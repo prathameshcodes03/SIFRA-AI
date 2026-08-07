@@ -1,176 +1,153 @@
-import axios from "axios";
 import { useState } from "react";
+import { useWorkout } from "../../context/WorkoutContext";
 
-const Exercises = ({ workouts, fetchWorkouts }) => {
+const Exercises = () => {
 
-  const [exerciseName, setExerciseName] = useState("");
-  const [sets, setSets] = useState("");
-  const [reps, setReps] = useState("");
+    const { workouts, addWorkout, deleteWorkout } = useWorkout();
 
-  const addExercise = async () => {
+    const [exerciseName, setExerciseName] = useState("");
+    const [sets, setSets] = useState("");
+    const [reps, setReps] = useState("");
 
-    if (!exerciseName || !sets || !reps) return;
+    const addExercise = async () => {
 
-    try {
+        if (!exerciseName || !sets || !reps) return;
 
-      await axios.post(
-        "http://localhost:3000/api/workouts",
-        {
-          exercise: exerciseName,
-          sets,
-          reps,
-        },
-        {
-          withCredentials: true,
-        }
-      );
+        await addWorkout(exerciseName, sets, reps);
 
-      setExerciseName("");
-      setSets("");
-      setReps("");
+        setExerciseName("");
+        setSets("");
+        setReps();
+    };
 
-      fetchWorkouts();
-
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const deleteExercise = async (id) => {
-
-    try {
-
-      await axios.delete(
-        `http://localhost:3000/api/workouts/${id}`,
-        {
-          withCredentials: true,
-        }
-      );
-
-      fetchWorkouts();
-
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  return (
-    <div className="w-[60rem] rounded-2xl mt-[-42rem] ml-[20rem] bg-[#11111B] border border-white/10 p-5">
-
-      <h2 className="text-white text-xl font-semibold mb-5">
-        Workout Plan
-      </h2>
-
-      <div className="grid grid-cols-4 gap-3">
-
-        <input
-          type="text"
-          placeholder="Exercise"
-          value={exerciseName}
-          onChange={(e) => setExerciseName(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none cursor-pointer"
-        />
-
-        <input
-          type="number"
-          placeholder="Sets"
-          value={sets}
-          onChange={(e) => setSets(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none cursor-pointer"
-        />
-
-        <input
-          type="number"
-          placeholder="Reps"
-          value={reps}
-          onChange={(e) => setReps(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 h-11 text-white outline-none cursor-pointer"
-        />
-
-        <button
-          onClick={addExercise}
-          className="
-          cursor-pointer
-          rounded-xl
-          bg-gradient-to-r
-          from-violet-600
-          to-purple-600
-          text-white
-          hover:scale-105
-          duration-300
-          "
+    return (
+        <div
+            className="
+            w-full
+            max-w-2xl
+            ml-[28rem]
+            mt-[-37.5rem]
+            rounded-2xl
+            bg-white/5
+            backdrop-blur-xl
+            border
+            border-white/10
+            shadow-[0_0_25px_rgba(139,92,246,0.12)]
+            p-5
+            "
         >
-          <i className="fa-solid fa-plus mr-2"></i>
-          Add
-        </button>
+            <div className="flex items-center justify-between mb-5">
 
-      </div>
+                <h2 className="text-2xl font-bold text-white">
+                    Workout Plan
+                </h2>
 
-      <div className="mt-6 space-y-3">
-
-        {workouts.length === 0 ? (
-
-          <div className="text-center text-gray-400 py-8">
-            No exercises added yet.
-          </div>
-
-        ) : (
-
-          workouts.map((item) => (
-
-            <div
-              key={item.id}
-              className="
-              flex
-              justify-between
-              items-center
-              bg-white/5
-              border
-              border-white/10
-              rounded-xl
-              px-5
-              py-4
-              "
-            >
-
-              <div>
-
-                <h3 className="text-white font-semibold">
-                  {item.exercise}
-                </h3>
-
-                <p className="text-gray-400">
-                  {item.sets} Sets • {item.reps} Reps
-                </p>
-
-              </div>
-
-              <button
-                onClick={() => deleteExercise(item.id)}
-                className="
-                h-10
-                w-10
-                rounded-lg
-                bg-red-500/20
-                text-red-400
-                hover:bg-red-500
-                hover:text-white
-                duration-300
-                "
-              >
-                <i className="fa-solid fa-trash"></i>
-              </button>
+                <span className="text-sm text-violet-400">
+                    {workouts.length} Exercise{workouts.length !== 1 ? "s" : ""}
+                </span>
 
             </div>
 
-          ))
+            <div className="grid grid-cols-4 gap-3">
 
-        )}
+                <input
+                    type="text"
+                    placeholder="Exercise"
+                    value={exerciseName}
+                    onChange={(e) => setExerciseName(e.target.value)}
+                    className="col-span-2 h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-white placeholder:text-gray-500 outline-none focus:border-violet-500"
+                />
 
-      </div>
+                <input
+                    type="number"
+                    placeholder="Sets"
+                    value={sets}
+                    onChange={(e) => setSets(e.target.value)}
+                    className="h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-white outline-none focus:border-violet-500"
+                />
 
-    </div>
-  );
+                <input
+                    type="number"
+                    placeholder="Reps"
+                    value={reps}
+                    onChange={(e) => setReps(e.target.value)}
+                    className="h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-white outline-none focus:border-violet-500"
+                />
+
+            </div>
+
+            <button
+                onClick={addExercise}
+                className="mt-4 w-full h-10 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium hover:opacity-90 transition-all duration-300"
+            >
+                <i className="fa-solid fa-plus mr-2"></i>
+                Add Exercise
+            </button>
+
+            <div className="mt-5 space-y-3 max-h-[320px] overflow-y-auto pr-1">
+
+                {workouts.length === 0 ? (
+
+                    <div className="flex flex-col items-center justify-center py-8">
+
+                        <i className="fa-solid fa-dumbbell text-4xl text-violet-500"></i>
+
+                        <p className="text-gray-400 text-sm mt-3">
+                            No exercises added yet.
+                        </p>
+
+                    </div>
+
+                ) : (
+
+                    workouts.map((item) => (
+
+                        <div
+                            key={item.id}
+                            className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-4 py-3 hover:bg-violet-500/10 transition-all duration-300"
+                        >
+
+                            <div className="flex items-center gap-3">
+
+                                <div className="w-10 h-10 rounded-full bg-violet-500/15 flex items-center justify-center">
+
+                                    <i className="fa-solid fa-dumbbell text-violet-400"></i>
+
+                                </div>
+
+                                <div>
+
+                                    <h3 className="text-white font-medium">
+                                        {item.exercise}
+                                    </h3>
+
+                                    <p className="text-xs text-gray-400">
+                                        {item.sets} Sets • {item.reps} Reps
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                            <button
+                                onClick={() => deleteWorkout(item.id)}
+                                className="w-9 h-9 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all duration-300"
+                            >
+
+                                <i className="fa-solid fa-trash"></i>
+
+                            </button>
+
+                        </div>
+
+                    ))
+
+                )}
+
+            </div>
+
+        </div>
+    );
 };
 
 export default Exercises;

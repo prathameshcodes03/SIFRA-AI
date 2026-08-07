@@ -3,7 +3,7 @@ import Footer from '../components/Footer';
 import DashSidebar from '../components/Dashboard/DashSidebar'
 import DashNavbar from '../components/Dashboard/DashNavbar'
 import Exercises from '../components/Workout/Exercises';
-import TodayWorkout from '../components/Dashboard/TodayWorkout'
+import TodayWorkout from '../components/Workout/TodayWorkout'
 import { useState,useEffect } from "react";
 import axios from 'axios';
 

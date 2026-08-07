@@ -4,14 +4,23 @@ import App from './App.jsx'
 import "./index.css";
 import { AuthProvider } from "./Context/AuthContext";
 import { BrowserRouter } from 'react-router-dom'
+import { WorkoutProvider } from "./context/WorkoutContext";
+
+
 
 ReactDOM.createRoot(document.getElementById('root')).render(
       <BrowserRouter>
-        <AuthProvider>
-           <App />
-        </AuthProvider>
-       
-        </BrowserRouter>
-  
+
+  <AuthProvider>
+
+    <WorkoutProvider>
+
+      <App />
+
+    </WorkoutProvider>
+
+  </AuthProvider>
+
+</BrowserRouter>
 
 )

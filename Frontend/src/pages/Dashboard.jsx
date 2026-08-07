@@ -10,7 +10,7 @@ import Footer from '../components/Footer';
 const Dashboard = () => {
   return (
     <section className='h-full w-screen bg-[#05050A]'>
-            <DashNavbar/>
+       <DashNavbar/>
         <DashSidebar/>
 
         <WorkourBanner/>

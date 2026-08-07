@@ -9,7 +9,7 @@ const WorkourBanner = () => {
 
 
   return (
-   <div className='h-[20rem] w-[70rem] ml-70  mt-[-43rem] bg-no-repeat bg-cover bg-center border rounded-2xl  border-violet-400/20'    style={{
+   <div className='h-[20rem] w-[65rem] ml-70  mt-[-37rem] bg-no-repeat bg-cover bg-center border rounded-2xl  border-violet-400/20'    style={{
                                        backgroundImage: `url(${Dashboard})`,
                                    }}>
 
