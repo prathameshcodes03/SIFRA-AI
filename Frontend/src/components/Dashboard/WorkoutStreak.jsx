@@ -8,7 +8,7 @@ const WorkoutStreak = ({
 }) => {
 
     return (
-   <div className="h-[20rem] w-[30rem] ml-[50rem] mt-[-18rem] rounded-3xl  bg-white/5
+   <div className="min-h-[18rem] w-full rounded-3xl bg-white/5
             backdrop-blur-xl
             border
             border-white/10
@@ -16,9 +16,9 @@ const WorkoutStreak = ({
 
             <div className='flex flex-wrap items-center gap-4'>
 
-                <i className="mt-4 ml-12 font-bold text-3xl text-white fa-regular fa-calendar"></i>
+                <i className="mt-4 ml-6 font-bold text-2xl text-white fa-regular fa-calendar"></i>
 
-                <h1 className='mt-4 ml-12 font-bold font-serif text-2xl text-white'>
+                <h1 className='mt-4 ml-2 font-bold text-xl text-white'>
                     Workout Streak
                 </h1>
 

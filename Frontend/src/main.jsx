@@ -4,7 +4,7 @@ import App from './App.jsx'
 import "./index.css";
 import { AuthProvider } from "./Context/AuthContext";
 import { BrowserRouter } from 'react-router-dom'
-import { WorkoutProvider } from "./context/WorkoutContext";
+import { WorkoutProvider } from "./Context/WorkoutContext";
 
 
 

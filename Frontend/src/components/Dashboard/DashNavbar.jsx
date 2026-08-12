@@ -1,124 +1,36 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
-import Welcomecard from "./Welcomecard";
 import Profile from "../../assets/Images/profileimg.jpg";
 import { useAuth } from "../../Context/AuthContext";
 
-const DashNavbar = () => {
-    const navigate = useNavigate();
-    const { user, logout } = useAuth();
-
-    const [showDropdown, setShowDropdown] = useState(false);
-    const dropdownRef = useRef(null);
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(event.target)
-            ) {
-                setShowDropdown(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, []);
-
-    const handleLogout = async () => {
-        try {
-            await axios.post(
-                "http://localhost:3000/api/auth/logout",
-                {},
-                {
-                    withCredentials: true,
-                }
-            );
-        } catch (error) {
-            console.log(error);
-        }
-
-        logout();
-        navigate("/Login", { replace: true });
-    };
-
-    return (
-        <nav className="w-full px-8 pt-6  ">
-            <div className="w-[65rem] ml-[15.5rem]  max-w-7xl mx-auto h-24 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl px-8 flex items-center justify-between">
-                
-                {/* Welcome Card */}
-                <Welcomecard />
-
-                {/* Right Section */}
-                <div className="flex items-center gap-6">
-                    {/* Notification */}
-                    <button className="relative ml-[55rem] text-white hover:text-violet-400 transition-colors duration-300">
-                        <i className="fa-regular fa-bell text-2xl"></i>
-
-                        {/* Notification Dot */}
-                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
-                    </button>
-
-                    {/* Profile */}
-                    <div className="relative" ref={dropdownRef}>
-                        <div
-                            onClick={() =>
-                                setShowDropdown((prev) => !prev)
-                            }
-                            className="w-12 h-12 rounded-full border border-violet-500/30 bg-cover bg-center cursor-pointer hover:ring-2 hover:ring-violet-500 transition-all duration-300"
-                            style={{
-                                backgroundImage: `url(${Profile})`,
-                            }}
-                        />
-
-                        {showDropdown && (
-                            <div
-                                className="
-                                absolute
-                                right-0
-                                mt-4
-                                w-64
-                                rounded-2xl
-                                bg-[#161225]/95
-                                backdrop-blur-2xl
-                                border
-                                border-violet-500/20
-                                shadow-2xl
-                                overflow-hidden
-                                z-50
-                                "
-                            >
-                                {/* User Info */}
-                                <div className="px-5 py-4 border-b border-white/10">
-                                    <h3 className="text-white font-semibold text-lg">
-                                        {user?.fullName}
-                                    </h3>
-
-                                    <p className="text-gray-400 text-sm truncate">
-                                        {user?.email}
-                                    </p>
-                                </div>
-
-                                {/* Menu */}
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full text-left  px-5 py-4 text-red-400 hover:bg-red-500/10 transition-all duration-300"
-                                >
-                                    <i className="fa-solid fa-right-from-bracket mr-3"></i>
-                                    Logout
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </nav>
-    );
+const DashNavbar = ({ onMenuToggle }) => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+  useEffect(() => {
+    const close = (event) => dropdownRef.current && !dropdownRef.current.contains(event.target) && setShowDropdown(false);
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+  const handleLogout = async () => {
+    try { await axios.post("http://localhost:3000/api/auth/logout", {}, { withCredentials: true }); } catch (error) { console.error(error); }
+    logout(); navigate("/Login", { replace: true });
+  };
+  return <nav className="sticky top-0 z-20 border-b border-white/5 bg-[#05050A]/85 px-4 py-3 backdrop-blur-xl sm:px-6 lg:ml-[15rem] lg:px-8">
+    <div className="mx-auto flex w-full max-w-[90rem] items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 sm:px-6">
+      <div className="min-w-0"><p className="text-xs font-medium uppercase tracking-[0.18em] text-violet-300/80">Your space</p><h1 className="truncate text-base font-bold text-white sm:text-lg">Welcome back, {user?.fullName || "Athlete"}</h1></div>
+      <div className="flex items-center gap-2 sm:gap-4">
+        <button onClick={onMenuToggle} aria-label="Open navigation" className="grid size-10 place-items-center rounded-xl border border-white/10 text-white hover:bg-white/10 lg:hidden"><i className="fa-solid fa-bars" /></button>
+        <button aria-label="Notifications" className="relative grid size-10 place-items-center rounded-xl text-white transition-colors hover:bg-white/10 hover:text-violet-400"><i className="fa-regular fa-bell text-lg" /><span className="absolute right-2 top-2 size-2 rounded-full bg-red-500" /></button>
+        <div className="relative" ref={dropdownRef}>
+          <button onClick={() => setShowDropdown((prev) => !prev)} aria-label="Open account menu" className="size-10 rounded-full border border-violet-500/30 bg-cover bg-center transition hover:ring-2 hover:ring-violet-500" style={{ backgroundImage: `url(${Profile})` }} />
+          {showDropdown && <div className="absolute right-0 z-50 mt-3 w-60 overflow-hidden rounded-2xl border border-violet-500/20 bg-[#161225]/95 shadow-2xl backdrop-blur-2xl"><div className="border-b border-white/10 px-5 py-4"><h3 className="truncate font-semibold text-white">{user?.fullName || "Athlete"}</h3><p className="truncate text-sm text-gray-400">{user?.email}</p></div><button onClick={handleLogout} className="w-full px-5 py-4 text-left text-red-400 transition hover:bg-red-500/10"><i className="fa-solid fa-right-from-bracket mr-3" />Logout</button></div>}
+        </div>
+      </div>
+    </div>
+  </nav>;
 };
 
 export default DashNavbar;

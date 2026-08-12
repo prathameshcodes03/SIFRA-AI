@@ -7,9 +7,7 @@ export default function NotFound() {
 
   /* animated corner coord tick */
   useEffect(() => {
-    let tick = 0;
     const id = setInterval(() => {
-      tick++;
       if (coordRef.current) {
         coordRef.current.innerHTML =
           `SYS: ONLINE<br/>AI: ACTIVE`;

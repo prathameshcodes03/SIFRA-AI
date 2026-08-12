@@ -7,11 +7,11 @@ const Footer = () => {
       {/* Glow Effect */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-violet-600/10 blur-[120px]" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-8 py-20">
+      <div className="relative z-10 mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20">
 
         {/* Logo Section */}
                     <div className="text-center flex flex-col items-center">
-                <h1 className="text-5xl font-black bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-transparent">
+                <h1 className="bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.5rem,10vw,3rem)] font-black text-transparent">
                     Sifra.AI
                 </h1>
 

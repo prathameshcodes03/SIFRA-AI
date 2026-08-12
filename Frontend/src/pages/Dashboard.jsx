@@ -1,39 +1,8 @@
-import React from 'react'
-import DashSidebar from '../components/Dashboard/DashSidebar'
-import DashNavbar from '../components/Dashboard/DashNavbar'
-import WorkourBanner from '../components/Dashboard/WorkourBanner'
-import AccuracyCard from '../components/Dashboard/AccuracyCard'
-import WorkoutStreak from '../components/Dashboard/WorkoutStreak'
+import Footer from "../components/Footer";
+import AppShell from "../components/Dashboard/AppShell";
+import WorkourBanner from "../components/Dashboard/WorkourBanner";
+import AccuracyCard from "../components/Dashboard/AccuracyCard";
+import WorkoutStreak from "../components/Dashboard/WorkoutStreak";
 
-import Footer from '../components/Footer';
-
-const Dashboard = () => {
-  return (
-    <section className='h-full w-screen bg-[#05050A]'>
-       <DashNavbar/>
-        <DashSidebar/>
-
-        <WorkourBanner/>
-        <AccuracyCard/>
-        <WorkoutStreak/>
-        
-
-         <div className='mt-[10rem]'>
-           <Footer/>
-         </div>
-  
-
-
-
-
-
-
-
-
-
-      
-    </section>
-  )
-}
-
-export default Dashboard
+const Dashboard = () => <AppShell footer={<Footer />}><div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,.8fr)]"><WorkourBanner /><div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1"><AccuracyCard /><WorkoutStreak /></div></div></AppShell>;
+export default Dashboard;

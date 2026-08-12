@@ -1,4 +1,4 @@
-import {React,useRef,useLayoutEffect,videoRef} from 'react'
+import { useRef, useLayoutEffect } from 'react'
 import gsap from "gsap";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -17,61 +17,19 @@ gsap.registerPlugin(ScrollTrigger);
 const Landing_Page = () => {
 
 const featuresRef = useRef(null);
-const slide1Ref = useRef(null);
-const slide2Ref = useRef(null);
-const slide3Ref = useRef(null);
-
-
 useLayoutEffect(() => {
   const ctx = gsap.context(() => {
-
     const slides = gsap.utils.toArray(".feature-slide");
-
-    gsap.set(slides, {
-      opacity: 0,
-      y: 80,
+    const mm = gsap.matchMedia();
+    mm.add("(min-width: 768px)", () => {
+      gsap.set(slides, { opacity: 0, y: 80 });
+      gsap.set(slides[0], { opacity: 1, y: 0 });
+      const tl = gsap.timeline({ scrollTrigger: { trigger: featuresRef.current, start: "top top", end: "+=220%", pin: true, scrub: 0.6, anticipatePin: 1, invalidateOnRefresh: true } });
+      slides.forEach((slide, i) => { if (i) { tl.to(slides[i - 1], { opacity: 0, y: -60, duration: 1, ease: "power2.out" }).to(slide, { opacity: 1, y: 0, duration: 1, ease: "power2.out" }, "<0.15"); } });
     });
-
-    gsap.set(slides[0], {
-      opacity: 1,
-      y: 0,
-    });
-
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: featuresRef.current,
-        start: "top top",
-        end: "+=220%",  
-        pin: true,
-        scrub: 0.6,     
-        anticipatePin: 1,
-      },
-    });
-
-    slides.forEach((slide, i) => {
-      if (i === 0) return;
-
-      tl.to(slides[i - 1], {
-        opacity: 0,
-        y: -60,
-        duration: 1,
-        ease: "power2.out",
-      });
-
-      tl.to(
-        slide,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 1,
-          ease: "power2.out",
-        },
-        "<0.15"
-      );
-    });
-
+    mm.add("(max-width: 767px)", () => gsap.set(slides, { clearProps: "all" }));
+    return () => mm.revert();
   }, featuresRef);
-
   return () => ctx.revert();
 }, []);
 
@@ -87,7 +45,7 @@ useLayoutEffect(() => {
         
         <section
           id="home"
-          className='mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 py-12 text-white sm:px-8 md:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:px-10 lg:pb-30'
+          className='mx-auto grid min-h-[calc(100svh-4rem)] w-full max-w-7xl grid-cols-1 items-center gap-8 px-5 py-10 text-white sm:px-8 md:py-16 lg:grid-cols-[0.9fr_1.1fr] lg:px-10'
         >
           <div className='order-2 mx-auto w-full max-w-[22rem] overflow-hidden rounded-2xl shadow-[0_0_45px_rgba(52,211,153,0.18)] sm:max-w-[26rem] lg:order-1'>
             <video
@@ -113,13 +71,12 @@ useLayoutEffect(() => {
 
 
 
-<section id="features" ref={featuresRef} className="relative h-screen">
+<section id="features" ref={featuresRef} className="relative h-auto overflow-hidden md:h-screen">
 
 
-  <div className="sticky top-0 h-screen overflow-hidden">
+  <div className="absolute inset-0 overflow-hidden md:sticky md:top-0 md:h-screen">
 
     <video
-      ref={videoRef}
       src={Pushups}
       autoPlay
       loop
@@ -133,10 +90,10 @@ useLayoutEffect(() => {
   </div>
 
 
-  <div className="absolute inset-0">
+  <div className="relative space-y-1 py-8 md:absolute md:inset-0 md:space-y-0 md:py-0">
 
 
-    <div className="feature-slide absolute inset-0 flex items-center justify-center px-6">
+    <div className="feature-slide relative flex min-h-[58svh] items-center justify-center px-6 md:absolute md:inset-0 md:min-h-0">
       <div className="max-w-5xl text-center">
 
         <h1 className="mb-6 inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.5rem,8vw,5rem)] font-bold leading-tight text-transparent">
@@ -151,7 +108,7 @@ useLayoutEffect(() => {
     </div>
 
    
-    <div className="feature-slide absolute inset-0 flex items-center justify-center px-6">
+    <div className="feature-slide relative flex min-h-[58svh] items-center justify-center px-6 md:absolute md:inset-0 md:min-h-0">
       <div className="max-w-5xl text-center">
 
         <h1 className="mb-6 inline-block bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-[clamp(2.5rem,8vw,5rem)] font-bold leading-tight text-transparent">
@@ -166,7 +123,7 @@ useLayoutEffect(() => {
     </div>
 
    
-    <div className="feature-slide absolute inset-0 flex items-center justify-center px-6">
+    <div className="feature-slide relative flex min-h-[58svh] items-center justify-center px-6 md:absolute md:inset-0 md:min-h-0">
       <div className="max-w-5xl text-center">
 
         <h1 className="mb-6 inline-block bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444] bg-clip-text text-[clamp(2.5rem,8vw,5rem)] font-bold leading-tight text-transparent">

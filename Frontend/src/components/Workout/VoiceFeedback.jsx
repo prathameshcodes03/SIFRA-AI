@@ -1,18 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 
 const VoiceFeedback = () => {
 
-  const [isSpeaking, setIsSpeaking] = useState(true);
-
-  const [message, setMessage] = useState("Keep your back straight.");
+  const isSpeaking = true;
+  const message = "Keep your back straight.";
 
   return (
     <div
       className="
-      w-[60rem]
-      h-15
-      ml-[20rem]
-      mt-4
+      min-h-20
+      w-full
       rounded-2xl
       border border-white/10
       bg-[#11111B]

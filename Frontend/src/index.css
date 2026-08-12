@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@theme {
+  --breakpoint-xs: 23rem;
+}
+
+html { background: #05050A; scroll-behavior: smooth; }
+body { min-width: 320px; overflow-x: hidden; background: #05050A; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
 
 ::-webkit-scrollbar {
   display: none;

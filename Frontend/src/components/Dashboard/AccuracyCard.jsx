@@ -6,8 +6,8 @@ const AccuracyCard = ({ accuracy = 0 }) => {
 
         <div
             className="
-            w-[20rem]
-            h-[18rem]
+            min-h-[18rem]
+            w-full
             rounded-3xl
             bg-white/5
             backdrop-blur-xl
@@ -15,8 +15,6 @@ const AccuracyCard = ({ accuracy = 0 }) => {
             border-white/10
             shadow-[0_0_30px_rgba(139,92,246,0.15)]
             p-6
-            ml-[18rem]
-            mt-8
             "
         >
 
@@ -33,8 +31,7 @@ const AccuracyCard = ({ accuracy = 0 }) => {
                 <div
                     className="
                     relative
-                    w-36
-                    h-36
+                    size-36
                     rounded-full
                     bg-gradient-to-br
                     from-violet-600
@@ -49,8 +46,7 @@ const AccuracyCard = ({ accuracy = 0 }) => {
 
                     <div
                         className="
-                        w-28
-                        h-28
+                        size-28
                         rounded-full
                         bg-[#0f0f18]
                         flex

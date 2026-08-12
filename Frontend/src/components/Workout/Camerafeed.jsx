@@ -104,7 +104,7 @@ const Camerafeed = () => {
 
   return (
 
-    <div className="relative h-[31rem] w-[65rem] bg-[#11111B] rounded-2xl mt-[-37.5rem] ml-[18rem] overflow-hidden">
+    <div className="relative mx-auto aspect-video min-h-[13rem] w-full max-w-3xl overflow-hidden rounded-2xl bg-[#11111B] shadow-[0_0_30px_rgba(139,92,246,.12)]">
 
       {cameraOn ? (
         <>
@@ -144,7 +144,7 @@ const Camerafeed = () => {
 
         <button
           onClick={handleEndWorkout}
-          className="absolute bottom-8 right-8 w-40 h-16 text-xl text-white bg-gradient-to-r from-rose-500 to-red-500 transition-all duration-300 hover:from-rose-600 hover:to-red-600 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(244,63,94,0.45)] active:scale-[0.98] rounded-2xl cursor-pointer"
+          className="absolute bottom-4 right-4 min-h-11 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 px-4 text-sm font-semibold text-white transition-all duration-300 hover:from-rose-600 hover:to-red-600 hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(244,63,94,0.45)] active:scale-[0.98] sm:bottom-6 sm:right-6 sm:px-6 sm:text-base"
         >
           End Workout
         </button>

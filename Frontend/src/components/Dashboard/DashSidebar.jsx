@@ -1,189 +1,26 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { NavLink } from "react-router-dom";
 
-const DashSidebar = () => {
+const navItems = [
+  ["Dashboard", "/Dashboard", "fa-regular fa-house"],
+  ["Workout", "/Workout", "fa-solid fa-dumbbell"],
+  ["Workout plan", "/WorkoutPlan", "fa-solid fa-calendar-check"],
+  ["Profile", "/Profile", "fa-regular fa-user"],
+  ["Settings", "/Setting", "fa-solid fa-gear"],
+];
 
-  const navigate = useNavigate();
-
-  const [active, setActive] = useState("Dashboard");
-
-  const handleNavigation = (page) => {
-    setActive(page);
-
-    switch (page) {
-      case "Dashboard":
-        navigate("/Dashboard");
-        break;
-
-      case "Workout":
-        navigate("/Workout");
-        break;
-
-      case "WorkoutPlan":
-        navigate("/WorkoutPlan");
-        break;
-
-      case "Profile":
-        navigate("/Profile");
-        break;
-
-      case "Setting":
-        navigate("/Setting");
-        break;
-
-      default:
-        navigate("/Dashboard");
-    }
-  };
-
-  return (
-
-    <aside className='mt-[-7rem] h-screen w-[15rem] bg-gradient-to-b from-[#08070f] via-[#0b0818] to-[#1a0d35]'>
-
-      <div className='flex flex-col justify-between flex-wrap'>
-
-        <div className='mt-4 ml-4'>
-
-          <div>
-            <h1 className='pt-[-6rem] text-3xl font-extrabold inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-transparent'>
-              Sifra.Ai
-            </h1>
-
-            <br />
-
-            <p className='text-sm inline-block bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-transparent'>
-              Ai fitness coach
-            </p>
-
-          </div>
-
-     
-
-
-
-          <div
-            onClick={() => handleNavigation("Dashboard")}
-            className={`flex items-center gap-2 mt-4 h-16 rounded-xl border cursor-pointer transition-all duration-300
-            ${
-              active === "Dashboard"
-                 ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
-                : "bg-violet-500/15 border border-violet-400/20 hover:bg-violet-500/25 hover:scale-[1.02]"
-            }`}
-          >
-            <h3>
-              <i className="ml-8 text-white text-2xl fa-regular fa-house"></i>
-            </h3>
-
-            <span className='pt-[2rem] mt-[-2rem] text-1xl font-extrabold text-white cursor-pointer'>
-              Dashboard
-            </span>
-          </div>
-
-
-
-
-
-       
-          <div
-            onClick={() => handleNavigation("Workout")}
-            className={`flex items-center gap-2 mt-4 h-16 rounded-xl border cursor-pointer transition-all duration-300
-            ${
-              active === "Workout"
-                ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
-                : "bg-violet-500/15 border border-violet-400/20 hover:bg-violet-500/25 hover:scale-[1.02]"
-            }`}
-          >
-            <h3>
-              <i className="ml-8 text-white text-2xl fa-solid fa-dumbbell"></i>
-            </h3>
-
-            <span className='pt-[2rem] mt-[-2rem] text-1xl font-extrabold text-white cursor-pointer'>
-              Workout
-            </span>
-          </div>
-
-
-
-
-
-       
-          <div
-            onClick={() => handleNavigation("WorkoutPlan")}
-            className={`flex items-center gap-2 mt-4 h-16 rounded-xl border cursor-pointer transition-all duration-300
-            ${
-              active === "WorkoutPlan"
-                ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
-                : "bg-violet-500/15 border border-violet-400/20 hover:bg-violet-500/25 hover:scale-[1.02]"
-            }`}
-          >
-            <h3>
-              <i className="ml-8 text-white text-2xl fa-solid fa-calendar-check"></i>
-            </h3>
-
-            <span className='pt-[2rem] mt-[-2rem] text-1xl font-extrabold text-white cursor-pointer'>
-              WorkoutPlan
-            </span>
-          </div>
-
-
-
-
-
-       
-          <div
-            onClick={() => handleNavigation("Profile")}
-            className={`flex items-center gap-2 mt-4 h-16 rounded-xl border cursor-pointer transition-all duration-300
-            ${
-              active === "Profile"
-                ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
-                : "bg-violet-500/15 border border-violet-400/20 hover:bg-violet-500/25 hover:scale-[1.02]"
-            }`}
-          >
-            <h3>
-              <i className="ml-8 text-white text-2xl fa-regular fa-user"></i>
-            </h3>
-
-            <span className='pt-[2rem] mt-[-2rem] text-1xl font-extrabold text-white cursor-pointer'>
-              Profile
-            </span>
-          </div>
-
-
-
-
-
-
-        
-          <div
-            onClick={() => handleNavigation("Setting")}
-            className={`flex items-center gap-2 mt-4 h-16 rounded-xl border cursor-pointer transition-all duration-300
-            ${
-              active === "Setting"
-                ? "bg-violet-600/30 border-violet-400 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
-                : "bg-violet-500/15 border border-violet-400/20 hover:bg-violet-500/25 hover:scale-[1.02]"
-            }`}
-          >
-            <h3>
-              <i className="ml-8 text-white text-2xl fa-solid fa-gear"></i>
-            </h3>
-
-            <span className='pt-[2rem] mt-[-2rem] text-1xl font-extrabold text-white cursor-pointer'>
-              Setting
-            </span>
-          </div>
-
-        </div>
-
-
-
-
-
-
+const DashSidebar = ({ isOpen, onClose }) => (
+  <>
+    <button onClick={onClose} aria-label="Close navigation" className={`fixed inset-0 z-30 bg-black/60 transition-opacity lg:hidden ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}`} />
+    <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-violet-400/15 bg-gradient-to-b from-[#08070f] via-[#0b0818] to-[#1a0d35] px-4 py-7 shadow-2xl transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : ""}`}>
+      <div className="mb-10">
+        <h1 className="bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-3xl font-extrabold text-transparent">Sifra.AI</h1>
+        <p className="mt-1 bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-sm text-transparent">AI fitness coach</p>
       </div>
-
+      <nav aria-label="Dashboard navigation" className="space-y-2">
+        {navItems.map(([label, to, icon]) => <NavLink key={to} to={to} onClick={onClose} className={({ isActive }) => `flex min-h-12 items-center gap-3 rounded-xl border px-4 font-semibold transition ${isActive ? "border-violet-400 bg-violet-600/30 shadow-[0_0_20px_rgba(168,85,247,0.25)]" : "border-violet-400/15 bg-violet-500/10 hover:bg-violet-500/20"}`}><i aria-hidden="true" className={`${icon} w-5 text-lg`} />{label}</NavLink>)}
+      </nav>
     </aside>
-
-  );
-};
+  </>
+);
 
 export default DashSidebar;

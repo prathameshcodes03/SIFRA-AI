@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import Footer from '../components/Footer';
-import DashSidebar from '../components/Dashboard/DashSidebar'
-import DashNavbar from '../components/Dashboard/DashNavbar'
+import AppShell from '../components/Dashboard/AppShell'
 import { ChevronRight } from 'lucide-react'
 import Toggle from '../components/Toggle'
 
@@ -24,15 +23,9 @@ const Setting = () => {
   const [dataSaver, setDataSaver] = useState(false)
 
   return (
-    <section className='min-h-screen w-full bg-[#05050A] text-white'>
+    <AppShell footer={<Footer/>}>
 
-      <DashNavbar/>
-
-      <div className='fixed z-10'>
-        <DashSidebar />
-      </div>
-
-      <div className='lg:ml-60 px-4 sm:px-6 lg:px-10 py-6'>
+      <div>
 
         <h1 className='text-2xl font-bold'>Settings</h1>
         <p className='text-white/40 text-sm mb-6'>Manage your preferences and app settings</p>
@@ -207,11 +200,7 @@ const Setting = () => {
 
       </div>
 
-      <div className='lg:ml-60'>
-        <Footer/>
-      </div>
-
-    </section>
+    </AppShell>
   )
 }
 

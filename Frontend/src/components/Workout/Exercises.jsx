@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWorkout } from "../../context/WorkoutContext";
+import { useWorkout } from "../../Context/WorkoutContext";
 
 const Exercises = () => {
 
@@ -17,16 +17,14 @@ const Exercises = () => {
 
         setExerciseName("");
         setSets("");
-        setReps();
+        setReps("");
     };
 
     return (
         <div
             className="
             w-full
-            max-w-2xl
-            ml-[28rem]
-            mt-[-37.5rem]
+            max-w-none
             rounded-2xl
             bg-white/5
             backdrop-blur-xl
@@ -48,14 +46,14 @@ const Exercises = () => {
 
             </div>
 
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
 
                 <input
                     type="text"
                     placeholder="Exercise"
                     value={exerciseName}
                     onChange={(e) => setExerciseName(e.target.value)}
-                    className="col-span-2 h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-white placeholder:text-gray-500 outline-none focus:border-violet-500"
+                    className="col-span-2 h-11 rounded-lg bg-white/5 border border-white/10 px-3 text-white placeholder:text-gray-500 outline-none focus:border-violet-500"
                 />
 
                 <input
@@ -63,7 +61,7 @@ const Exercises = () => {
                     placeholder="Sets"
                     value={sets}
                     onChange={(e) => setSets(e.target.value)}
-                    className="h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-white outline-none focus:border-violet-500"
+                    className="h-11 rounded-lg bg-white/5 border border-white/10 px-3 text-white outline-none focus:border-violet-500"
                 />
 
                 <input
@@ -71,7 +69,7 @@ const Exercises = () => {
                     placeholder="Reps"
                     value={reps}
                     onChange={(e) => setReps(e.target.value)}
-                    className="h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-white outline-none focus:border-violet-500"
+                    className="h-11 rounded-lg bg-white/5 border border-white/10 px-3 text-white outline-none focus:border-violet-500"
                 />
 
             </div>

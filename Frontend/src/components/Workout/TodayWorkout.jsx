@@ -1,4 +1,4 @@
-import { useWorkout } from "../../context/WorkoutContext";
+import { useWorkout } from "../../Context/WorkoutContext";
 
 const TodayWorkout = () => {
 
@@ -9,9 +9,7 @@ const TodayWorkout = () => {
         <div
             className="
             w-full
-            ml-[28rem]
-            mt-[2rem]
-            max-w-xl
+            max-w-none
             rounded-2xl
             bg-white/5
             backdrop-blur-xl
