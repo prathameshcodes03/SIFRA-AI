@@ -11,7 +11,7 @@ export const WorkoutProvider = ({ children }) => {
   const fetchWorkouts = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:3000/api/workouts",
+        `${import.meta.env.VITE_API_URL}/api/workouts`,
         {
           withCredentials: true,
         }
