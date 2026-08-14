@@ -15,10 +15,12 @@ const Login = () => {
     setLoading(true);
     setMessage("");
     try {
-      const response = await api.post("/api/auth/login", formData);
-      login(response.data.user, response.data.token);
-      setMessage(response.data.message);
-      setTimeout(() => navigate("/Dashboard"), 700);
+      const loginResponse = await api.post("/api/auth/login", formData);
+      const currentUserResponse = await api.get("/api/auth/me");
+
+      login(currentUserResponse.data.user, loginResponse.data.token);
+      setMessage(loginResponse.data.message);
+      navigate("/Dashboard");
     } catch (error) {
       setMessage(
         error.response?.data?.message || "Login failed. Please try again.",

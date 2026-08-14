@@ -40,7 +40,9 @@ export const AuthProvider = ({ children }) => {
 
         localStorage.setItem("user", JSON.stringify(response.data.user));
       } catch (error) {
-        console.log(error);
+        if (error.response?.status !== 401) {
+          console.error("AUTH SESSION CHECK ERROR:", error);
+        }
 
         setUser(null);
 

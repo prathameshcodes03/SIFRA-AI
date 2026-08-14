@@ -9,6 +9,15 @@ const cookieOptions = {
   sameSite: isProduction ? "none" : "lax",
 };
 
+const logAuthError = (operation, error) => {
+  console.error(`${operation} ERROR:`, {
+    name: error.name,
+    code: error.code,
+    message: error.message,
+    meta: error.meta,
+  });
+};
+
 const registerUser = async (req, res) => {
   try {
     const { fullName, email, password, age, gender, weight } = req.body;
@@ -53,7 +62,7 @@ const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logAuthError("REGISTER", error);
 
     return res.status(500).json({
       success: false,
@@ -73,7 +82,7 @@ const loginUser = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message: "Invalid Credentials",
       });
@@ -82,7 +91,7 @@ const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message: "Invalid Credentials",
       });
@@ -117,7 +126,7 @@ const loginUser = async (req, res) => {
       user: userData,
     });
   } catch (error) {
-    console.log(error);
+    logAuthError("LOGIN", error);
 
     return res.status(500).json({
       success: false,
@@ -135,7 +144,7 @@ const logoutUser = async (req, res) => {
       message: "Logout Successful",
     });
   } catch (error) {
-    console.log(error);
+    logAuthError("LOGOUT", error);
 
     return res.status(500).json({
       success: false,
@@ -166,7 +175,7 @@ const getCurrentUser = async (req, res) => {
       user: userData,
     });
   } catch (error) {
-    console.log(error);
+    logAuthError("GET CURRENT USER", error);
 
     return res.status(500).json({
       success: false,
