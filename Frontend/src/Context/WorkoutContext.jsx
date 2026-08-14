@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api/axios";
 
 const WorkoutContext = createContext();
 
@@ -10,12 +10,7 @@ export const WorkoutProvider = ({ children }) => {
 
   const fetchWorkouts = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/workouts`,
-        {
-          withCredentials: true,
-        }
-      );
+      const res = await api.get("/api/workouts");
 
       setWorkouts(res.data.workouts);
     } catch (error) {
@@ -27,15 +22,12 @@ export const WorkoutProvider = ({ children }) => {
 
   const addWorkout = async (exercise, sets, reps) => {
     try {
-      await axios.post(
-        "http://localhost:3000/api/workouts",
+      await api.post(
+        "/api/workouts",
         {
           exercise,
           sets,
           reps,
-        },
-        {
-          withCredentials: true,
         }
       );
 
@@ -47,12 +39,7 @@ export const WorkoutProvider = ({ children }) => {
 
   const deleteWorkout = async (id) => {
     try {
-      await axios.delete(
-        `http://localhost:3000/api/workouts/${id}`,
-        {
-          withCredentials: true,
-        }
-      );
+      await api.delete(`/api/workouts/${id}`);
 
       fetchWorkouts();
     } catch (error) {

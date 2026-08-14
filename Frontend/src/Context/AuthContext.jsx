@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api/axios";
 
 const AuthContext = createContext();
 
@@ -46,12 +46,7 @@ export const AuthProvider = ({ children }) => {
 
             try {
 
-                const response = await axios.get(
-                    "http://localhost:3000/api/auth/me",
-                    {
-                        withCredentials: true,
-                    }
-                );
+                const response = await api.get("/api/auth/me");
 
                 setUser(response.data.user);
 

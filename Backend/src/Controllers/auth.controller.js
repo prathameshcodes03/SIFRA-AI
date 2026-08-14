@@ -2,6 +2,13 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { prisma } = require("../data/db");
 
+const isProduction = process.env.NODE_ENV === "production";
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+};
+
 
 
 
@@ -157,9 +164,7 @@ const loginUser = async (req, res) => {
 
         res.cookie("token", token, {
 
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            ...cookieOptions,
             maxAge: 7 * 24 * 60 * 60 * 1000,
 
         });
@@ -200,13 +205,7 @@ const logoutUser = async (req, res) => {
 
     try {
 
-        res.clearCookie("token", {
-
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
-
-        });
+        res.clearCookie("token", cookieOptions);
 
         return res.status(200).json({
 

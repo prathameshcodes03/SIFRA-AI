@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../api/axios";
 import Profile from "../../assets/Images/profileimg.jpg";
 import { useAuth } from "../../Context/AuthContext";
 
@@ -15,7 +15,7 @@ const DashNavbar = ({ onMenuToggle }) => {
     return () => document.removeEventListener("mousedown", close);
   }, []);
   const handleLogout = async () => {
-    try { await axios.post("http://localhost:3000/api/auth/logout", {}, { withCredentials: true }); } catch (error) { console.error(error); }
+    try { await api.post("/api/auth/logout"); } catch (error) { console.error(error); }
     logout(); navigate("/Login", { replace: true });
   };
   return <nav className="sticky top-0 z-20 border-b border-white/5 bg-[#05050A]/85 px-4 py-3 backdrop-blur-xl sm:px-6 lg:ml-[15rem] lg:px-8">

@@ -5,6 +5,13 @@ const cors = require("cors");
 const workoutRoutes = require("./Routes/workout.routes");
 
 const app = express();
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://sifra-ai-1.onrender.com",
+    process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -13,7 +20,7 @@ app.use(
 
     cors({
 
-        origin: "http://localhost:5173",
+        origin: allowedOrigins,
 
         credentials: true,
 
