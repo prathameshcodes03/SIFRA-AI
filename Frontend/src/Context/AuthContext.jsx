@@ -5,94 +5,69 @@ import api from "../api/axios";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("user");
 
-    const [user, setUser] = useState(() => {
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
-        const savedUser = localStorage.getItem("user");
+  const [token, setToken] = useState(localStorage.getItem("token") || "");
 
-        return savedUser ? JSON.parse(savedUser) : null;
+  const [loading, setLoading] = useState(true);
 
-    });
+  const login = (userData, jwtToken) => {
+    setUser(userData);
+    setToken(jwtToken);
 
-    const [token, setToken] = useState(
-        localStorage.getItem("token") || ""
-    );
+    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", jwtToken);
+  };
 
-    const [loading, setLoading] = useState(true);
+  const logout = () => {
+    setUser(null);
+    setToken("");
 
-    const login = (userData, jwtToken) => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+  };
 
-        setUser(userData);
-        setToken(jwtToken);
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await api.get("/api/auth/me");
 
-        localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("token", jwtToken);
+        setUser(response.data.user);
 
-    };
-
-    const logout = () => {
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+      } catch (error) {
+        console.log(error);
 
         setUser(null);
-        setToken("");
 
         localStorage.removeItem("user");
         localStorage.removeItem("token");
-
+      } finally {
+        setLoading(false);
+      }
     };
 
-    useEffect(() => {
+    fetchUser();
+  }, []);
 
-        const fetchUser = async () => {
-
-            try {
-
-                const response = await api.get("/api/auth/me");
-
-                setUser(response.data.user);
-
-                localStorage.setItem(
-                    "user",
-                    JSON.stringify(response.data.user)
-                );
-
-            } catch (error) {
-
-                console.log(error);
-
-                setUser(null);
-
-                localStorage.removeItem("user");
-                localStorage.removeItem("token");
-
-            } finally {
-
-                setLoading(false);
-
-            }
-
-        };
-
-        fetchUser();
-
-    }, []);
-
-    return (
-
-        <AuthContext.Provider
-            value={{
-                user,
-                token,
-                loading,
-                login,
-                logout,
-                setUser,
-            }}
-        >
-            {children}
-        </AuthContext.Provider>
-
-    );
-
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        logout,
+        setUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);

@@ -4,293 +4,180 @@ const { prisma } = require("../data/db");
 
 const isProduction = process.env.NODE_ENV === "production";
 const cookieOptions = {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
 };
-
-
-
-
 
 const registerUser = async (req, res) => {
+  try {
+    const { fullName, email, password, age, gender, weight } = req.body;
 
-    try {
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
 
-        const {
-            fullName,
-            email,
-            password,
-            age,
-            gender,
-            weight
-        } = req.body;
-
-        const existingUser = await prisma.user.findUnique({
-            where: {
-                email,
-            },
-        });
-
-        if (existingUser) {
-
-            return res.status(400).json({
-                success: false,
-                message: "User already exists.",
-            });
-
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = await prisma.user.create({
-
-            data: {
-
-                fullName,
-                email,
-                password: hashedPassword,
-                age: Number(age),
-                gender,
-                weight: Number(weight),
-
-            },
-
-        });
-
-        return res.status(201).json({
-
-            success: true,
-            message: "User Registered Successfully",
-
-            user: {
-
-                id: user.id,
-                fullName: user.fullName,
-                email: user.email,
-                age: user.age,
-                gender: user.gender,
-                weight: user.weight,
-
-            },
-
-        });
-
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists.",
+      });
     }
 
-    catch (error) {
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-        console.log(error);
+    const user = await prisma.user.create({
+      data: {
+        fullName,
+        email,
+        password: hashedPassword,
+        age: Number(age),
+        gender,
+        weight: Number(weight),
+      },
+    });
 
-        return res.status(500).json({
+    return res.status(201).json({
+      success: true,
+      message: "User Registered Successfully",
 
-            success: false,
-            message: "Internal Server Error",
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        age: user.age,
+        gender: user.gender,
+        weight: user.weight,
+      },
+    });
+  } catch (error) {
+    console.log(error);
 
-        });
-
-    }
-
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
 };
-
-
-
 
 const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-    try {
+    const user = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
 
-        const { email, password } = req.body;
-
-        const user = await prisma.user.findUnique({
-
-            where: {
-
-                email,
-
-            },
-
-        });
-
-        if (!user) {
-
-            return res.status(400).json({
-
-                success: false,
-                message: "Invalid Credentials",
-
-            });
-
-        }
-
-        const isMatch = await bcrypt.compare(
-            password,
-            user.password
-        );
-
-        if (!isMatch) {
-
-            return res.status(400).json({
-
-                success: false,
-                message: "Invalid Credentials",
-
-            });
-
-        }
-
-        const token = jwt.sign(
-
-            {
-
-                id: user.id,
-                email: user.email,
-
-            },
-
-            process.env.JWT_SECRET,
-
-            {
-
-                expiresIn: "7d",
-
-            }
-
-        );
-
-    
-
-        const { password: _, ...userData } = user;
-
-        res.cookie("token", token, {
-
-            ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-
-        });
-
-        return res.status(200).json({
-
-            success: true,
-            message: "Login Successful",
-
-            token,
-
-            user: userData,
-
-        });
-
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Credentials",
+      });
     }
 
-    catch (error) {
+    const isMatch = await bcrypt.compare(password, user.password);
 
-        console.log(error);
-
-        return res.status(500).json({
-
-            success: false,
-            message: "Internal Server Error",
-
-        });
-
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Credentials",
+      });
     }
 
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+      },
+
+      process.env.JWT_SECRET,
+
+      {
+        expiresIn: "7d",
+      },
+    );
+
+    const { password: _, ...userData } = user;
+
+    res.cookie("token", token, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Login Successful",
+
+      token,
+
+      user: userData,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
 };
-
-
-
-
 
 const logoutUser = async (req, res) => {
+  try {
+    res.clearCookie("token", cookieOptions);
 
-    try {
+    return res.status(200).json({
+      success: true,
+      message: "Logout Successful",
+    });
+  } catch (error) {
+    console.log(error);
 
-        res.clearCookie("token", cookieOptions);
-
-        return res.status(200).json({
-
-            success: true,
-            message: "Logout Successful",
-
-        });
-
-    }
-
-    catch (error) {
-
-        console.log(error);
-
-        return res.status(500).json({
-
-            success: false,
-            message: "Internal Server Error",
-
-        });
-
-    }
-
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
 };
-
-
-
 
 const getCurrentUser = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: req.user.id,
+      },
+    });
 
-    try {
-
-        const user = await prisma.user.findUnique({
-
-            where: {
-
-                id: req.user.id,
-
-            },
-
-        });
-
-        if (!user) {
-
-            return res.status(404).json({
-
-                success: false,
-                message: "User not found",
-
-            });
-
-        }
-
-        const { password, ...userData } = user;
-
-        return res.status(200).json({
-
-            success: true,
-            user: userData,
-
-        });
-
-    } catch (error) {
-
-        console.log(error);
-
-        return res.status(500).json({
-
-            success: false,
-            message: "Internal Server Error",
-
-        });
-
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
+    const { password, ...userData } = user;
+
+    return res.status(200).json({
+      success: true,
+      user: userData,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
 };
 
-
-
-
 module.exports = {
-
-    registerUser,
-    loginUser,
-    logoutUser,
-    getCurrentUser,
-
+  registerUser,
+  loginUser,
+  logoutUser,
+  getCurrentUser,
 };

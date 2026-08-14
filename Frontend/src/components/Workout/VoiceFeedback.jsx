@@ -1,7 +1,6 @@
 import React from "react";
 
 const VoiceFeedback = () => {
-
   const isSpeaking = true;
   const message = "Keep your back straight.";
 
@@ -20,9 +19,7 @@ const VoiceFeedback = () => {
       "
     >
       <div>
-        <h2 className="text-white text-lg font-semibold">
-          AI Voice Coach
-        </h2>
+        <h2 className="text-white text-lg font-semibold">AI Voice Coach</h2>
 
         <p className="text-sm text-gray-400">
           {isSpeaking ? message : "Waiting..."}

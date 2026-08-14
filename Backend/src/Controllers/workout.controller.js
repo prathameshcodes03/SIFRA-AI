@@ -39,7 +39,6 @@ const createWorkout = async (req, res) => {
 // Get All Workouts of Logged In User
 const getAllWorkouts = async (req, res) => {
   try {
-   
     const workouts = await prisma.workout.findMany({
       where: {
         userId: req.user.id,

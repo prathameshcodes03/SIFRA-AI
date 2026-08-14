@@ -22,14 +22,11 @@ export const WorkoutProvider = ({ children }) => {
 
   const addWorkout = async (exercise, sets, reps) => {
     try {
-      await api.post(
-        "/api/workouts",
-        {
-          exercise,
-          sets,
-          reps,
-        }
-      );
+      await api.post("/api/workouts", {
+        exercise,
+        sets,
+        reps,
+      });
 
       fetchWorkouts();
     } catch (error) {

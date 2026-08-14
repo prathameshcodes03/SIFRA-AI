@@ -9,8 +9,7 @@ export default function NotFound() {
   useEffect(() => {
     const id = setInterval(() => {
       if (coordRef.current) {
-        coordRef.current.innerHTML =
-          `SYS: ONLINE<br/>AI: ACTIVE`;
+        coordRef.current.innerHTML = `SYS: ONLINE<br/>AI: ACTIVE`;
       }
     }, 80);
     return () => clearInterval(id);
@@ -21,12 +20,14 @@ export default function NotFound() {
     const btn = document.getElementById("backBtn");
     if (!btn) return;
     const onMove = (e) => {
-      const r  = btn.getBoundingClientRect();
-      const dx = (e.clientX - r.left  - r.width  / 2) * 0.18;
-      const dy = (e.clientY - r.top   - r.height / 2) * 0.18;
+      const r = btn.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width / 2) * 0.18;
+      const dy = (e.clientY - r.top - r.height / 2) * 0.18;
       btn.style.transform = `translate(${dx}px,${dy}px) scale(1.03)`;
     };
-    const onLeave = () => { btn.style.transform = ""; };
+    const onLeave = () => {
+      btn.style.transform = "";
+    };
     btn.addEventListener("mousemove", onMove);
     btn.addEventListener("mouseleave", onLeave);
     return () => {
@@ -293,7 +294,9 @@ export default function NotFound() {
 
         {/* corner HUD — no X/Y */}
         <div className="nf-corner nf-tr" ref={coordRef}>
-          SYS: ONLINE<br />AI: ACTIVE
+          SYS: ONLINE
+          <br />
+          AI: ACTIVE
         </div>
         <div className="nf-corner nf-bl">SIFRA v2.0.4</div>
         <div className="nf-corner nf-br">ERR: 0x404</div>
@@ -308,7 +311,6 @@ export default function NotFound() {
 
         {/* content */}
         <div className="nf-content">
-
           {/* 4 · 0(dumbbell) · 4 */}
           <div className="nf-four-wrap">
             <div className="nf-digit">4</div>
@@ -319,20 +321,66 @@ export default function NotFound() {
               <div className="nf-zero-char">0</div>
               <div className="nf-db">
                 <svg width="46" height="46" viewBox="0 0 72 72" fill="none">
-                  <rect x="2"  y="20" width="12" height="32" rx="5"
-                    fill="rgba(99,102,241,.25)" stroke="rgba(99,102,241,.85)" strokeWidth="1.4"/>
-                  <rect x="6"  y="25" width="5"  height="22" rx="2.5"
-                    fill="rgba(99,102,241,.45)" stroke="rgba(99,102,241,.6)"  strokeWidth="1"/>
-                  <rect x="14" y="33" width="44" height="6"  rx="3"
-                    fill="rgba(99,102,241,.2)"  stroke="rgba(99,102,241,.7)"  strokeWidth="1"/>
-                  <rect x="61" y="25" width="5"  height="22" rx="2.5"
-                    fill="rgba(99,102,241,.45)" stroke="rgba(99,102,241,.6)"  strokeWidth="1"/>
-                  <rect x="58" y="20" width="12" height="32" rx="5"
-                    fill="rgba(99,102,241,.25)" stroke="rgba(99,102,241,.85)" strokeWidth="1.4"/>
-                  <rect x="18" y="34" width="20" height="2"  rx="1"
-                    fill="rgba(255,255,255,.14)"/>
-                  <circle cx="36" cy="36" r="4.5" fill="#34d399" opacity=".9"/>
-                  <circle cx="36" cy="36" r="2"   fill="#07070a" opacity=".6"/>
+                  <rect
+                    x="2"
+                    y="20"
+                    width="12"
+                    height="32"
+                    rx="5"
+                    fill="rgba(99,102,241,.25)"
+                    stroke="rgba(99,102,241,.85)"
+                    strokeWidth="1.4"
+                  />
+                  <rect
+                    x="6"
+                    y="25"
+                    width="5"
+                    height="22"
+                    rx="2.5"
+                    fill="rgba(99,102,241,.45)"
+                    stroke="rgba(99,102,241,.6)"
+                    strokeWidth="1"
+                  />
+                  <rect
+                    x="14"
+                    y="33"
+                    width="44"
+                    height="6"
+                    rx="3"
+                    fill="rgba(99,102,241,.2)"
+                    stroke="rgba(99,102,241,.7)"
+                    strokeWidth="1"
+                  />
+                  <rect
+                    x="61"
+                    y="25"
+                    width="5"
+                    height="22"
+                    rx="2.5"
+                    fill="rgba(99,102,241,.45)"
+                    stroke="rgba(99,102,241,.6)"
+                    strokeWidth="1"
+                  />
+                  <rect
+                    x="58"
+                    y="20"
+                    width="12"
+                    height="32"
+                    rx="5"
+                    fill="rgba(99,102,241,.25)"
+                    stroke="rgba(99,102,241,.85)"
+                    strokeWidth="1.4"
+                  />
+                  <rect
+                    x="18"
+                    y="34"
+                    width="20"
+                    height="2"
+                    rx="1"
+                    fill="rgba(255,255,255,.14)"
+                  />
+                  <circle cx="36" cy="36" r="4.5" fill="#34d399" opacity=".9" />
+                  <circle cx="36" cy="36" r="2" fill="#07070a" opacity=".6" />
                 </svg>
               </div>
             </div>
@@ -351,27 +399,30 @@ export default function NotFound() {
             Looks like this <span>page</span> is lost.
           </h1>
           <p className="nf-sub">
-            This page skipped leg day and went missing.
-            Let Sifra guide you back to your training.
+            This page skipped leg day and went missing. Let Sifra guide you back
+            to your training.
           </p>
 
           {/* single button */}
-          <button
-            id="backBtn"
-            className="nf-btn"
-            onClick={() => navigate(-1)}
-          >
+          <button id="backBtn" className="nf-btn" onClick={() => navigate(-1)}>
             ← Go back
           </button>
 
           {/* HUD */}
           <div className="nf-hud">
-            <div className="nf-hi">STATUS <span className="nf-hv">404</span></div>
-            <div className="nf-hi">PAGE   <span className="nf-hv">MISSING</span></div>
-            <div className="nf-hi">ROUTE  <span className="nf-hv">NULL</span></div>
-            <div className="nf-hi">AI     <span className="nf-hv">ONLINE</span></div>
+            <div className="nf-hi">
+              STATUS <span className="nf-hv">404</span>
+            </div>
+            <div className="nf-hi">
+              PAGE <span className="nf-hv">MISSING</span>
+            </div>
+            <div className="nf-hi">
+              ROUTE <span className="nf-hv">NULL</span>
+            </div>
+            <div className="nf-hi">
+              AI <span className="nf-hv">ONLINE</span>
+            </div>
           </div>
-
         </div>
       </div>
     </>

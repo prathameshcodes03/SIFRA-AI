@@ -1,8 +1,63 @@
 import { createElement } from "react";
-import { UserRound, CalendarDays, Mail, VenusAndMars, MapPin, Goal } from "lucide-react";
+import {
+  UserRound,
+  CalendarDays,
+  Mail,
+  VenusAndMars,
+  MapPin,
+  Goal,
+} from "lucide-react";
 import Footer from "../components/Footer";
 import AppShell from "../components/Dashboard/AppShell";
 
-const rows = [[UserRound, "Full name", "Nimish Kapoor"], [Mail, "Email", "nimishkapoor@gmail.com"], [CalendarDays, "Date of birth", "2/8/2002"], [VenusAndMars, "Gender", "Male"], [MapPin, "Location", "Mumbai, Maharashtra"], [Goal, "Fitness goal", "Increase strength"]];
-const Profile = () => <AppShell footer={<Footer />}><div className="space-y-5"><section className="flex flex-col gap-6 rounded-2xl border border-violet-400/20 bg-[#2A194F]/75 p-5 sm:flex-row sm:items-center sm:p-7"><img src="https://i.pinimg.com/736x/c6/29/b7/c629b7a6697803a29bf9ae45e5e3be13.jpg" alt="Nimish Kapoor" className="size-28 rounded-full border-2 border-purple-500 object-cover sm:size-36" /><div><h1 className="text-2xl font-extrabold sm:text-3xl">Nimish Kapoor</h1><p className="mt-2 text-sm text-white/65">nimishkapoor@gmail.com</p><p className="mt-5 text-white/85">Stay consistent and strong — you&apos;ve got this. 💪</p></div></section><section className="rounded-2xl border border-violet-400/20 bg-[#2A194F]/75 p-5 sm:p-7"><div className="mb-3 flex items-center justify-between border-b border-white/20 pb-4"><h2 className="text-lg font-bold">Personal information</h2><button className="text-sm font-semibold text-violet-300 hover:text-violet-200">Edit profile</button></div>{rows.map(([icon, label, value]) => <div key={label} className="flex flex-col gap-2 border-b border-white/15 py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"><span className="flex items-center gap-2 font-medium">{createElement(icon, { size: 18 })}{label}</span><span className="break-all text-sm text-white/70 sm:text-base">{value}</span></div>)}</section></div></AppShell>;
+const rows = [
+  [UserRound, "Full name", "Nimish Kapoor"],
+  [Mail, "Email", "nimishkapoor@gmail.com"],
+  [CalendarDays, "Date of birth", "2/8/2002"],
+  [VenusAndMars, "Gender", "Male"],
+  [MapPin, "Location", "Mumbai, Maharashtra"],
+  [Goal, "Fitness goal", "Increase strength"],
+];
+const Profile = () => (
+  <AppShell footer={<Footer />}>
+    <div className="space-y-5">
+      <section className="flex flex-col gap-6 rounded-2xl border border-violet-400/20 bg-[#2A194F]/75 p-5 sm:flex-row sm:items-center sm:p-7">
+        <img
+          src="https://i.pinimg.com/736x/c6/29/b7/c629b7a6697803a29bf9ae45e5e3be13.jpg"
+          alt="Nimish Kapoor"
+          className="size-28 rounded-full border-2 border-purple-500 object-cover sm:size-36"
+        />
+        <div>
+          <h1 className="text-2xl font-extrabold sm:text-3xl">Nimish Kapoor</h1>
+          <p className="mt-2 text-sm text-white/65">nimishkapoor@gmail.com</p>
+          <p className="mt-5 text-white/85">
+            Stay consistent and strong — you&apos;ve got this. 💪
+          </p>
+        </div>
+      </section>
+      <section className="rounded-2xl border border-violet-400/20 bg-[#2A194F]/75 p-5 sm:p-7">
+        <div className="mb-3 flex items-center justify-between border-b border-white/20 pb-4">
+          <h2 className="text-lg font-bold">Personal information</h2>
+          <button className="text-sm font-semibold text-violet-300 hover:text-violet-200">
+            Edit profile
+          </button>
+        </div>
+        {rows.map(([icon, label, value]) => (
+          <div
+            key={label}
+            className="flex flex-col gap-2 border-b border-white/15 py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span className="flex items-center gap-2 font-medium">
+              {createElement(icon, { size: 18 })}
+              {label}
+            </span>
+            <span className="break-all text-sm text-white/70 sm:text-base">
+              {value}
+            </span>
+          </div>
+        ))}
+      </section>
+    </div>
+  </AppShell>
+);
 export default Profile;

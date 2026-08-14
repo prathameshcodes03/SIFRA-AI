@@ -1,11 +1,7 @@
-import React from 'react'
+import React from "react";
 
 const ProgressChart = () => {
-  return (
-    <div>
-      
-    </div>
-  )
-}
+  return <div></div>;
+};
 
-export default ProgressChart
+export default ProgressChart;
