@@ -73,7 +73,12 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
+    console.log("LOGIN: request reached login controller");
+
     const { email, password } = req.body;
+    console.log("LOGIN: email received", { email });
+
+    console.log("LOGIN: user lookup started");
 
     const user = await prisma.user.findUnique({
       where: {
@@ -82,13 +87,17 @@ const loginUser = async (req, res) => {
     });
 
     if (!user) {
+      console.log("LOGIN: user not found");
       return res.status(401).json({
         success: false,
         message: "Invalid Credentials",
       });
     }
 
+    console.log("LOGIN: user found", { userId: user.id });
+    console.log("LOGIN: password comparison started");
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log("LOGIN: password comparison result", { isMatch });
 
     if (!isMatch) {
       return res.status(401).json({
@@ -97,6 +106,7 @@ const loginUser = async (req, res) => {
       });
     }
 
+    console.log("LOGIN: JWT generation started");
     const token = jwt.sign(
       {
         id: user.id,
@@ -112,10 +122,13 @@ const loginUser = async (req, res) => {
 
     const { password: _, ...userData } = user;
 
+    console.log("LOGIN: cookie creation started");
     res.cookie("token", token, {
       ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
+    console.log("LOGIN: response sent", { status: 200, userId: user.id });
 
     return res.status(200).json({
       success: true,
@@ -126,7 +139,7 @@ const loginUser = async (req, res) => {
       user: userData,
     });
   } catch (error) {
-    logAuthError("LOGIN", error);
+    console.error("LOGIN ERROR:", error);
 
     return res.status(500).json({
       success: false,
