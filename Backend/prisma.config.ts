@@ -9,6 +9,12 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DIRECT_URL"] || process.env["DATABASE_URL"],
+    // Prisma migrations need a direct PostgreSQL connection. Support both
+    // common environment-variable names while keeping DATABASE_URL as a
+    // development fallback.
+    url:
+      process.env["DIRECT_URL"] ||
+      process.env["DIRECT_DATABASE_URL"] ||
+      process.env["DATABASE_URL"],
   },
 });
