@@ -79,7 +79,7 @@ const Camerafeed = () => {
   };
 
   return (
-    <div className="relative mx-auto aspect-video min-h-[13rem] w-full max-w-3xl overflow-hidden rounded-2xl bg-[#11111B] shadow-[0_0_30px_rgba(139,92,246,.12)]">
+    <div className="relative mx-auto aspect-video min-h-[13rem] w-full overflow-hidden rounded-2xl bg-[#11111B] shadow-[0_0_30px_rgba(139,92,246,.12)] sm:min-h-[22rem]">
       {cameraOn ? (
         <>
           <Webcam
