@@ -4,7 +4,14 @@ const validateRegisterUser = (req, res, next) => {
   try {
     const { fullName, email, password, age, gender, weight } = req.body;
 
-    if (!fullName || !email || !password || !age || !gender || !weight) {
+    if (
+      !fullName ||
+      !email ||
+      !password ||
+      age === undefined ||
+      !gender ||
+      weight === undefined
+    ) {
       return res.status(400).json({
         success: false,
         message: "Please fill all fields.",
@@ -26,8 +33,35 @@ const validateRegisterUser = (req, res, next) => {
       });
     }
 
+    const normalizedGender = String(gender).trim().toUpperCase();
+    if (!["MALE", "FEMALE", "OTHER"].includes(normalizedGender)) {
+      return res.status(400).json({
+        success: false,
+        message: "Gender must be Male, Female, or Other.",
+      });
+    }
+
+    const numericAge = Number(age);
+    const numericWeight = Number(weight);
+    if (
+      !Number.isFinite(numericAge) ||
+      numericAge <= 0 ||
+      !Number.isFinite(numericWeight) ||
+      numericWeight <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Age and weight must be positive numbers.",
+      });
+    }
+
+    req.body.gender = normalizedGender;
+    req.body.age = numericAge;
+    req.body.weight = numericWeight;
+
     next();
   } catch (error) {
+    console.error("REGISTER VALIDATION ERROR:", error);
     return res.status(500).json({
       success: false,
       message: "Validation Error",

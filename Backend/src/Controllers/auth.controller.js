@@ -42,9 +42,9 @@ const registerUser = async (req, res) => {
         fullName,
         email,
         password: hashedPassword,
-        age: Number(age),
+        age,
         gender,
-        weight: Number(weight),
+        weight,
       },
     });
 
@@ -63,6 +63,7 @@ const registerUser = async (req, res) => {
     });
   } catch (error) {
     logAuthError("REGISTER", error);
+    console.error("REGISTER ERROR:", error);
 
     return res.status(500).json({
       success: false,
