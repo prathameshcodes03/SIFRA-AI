@@ -47,13 +47,20 @@ const Register = () => {
     }
   };
   return (
-    <section
-      className="relative grid min-h-[100svh] place-items-center overflow-hidden bg-cover bg-center px-4 py-8"
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.3), transparent 34%), radial-gradient(circle at 80% 75%, rgba(6, 182, 212, 0.18), transparent 30%)",
-      }}
+     <section className="relative grid min-h-[100svh] place-items-center overflow-hidden px-4 py-8">
+    
+
+    <video
+      className="absolute inset-0 h-full w-full object-cover"
+      autoPlay
+      loop
+      muted
+      playsInline
     >
+      <source src= {Pushups} type="video/mp4" />
+    </video>
+
+  
       <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
       <form
         onSubmit={handleRegister}
