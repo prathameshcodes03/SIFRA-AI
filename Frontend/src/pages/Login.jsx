@@ -1,5 +1,4 @@
 import { useState } from "react";
-import LoginBackground from "../assets/Images/Login_Background.png";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useAuth } from "../Context/AuthContext";
@@ -32,7 +31,10 @@ const Login = () => {
   return (
     <section
       className="relative grid min-h-[100svh] place-items-center overflow-hidden bg-cover bg-center px-4 py-8"
-      style={{ backgroundImage: `url(${LoginBackground})` }}
+      style={{
+        backgroundImage:
+          "radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.3), transparent 34%), radial-gradient(circle at 80% 75%, rgba(6, 182, 212, 0.18), transparent 30%)",
+      }}
     >
       <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
       <form

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
-import Profile from "../../assets/Images/profileimg.jpg";
 import { useAuth } from "../../Context/AuthContext";
 
 const DashNavbar = ({ onMenuToggle }) => {
@@ -56,9 +55,10 @@ const DashNavbar = ({ onMenuToggle }) => {
             <button
               onClick={() => setShowDropdown((prev) => !prev)}
               aria-label="Open account menu"
-              className="size-10 rounded-full border border-violet-500/30 bg-cover bg-center transition hover:ring-2 hover:ring-violet-500"
-              style={{ backgroundImage: `url(${Profile})` }}
-            />
+              className="grid size-10 place-items-center rounded-full border border-violet-400/40 bg-gradient-to-br from-violet-500 to-cyan-500 text-sm font-bold text-white transition hover:ring-2 hover:ring-violet-500"
+            >
+              {(user?.fullName || "A").trim().charAt(0).toUpperCase()}
+            </button>
             {showDropdown && (
               <div className="absolute right-0 z-50 mt-3 w-60 overflow-hidden rounded-2xl border border-violet-500/20 bg-[#161225]/95 shadow-2xl backdrop-blur-2xl">
                 <div className="border-b border-white/10 px-5 py-4">

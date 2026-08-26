@@ -1,13 +1,13 @@
-import DashboardImage from "../../assets/Images/dashboard.jpg";
 import { useNavigate } from "react-router-dom";
 
 const WorkourBanner = () => {
   const navigate = useNavigate();
   return (
     <section
-      className="relative min-h-[22rem] overflow-hidden rounded-3xl border border-violet-400/20 bg-cover bg-center p-6 shadow-[0_0_35px_rgba(139,92,246,0.12)] sm:p-9"
-      style={{ backgroundImage: `url(${DashboardImage})` }}
+      className="relative min-h-[22rem] overflow-hidden rounded-3xl border border-violet-400/20 bg-[#100d1f] p-6 shadow-[0_0_35px_rgba(139,92,246,0.12)] sm:p-9"
     >
+      <div className="absolute -right-20 -top-24 size-80 rounded-full bg-violet-500/20 blur-3xl" />
+      <div className="absolute -bottom-32 right-24 size-80 rounded-full bg-cyan-500/15 blur-3xl" />
       <div className="absolute inset-0 bg-gradient-to-r from-[#090710]/95 via-[#090710]/75 to-[#090710]/20" />
       <div className="relative flex h-full max-w-md flex-col justify-end">
         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-violet-200">

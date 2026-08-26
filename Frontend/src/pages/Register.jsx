@@ -1,5 +1,4 @@
 import { useState } from "react";
-import LoginBackground from "../assets/Images/Login_Background.png";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
 
@@ -8,7 +7,6 @@ const fields = [
   ["email", "Email address", "email"],
   ["password", "Password", "password"],
   ["age", "Age", "number"],
-  ["gender", "Gender", "text"],
   ["weight", "Weight (kg)", "number"],
 ];
 const Register = () => {
@@ -51,7 +49,10 @@ const Register = () => {
   return (
     <section
       className="relative grid min-h-[100svh] place-items-center overflow-hidden bg-cover bg-center px-4 py-8"
-      style={{ backgroundImage: `url(${LoginBackground})` }}
+      style={{
+        backgroundImage:
+          "radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.3), transparent 34%), radial-gradient(circle at 80% 75%, rgba(6, 182, 212, 0.18), transparent 30%)",
+      }}
     >
       <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px]" />
       <form
@@ -93,6 +94,25 @@ const Register = () => {
               />
             </label>
           ))}
+          <label>
+            <span className="sr-only">Gender</span>
+            <select
+              required
+              name="gender"
+              value={formData.gender}
+              onChange={(e) =>
+                setFormData({ ...formData, gender: e.target.value })
+              }
+              className="min-h-12 w-full rounded-xl border border-white/20 bg-[#181020] px-4 text-white transition focus:border-violet-500 focus:shadow-[0_0_20px_rgba(139,92,246,.35)]"
+            >
+              <option value="" disabled>
+                Gender
+              </option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </label>
         </div>
         {message && (
           <p role="status" className="mt-4 text-center text-sm text-white/80">
