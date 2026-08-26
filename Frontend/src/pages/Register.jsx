@@ -1,6 +1,7 @@
 import { useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
+import Pushups from "../assets/Videos/Pushups.mp4"
 
 const fields = [
   ["fullName", "Full name", "text"],
