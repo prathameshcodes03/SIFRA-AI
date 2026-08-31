@@ -1,53 +1,93 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from "react";
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
 import api from "../api/axios";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user");
-
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-
-  const [token, setToken] = useState(localStorage.getItem("token") || "");
-
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const login = (userData, jwtToken) => {
+  // ==========================================
+  // LOGIN
+  // ==========================================
+
+  const login = (userData) => {
     setUser(userData);
-    setToken(jwtToken);
 
-    localStorage.setItem("user", JSON.stringify(userData));
-    localStorage.setItem("token", jwtToken);
+    localStorage.setItem(
+      "user",
+      JSON.stringify(userData)
+    );
   };
 
-  const logout = () => {
+  // ==========================================
+  // UPDATE USER
+  // ==========================================
+
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify(updatedUser)
+    );
+  };
+
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
+  const logout = async () => {
+    try {
+      await api.post("/api/auth/logout");
+    } catch (error) {
+      console.error("LOGOUT ERROR:", error);
+    }
+
     setUser(null);
-    setToken("");
-
     localStorage.removeItem("user");
-    localStorage.removeItem("token");
   };
+
+  // ==========================================
+  // CHECK SESSION
+  // ==========================================
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const response = await api.get("/api/auth/me");
 
-        setUser(response.data.user);
+        console.log(
+          "AUTH USER:",
+          response.data
+        );
 
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        if (response.data.success) {
+          setUser(response.data.user);
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify(response.data.user)
+          );
+        }
       } catch (error) {
         if (error.response?.status !== 401) {
-          console.error("AUTH SESSION CHECK ERROR:", error);
+          console.error(
+            "AUTH SESSION CHECK ERROR:",
+            error
+          );
         }
 
         setUser(null);
-
         localStorage.removeItem("user");
-        localStorage.removeItem("token");
       } finally {
         setLoading(false);
       }
@@ -56,15 +96,19 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
+  // ==========================================
+  // CONTEXT
+  // ==========================================
+
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         loading,
         login,
         logout,
         setUser,
+        updateUser,
       }}
     >
       {children}
@@ -72,4 +116,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () =>
+  useContext(AuthContext);

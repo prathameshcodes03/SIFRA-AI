@@ -5,7 +5,6 @@ const navItems = [
   ["Workout", "/Workout", "fa-solid fa-dumbbell"],
   ["Workout plan", "/WorkoutPlan", "fa-solid fa-calendar-check"],
   ["Profile", "/Profile", "fa-regular fa-user"],
-  ["Settings", "/Setting", "fa-solid fa-gear"],
 ];
 
 const DashSidebar = ({ isOpen, onClose }) => (

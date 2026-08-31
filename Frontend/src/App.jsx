@@ -6,7 +6,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Workout from "./pages/Workout";
-import Setting from "./pages/Setting";
+
 import WorkoutPlan from "./pages/WorkoutPlan";
 
 function App() {
@@ -20,7 +20,7 @@ function App() {
       <Route path="/Workout" element={<Workout />} />
       <Route path="/WorkoutPlan" element={<WorkoutPlan />} />
       <Route path="/Profile" element={<Profile />} />
-      <Route path="/Setting" element={<Setting />} />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
