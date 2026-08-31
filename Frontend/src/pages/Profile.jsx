@@ -425,7 +425,7 @@ const Profile = () => {
                 group
                 relative
                 block
-                size-28
+                size-65
                 overflow-hidden
                 rounded-full
                 border-2
@@ -433,18 +433,21 @@ const Profile = () => {
                 sm:size-36
               "
             >
-                  <img
-          src={profileImage}
-          alt="Profile"
-          className="
-            size-full
-            object-cover
-            transition
-            duration-300
-            group-hover:scale-105
-            group-hover:brightness-75
-          "
-        />
+
+
+  <img
+  src={profileImage}
+  alt="Profile"
+  className="
+    size-full
+    object-cover
+    object-center
+    transition
+    duration-300
+    group-hover:scale-105
+    group-hover:brightness-75
+  "
+/>
 
               <div
                 className="
