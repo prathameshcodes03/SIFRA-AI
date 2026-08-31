@@ -72,6 +72,9 @@ const registerUser = async (req, res) => {
   }
 };
 
+
+
+
 const loginUser = async (req, res) => {
   try {
     console.log("LOGIN: request reached login controller");
@@ -198,9 +201,109 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+
+// Get logged-in user's profile
+const getProfile = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: req.user.id,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        age: true,
+        gender: true,
+        weight: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+
+  } catch (error) {
+    console.error("GET PROFILE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error.",
+    });
+  }
+};
+
+
+// Update logged-in user's profile
+const updateProfile = async (req, res) => {
+  try {
+    const { fullName, age, gender, weight } = req.body;
+
+    if (!fullName || !age || !gender || weight === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "All profile fields are required.",
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: req.user.id,
+      },
+
+      data: {
+        fullName: fullName.trim(),
+        age: Number(age),
+        gender,
+        weight: Number(weight),
+      },
+
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        age: true,
+        gender: true,
+        weight: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully.",
+      user: updatedUser,
+    });
+
+  } catch (error) {
+    console.error("UPDATE PROFILE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error.",
+    });
+  }
+};
+
+
+
+
 module.exports = {
   registerUser,
   loginUser,
   logoutUser,
   getCurrentUser,
+    getProfile,
+  updateProfile,
 };
