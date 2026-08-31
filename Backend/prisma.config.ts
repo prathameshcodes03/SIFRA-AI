@@ -10,6 +10,6 @@ export default defineConfig({
   },
   datasource: {
     // Prisma CLI commands must bypass Neon’s connection pooler.
-    url: env("DIRECT_URL"),
+    url: env("DIRECT_DATABASE_URL"),
   },
 });

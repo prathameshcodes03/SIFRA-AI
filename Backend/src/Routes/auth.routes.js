@@ -1,15 +1,13 @@
 const express = require("express");
+
 const router = express.Router();
 
 const {
-   registerUser,
+  registerUser,
   loginUser,
   logoutUser,
   getCurrentUser,
-    getProfile,
-  updateProfile,
 } = require("../Controllers/auth.controller");
-
 
 const {
   validateRegisterUser,
@@ -17,19 +15,31 @@ const {
   protectRoute,
 } = require("../Middlewares/auth.middleware");
 
+// ==========================================
+// AUTH
+// ==========================================
 
+router.post(
+  "/register",
+  validateRegisterUser,
+  registerUser
+);
 
-router.post("/register", validateRegisterUser, registerUser);
+router.post(
+  "/login",
+  validateLoginUser,
+  loginUser
+);
 
-router.post("/login", validateLoginUser, loginUser);
+router.post(
+  "/logout",
+  logoutUser
+);
 
-router.post("/logout", logoutUser);
-
-router.get("/me", protectRoute, getCurrentUser);
-
-
-router.get("/profile", protectRoute, getProfile);
-
-router.put("/profile", protectRoute, updateProfile);
+router.get(
+  "/me",
+  protectRoute,
+  getCurrentUser
+);
 
 module.exports = router;

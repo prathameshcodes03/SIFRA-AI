@@ -3,6 +3,7 @@ const authRoutes = require("./Routes/auth.routes");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const workoutRoutes = require("./Routes/workout.routes");
+const profileRoutes = require("./Routes/profile.routes");
 
 const app = express();
 const allowedOrigins = [
@@ -24,7 +25,9 @@ app.use(
 );
 
 app.use("/api/auth", authRoutes);
-
+app.use("/api/profile", profileRoutes);
 app.use("/api/workouts", workoutRoutes);
+
+
 
 module.exports = app;
