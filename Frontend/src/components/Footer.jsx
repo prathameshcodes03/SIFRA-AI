@@ -9,11 +9,11 @@ const Footer = () => {
       <div className="relative z-10 mx-auto max-w-7xl px-5 py-14 sm:px-8 sm:py-20">
         {/* Logo Section */}
         <div className="text-center flex flex-col items-center">
-          <h1 className="bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.5rem,10vw,3rem)] font-black text-transparent">
+          <h1 className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-[clamp(2.5rem,10vw,3rem)] font-black tracking-tight text-transparent">
             Sifra.AI
           </h1>
 
-          <p className="mt-5 text-lg font-medium bg-gradient-to-r from-emerald-400 via-cyan-400 to-violet-500 bg-clip-text text-transparent">
+          <p className="mt-3 text-base font-normal text-zinc-400">
             Train Smarter. Move Better. Achieve More.
           </p>
         </div>

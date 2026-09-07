@@ -18,11 +18,11 @@ const DashSidebar = ({ isOpen, onClose }) => (
       className={`fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-violet-400/15 bg-gradient-to-b from-[#08070f] via-[#0b0818] to-[#1a0d35] px-4 py-7 shadow-2xl transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : ""}`}
     >
       <div className="mb-10">
-        <h1 className="bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-3xl font-extrabold text-transparent">
+        <h1 className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-3xl font-black tracking-tight text-transparent">
           Sifra.AI
         </h1>
-        <p className="mt-1 bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-sm text-transparent">
-          AI fitness coach
+        <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          AI Fitness Coach
         </p>
       </div>
       <nav aria-label="Dashboard navigation" className="space-y-2">

@@ -48,7 +48,7 @@ const Login = () => {
         onSubmit={handleLogin}
         className="relative z-10 w-full max-w-md rounded-3xl border border-white/20 bg-black/30 p-6 shadow-[0_0_50px_rgba(139,92,246,.25)] backdrop-blur-xl sm:p-8"
       >
-        <h1 className="bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-center text-[clamp(2.25rem,10vw,3rem)] font-extrabold text-transparent">
+        <h1 className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-center text-[clamp(2.25rem,6vw,2.75rem)] font-black tracking-tight text-transparent">
           Sifra.AI
         </h1>
         <div className="mt-8 text-center">

@@ -403,20 +403,20 @@ const Profile = () => {
 
         <section
           className="
-            flex flex-col gap-6
+            flex flex-col items-center gap-6
             rounded-2xl
             border border-violet-400/20
             bg-[#2A194F]/75
-            p-5
+            p-6
+            text-center
             sm:flex-row
             sm:items-center
             sm:p-7
+            sm:text-left
           "
         >
           {/* PROFILE IMAGE */}
-
           <div className="relative shrink-0">
-
             <button
               type="button"
               onClick={handleImageClick}
@@ -424,30 +424,31 @@ const Profile = () => {
               className="
                 group
                 relative
-                block
-                size-65
+                flex
+                size-32
+                shrink-0
+                items-center
+                justify-center
                 overflow-hidden
                 rounded-full
                 border-2
-                border-purple-500
+                border-violet-400/40
+                bg-gradient-to-br
+                from-violet-500
+                to-cyan-500
+                shadow-xl
+                transition
+                duration-300
+                hover:scale-105
+                hover:border-violet-400
                 sm:size-36
               "
             >
-
-
-  <img
-  src={profileImage}
-  alt="Profile"
-  className="
-    size-full
-    object-cover
-    object-center
-    transition
-    duration-300
-    group-hover:scale-105
-    group-hover:brightness-75
-  "
-/>
+              <img
+                src={profileImage}
+                alt="Profile"
+                className="h-full w-full object-cover object-center"
+              />
 
               <div
                 className="
@@ -463,14 +464,7 @@ const Profile = () => {
                   group-hover:opacity-100
                 "
               >
-                {uploadingImage ? (
-                  <div className="size-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Camera
-                    size={28}
-                    className="text-white"
-                  />
-                )}
+                <Camera size={28} className="text-white" />
               </div>
             </button>
 
@@ -478,8 +472,8 @@ const Profile = () => {
               className="
                 pointer-events-none
                 absolute
-                bottom-0
-                right-0
+                bottom-1
+                right-1
                 grid
                 size-9
                 place-items-center
@@ -488,6 +482,7 @@ const Profile = () => {
                 border-[#2A194F]
                 bg-violet-600
                 text-white
+                shadow-lg
               "
             >
               <Camera size={16} />
@@ -504,20 +499,20 @@ const Profile = () => {
 
           {/* PROFILE DETAILS */}
 
-          <div>
-            <h1 className="text-2xl font-extrabold sm:text-3xl">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-2xl font-extrabold text-white sm:text-3xl">
               {user.fullName}
             </h1>
 
-            <p className="mt-2 text-sm text-white/65">
+            <p className="mt-1.5 truncate text-sm text-white/65">
               {user.email}
             </p>
 
-            <p className="mt-5 text-white/85">
+            <p className="mt-4 text-sm font-medium text-white/85 sm:text-base">
               Stay consistent and strong — you've got this. 💪
             </p>
 
-            <p className="mt-2 text-xs text-white/40">
+            <p className="mt-1.5 text-xs text-white/40">
               Click your profile picture to change it
             </p>
           </div>
@@ -778,10 +773,11 @@ const Profile = () => {
 // ==========================================
 
 const ProfileRow = ({
-  icon: Icon,
+  icon,
   label,
   children,
 }) => {
+  const Icon = icon;
   return (
     <div
       className="
@@ -798,7 +794,7 @@ const ProfileRow = ({
       "
     >
       <span className="flex items-center gap-2 font-medium">
-        <Icon size={18} />
+        {Icon && <Icon size={18} />}
         {label}
       </span>
 

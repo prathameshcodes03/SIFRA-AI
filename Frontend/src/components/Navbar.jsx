@@ -7,8 +7,8 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-violet-400/15 bg-[#131323]/95 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
-        <h1 className="shrink-0 text-2xl font-extrabold inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-transparent sm:text-3xl">
-          Sifra.Ai
+        <h1 className="shrink-0 text-2xl font-black inline-block bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent sm:text-3xl tracking-tight">
+          Sifra.AI
         </h1>
 
         <button
@@ -36,14 +36,14 @@ const Navbar = () => {
                   .getElementById(id)
                   ?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="rounded-lg px-3 py-3 text-[#c084fc] transition hover:bg-violet-500/10 hover:text-white sm:p-0"
+              className="rounded-lg px-3 py-3 text-zinc-300 transition hover:bg-violet-500/10 hover:text-white sm:p-0 text-sm font-medium"
             >
               {label}
             </Link>
           ))}
           <button
             onClick={() => navigate("/Login")}
-            className="min-h-11 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#ec4899] px-5 font-semibold text-white transition hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(168,85,247,.45)]"
+            className="min-h-10 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(139,92,246,0.3)] transition hover:brightness-110 hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-[0.98]"
           >
             Get Started
           </button>

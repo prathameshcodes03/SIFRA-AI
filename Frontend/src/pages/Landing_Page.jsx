@@ -177,15 +177,17 @@ const Landing_Page = () => {
                     Next-Gen Fitness Intelligence
                   </div>
 
-                  <h1 className="inline-block max-w-3xl bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-[clamp(2.2rem,6.5vw,4.8rem)] font-bold leading-tight text-transparent">
-                    Your AI Coach
-                    <br className="hidden sm:block" />
-                    Every Rep Perfected.
+                  <h1 className="inline-block max-w-3xl text-[clamp(2.3rem,6.5vw,4.8rem)] font-extrabold leading-[1.08] tracking-tight text-white">
+                    <span className="bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+                      Your AI Coach.
+                    </span>{" "}
+                    <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
+                      Every Rep Perfected.
+                    </span>
                   </h1>
 
-                  <p className="mt-5 inline-block max-w-2xl bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.1rem,3.2vw,1.75rem)] font-semibold leading-snug text-transparent sm:mt-8">
-                    Real time pose correction, rep counting and personalised
-                    feedback.
+                  <p className="mt-5 max-w-xl text-[clamp(1.05rem,2.5vw,1.3rem)] font-normal leading-relaxed text-zinc-300 sm:mt-7">
+                    Real-time computer vision pose correction, automatic rep counting, and personalized biometric coaching.
                   </p>
                 </div>
               </div>
@@ -198,14 +200,14 @@ const Landing_Page = () => {
             >
               <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-6 sm:gap-8 md:grid-cols-2">
                 <div className="text-center md:text-left">
-                  <span className="mb-3 inline-block rounded-full border border-pink-500/30 bg-pink-500/10 px-3.5 py-1 text-xs font-semibold tracking-wider text-pink-400">
+                  <span className="mb-3 inline-block rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1 text-xs font-semibold tracking-wider text-violet-400">
                     FEATURE 01
                   </span>
-                  <h1 className="mb-4 bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2rem,6vw,4.5rem)] font-bold leading-tight text-transparent sm:mb-6">
+                  <h2 className="mb-4 bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-[clamp(2.1rem,6vw,4.5rem)] font-extrabold leading-tight tracking-tight text-transparent sm:mb-6">
                     98% Form Accuracy
-                  </h1>
-                  <p className="bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.05rem,2.8vw,1.6rem)] font-medium leading-relaxed text-transparent">
-                    Real-time AI posture analysis powered by MediaPipe computer vision.
+                  </h2>
+                  <p className="max-w-xl text-[clamp(1.05rem,2.5vw,1.3rem)] font-normal leading-relaxed text-zinc-300">
+                    Real-time AI posture analysis powered by high-frequency computer vision for injury prevention and flawless execution.
                   </p>
                 </div>
                 <div className="hidden md:block" />
@@ -220,11 +222,11 @@ const Landing_Page = () => {
                   <span className="mb-3 inline-block rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold tracking-wider text-cyan-400">
                     FEATURE 02
                   </span>
-                  <h1 className="mb-4 bg-gradient-to-r from-[#34d399] via-[#06b6d4] to-[#3b82f6] bg-clip-text text-[clamp(2rem,6vw,4.5rem)] font-bold leading-tight text-transparent sm:mb-6">
+                  <h2 className="mb-4 bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-[clamp(2.1rem,6vw,4.5rem)] font-extrabold leading-tight tracking-tight text-transparent sm:mb-6">
                     Smart Rep Counting
-                  </h1>
-                  <p className="bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.05rem,2.8vw,1.6rem)] font-medium leading-relaxed text-transparent">
-                    Automatically tracks every pushup and workout session with velocity analysis.
+                  </h2>
+                  <p className="max-w-xl text-[clamp(1.05rem,2.5vw,1.3rem)] font-normal leading-relaxed text-zinc-300">
+                    Automatically tracks cadence, concentric/eccentric speed, and full range-of-motion without manual inputs.
                   </p>
                 </div>
               </div>
@@ -234,14 +236,14 @@ const Landing_Page = () => {
             <div className="timeline-slide relative flex min-h-[60svh] items-center px-5 sm:px-8 md:absolute md:inset-0 md:min-h-0">
               <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-6 sm:gap-8 md:grid-cols-2">
                 <div className="text-center md:text-left">
-                  <span className="mb-3 inline-block rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold tracking-wider text-amber-400">
+                  <span className="mb-3 inline-block rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold tracking-wider text-emerald-400">
                     FEATURE 03
                   </span>
-                  <h1 className="mb-4 bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444] bg-clip-text text-[clamp(2rem,6vw,4.5rem)] font-bold leading-tight text-transparent sm:mb-6">
+                  <h2 className="mb-4 bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-[clamp(2.1rem,6vw,4.5rem)] font-extrabold leading-tight tracking-tight text-transparent sm:mb-6">
                     Voice Coaching
-                  </h1>
-                  <p className="bg-gradient-to-r from-[#f97316] to-[#8b5cf6] bg-clip-text text-[clamp(1.05rem,2.8vw,1.6rem)] font-medium leading-relaxed text-transparent">
-                    Get instant motivational feedback and cues just like having a real personal trainer beside you.
+                  </h2>
+                  <p className="max-w-xl text-[clamp(1.05rem,2.5vw,1.3rem)] font-normal leading-relaxed text-zinc-300">
+                    Receive instant audio coaching cues and tactical encouragement just like having an elite trainer beside you.
                   </p>
                 </div>
                 <div className="hidden md:block" />
@@ -250,22 +252,30 @@ const Landing_Page = () => {
           </div>
         </section>
 
-        {/* PAGE 3: TRAINER SECTION (Ava Steele Appears on Scroll from Left at 3/4 Athletic Angle) */}
+        {/* PAGE 3: TRAINER SECTION (Ava Steele Weightlifter with Interactive 3D Cursor Movement) */}
         <section
           id="trainer"
           data-model-section
           className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 items-center gap-10 px-5 py-16 text-white sm:px-8 lg:grid-cols-2 lg:px-10"
         >
           <div className="text-center lg:text-left">
-            <h1 className="inline-block bg-gradient-to-r from-[#f97316] via-[#ec4899] to-[#8b5cf6] bg-clip-text text-[clamp(2.4rem,8vw,5rem)] font-bold leading-tight text-transparent">
-              Meet Your AI
-              <br className="hidden sm:block" />
-              Coach
-            </h1>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-violet-300">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-violet-400" />
+              Next-Gen AI Trainer
+            </div>
 
-            <p className="mt-6 inline-block max-w-2xl bg-gradient-to-r from-[#6366f1] to-[#ec4899] bg-clip-text text-[clamp(1.2rem,4vw,2rem)] font-semibold leading-snug text-transparent sm:mt-8">
-              Your Personal AI Trainer is here 24/7 to guide, support and
-              push you to be your best.
+            <h2 className="text-[clamp(2.4rem,7vw,4.8rem)] font-extrabold tracking-tight leading-[1.1] text-white">
+              <span className="bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+                Meet Your AI
+              </span>
+              <br className="hidden sm:block" />
+              <span className="bg-gradient-to-r from-violet-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                Personal Coach
+              </span>
+            </h2>
+
+            <p className="mt-6 max-w-xl text-[clamp(1.05rem,2.5vw,1.35rem)] font-normal leading-relaxed text-zinc-300 sm:mt-8">
+              Available 24/7 with real-time biometric feedback, adaptive training programs, and interactive 3D motion analytics.
             </p>
 
             <div className="mt-8 flex justify-center lg:justify-start">
@@ -274,14 +284,20 @@ const Landing_Page = () => {
                   const audio = new Audio(Speaking);
                   audio.play();
                 }}
-                className="w-full max-w-xs cursor-pointer rounded-2xl bg-gradient-to-r from-violet-600 via-purple-500 to-fuchsia-500 px-6 py-3 font-semibold text-white shadow-[0_0_25px_rgba(168,85,247,0.4)] transition-all duration-300 hover:scale-105 sm:w-auto"
+                className="w-full max-w-xs cursor-pointer rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-7 py-3.5 font-semibold text-white shadow-[0_0_30px_rgba(139,92,246,0.35)] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] sm:w-auto"
               >
                 Listen to Sifra
               </button>
             </div>
           </div>
 
-          <div className="h-[480px] w-full lg:h-[620px]">
+          <div className="group relative h-[480px] w-full rounded-3xl border border-violet-500/20 bg-gradient-to-b from-violet-950/20 via-black/40 to-transparent p-2 backdrop-blur-sm transition-all duration-500 hover:border-violet-500/40 hover:shadow-[0_0_60px_rgba(139,92,246,0.25)] lg:h-[620px]">
+            {/* Interactive 3D Model Badge */}
+            <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-black/60 px-3.5 py-1.5 text-xs font-medium text-violet-300 backdrop-blur-md shadow-lg">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-violet-400" />
+              <span>Interactive 3D • Move cursor or drag</span>
+            </div>
+
             <FitnessModelScene
               modelUrl={AvaSteele}
               variant="workout"

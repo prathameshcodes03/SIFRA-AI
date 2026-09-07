@@ -243,23 +243,94 @@ const FitnessModelScene = ({
     scene.add(ground);
 
     // --------------------------------------------------
-    // MOUSE PARALLAX TRACKING
+    // HIGH-PRECISION 3D POINTER, HOVER & DRAG INTERACTION
     // --------------------------------------------------
-    const mouse = {
+    const pointer = {
       x: 0,
       y: 0,
       targetX: 0,
       targetY: 0,
+      isHovered: false,
+      isDragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      dragYaw: 0,
+      dragPitch: 0,
+      targetDragYaw: 0,
+      targetDragPitch: 0,
     };
 
-    const handleMouseMove = (e) => {
+    if (variant === "workout") {
+      container.style.cursor = "grab";
+      container.style.touchAction = "none";
+    }
+
+    const handlePointerEnter = () => {
+      pointer.isHovered = true;
+    };
+
+    const handlePointerLeave = () => {
+      pointer.isHovered = false;
+      if (!pointer.isDragging) {
+        pointer.targetX = 0;
+        pointer.targetY = 0;
+      }
+    };
+
+    const handleContainerPointerMove = (e) => {
+      const rect = container.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const normX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const normY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+
+      pointer.targetX = Math.max(-1.4, Math.min(1.4, normX));
+      pointer.targetY = Math.max(-1.4, Math.min(1.4, normY));
+      pointer.isHovered = true;
+
+      if (pointer.isDragging) {
+        const deltaX = (e.clientX - pointer.dragStartX) * 0.007;
+        const deltaY = (e.clientY - pointer.dragStartY) * 0.005;
+        pointer.targetDragYaw = deltaX;
+        pointer.targetDragPitch = deltaY;
+      }
+    };
+
+    const handleContainerPointerDown = (e) => {
+      pointer.isDragging = true;
+      pointer.dragStartX = e.clientX - pointer.targetDragYaw / 0.007;
+      pointer.dragStartY = e.clientY - pointer.targetDragPitch / 0.005;
+      container.style.cursor = "grabbing";
+    };
+
+    const handleContainerPointerUp = () => {
+      if (pointer.isDragging) {
+        pointer.isDragging = false;
+        container.style.cursor = "grab";
+        gsap.to(pointer, {
+          targetDragYaw: 0,
+          targetDragPitch: 0,
+          duration: 1.1,
+          ease: "power2.out",
+        });
+      }
+    };
+
+    const handleWindowMouseMove = (e) => {
+      if (pointer.isHovered) return;
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
-      mouse.targetX = (e.clientX / windowWidth) * 2 - 1;
-      mouse.targetY = -(e.clientY / windowHeight) * 2 + 1;
+      pointer.targetX = (e.clientX / windowWidth) * 2 - 1;
+      pointer.targetY = -(e.clientY / windowHeight) * 2 + 1;
     };
 
-    window.addEventListener("pointermove", handleMouseMove, { passive: true });
+    container.addEventListener("pointerenter", handlePointerEnter);
+    container.addEventListener("pointerleave", handlePointerLeave);
+    container.addEventListener("pointermove", handleContainerPointerMove);
+    container.addEventListener("pointerdown", handleContainerPointerDown);
+    window.addEventListener("pointerup", handleContainerPointerUp);
+    window.addEventListener("pointercancel", handleContainerPointerUp);
+    window.addEventListener("pointermove", handleWindowMouseMove, { passive: true });
 
     // --------------------------------------------------
     // RESIZE HANDLER (DYNMIC CAMERA PROJECTION FOR ALL DEVICES)
@@ -537,28 +608,57 @@ const FitnessModelScene = ({
 
       const elapsedTime = clock.getElapsedTime();
 
-      // Smooth mouse lerping for reactive pointer parallax
-      mouse.x += (mouse.targetX - mouse.x) * 0.05;
-      mouse.y += (mouse.targetY - mouse.y) * 0.05;
+      // Smooth pointer lerping with adaptive speed
+      const lerpSpeed = pointer.isHovered || pointer.isDragging ? 0.08 : 0.045;
+      pointer.x += (pointer.targetX - pointer.x) * lerpSpeed;
+      pointer.y += (pointer.targetY - pointer.y) * lerpSpeed;
+
+      pointer.dragYaw += (pointer.targetDragYaw - pointer.dragYaw) * 0.12;
+      pointer.dragPitch += (pointer.targetDragPitch - pointer.dragPitch) * 0.12;
 
       if (model) {
-        // 1. Lifelike diaphragmatic breathing (sinusoidal chest elevation + subtle expansion)
+        // 1. Lifelike diaphragmatic breathing
         const breathY = Math.sin(elapsedTime * 1.9) * 0.025;
         const breathScale = 1.0 + Math.sin(elapsedTime * 1.9) * 0.003;
 
-        // 2. Natural organic posture sway (micro weight shifting on Z & X)
+        // 2. Natural organic posture sway
         const idleSwayZ = Math.sin(elapsedTime * 0.9) * 0.01;
         const idleSwayX = Math.cos(elapsedTime * 1.3) * 0.007;
 
-        // Apply dynamic positions
-        model.position.x = basePosition.x;
-        model.position.y = basePosition.y + breathY;
-        model.position.z = basePosition.z;
+        if (variant === "workout") {
+          // Responsive 3D tracking for weightlifter:
+          // Pronounced yaw (turn left/right) and pitch (tilt up/down) tracking the mouse
+          const hoverYaw = pointer.x * 0.65;
+          const hoverPitch = -pointer.y * 0.28;
+          const hoverRoll = -pointer.x * 0.08;
 
-        // Apply dynamic rotations with mouse parallax follow
-        model.rotation.x = baseRotation.x + mouse.y * 0.1 + idleSwayX;
-        model.rotation.y = baseRotation.y + mouse.x * 0.2;
-        model.rotation.z = baseRotation.z + idleSwayZ;
+          model.rotation.x = baseRotation.x + hoverPitch + pointer.dragPitch + idleSwayX;
+          model.rotation.y = baseRotation.y + hoverYaw + pointer.dragYaw;
+          model.rotation.z = baseRotation.z + hoverRoll + idleSwayZ;
+
+          // Subtle spatial 3D translation parallax:
+          const parallaxX = pointer.x * 0.28;
+          const parallaxY = pointer.y * 0.2;
+          const hoverPopZ = pointer.isHovered ? 0.16 : 0;
+
+          model.position.x = basePosition.x + parallaxX;
+          model.position.y = basePosition.y + breathY + parallaxY;
+          model.position.z = basePosition.z + hoverPopZ;
+
+          // Real-time lighting modulation to highlight muscular definition & dumbbells
+          keyLight.position.x = 4 + pointer.x * 2.2;
+          keyLight.position.y = 5 + pointer.y * 1.8;
+          rimLight1.position.x = -4.5 - pointer.x * 1.2;
+        } else {
+          // Unified hero & features model
+          model.position.x = basePosition.x + pointer.x * 0.1;
+          model.position.y = basePosition.y + breathY + pointer.y * 0.08;
+          model.position.z = basePosition.z;
+
+          model.rotation.x = baseRotation.x + pointer.y * 0.18 + idleSwayX;
+          model.rotation.y = baseRotation.y + pointer.x * 0.35;
+          model.rotation.z = baseRotation.z + idleSwayZ;
+        }
 
         // Subtle micro-pulse on torso for organic breathing
         model.scale.set(
@@ -578,7 +678,14 @@ const FitnessModelScene = ({
     // --------------------------------------------------
     return () => {
       window.cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("pointermove", handleMouseMove);
+
+      container.removeEventListener("pointerenter", handlePointerEnter);
+      container.removeEventListener("pointerleave", handlePointerLeave);
+      container.removeEventListener("pointermove", handleContainerPointerMove);
+      container.removeEventListener("pointerdown", handleContainerPointerDown);
+      window.removeEventListener("pointerup", handleContainerPointerUp);
+      window.removeEventListener("pointercancel", handleContainerPointerUp);
+      window.removeEventListener("pointermove", handleWindowMouseMove);
       window.removeEventListener("resize", resizeRenderer);
 
       scrollTimeline?.scrollTrigger?.kill();
