@@ -3,6 +3,8 @@ const express = require("express");
 const router = express.Router();
 
 const {
+  sendOTP,
+  verifyOTPController,
   registerUser,
   loginUser,
   logoutUser,
@@ -10,14 +12,26 @@ const {
 } = require("../Controllers/auth.controller");
 
 const {
+  validateSendOTP,
   validateRegisterUser,
   validateLoginUser,
   protectRoute,
 } = require("../Middlewares/auth.middleware");
 
 // ==========================================
-// AUTH
+// AUTH & OTP
 // ==========================================
+
+router.post(
+  "/send-otp",
+  validateSendOTP,
+  sendOTP
+);
+
+router.post(
+  "/verify-otp",
+  verifyOTPController
+);
 
 router.post(
   "/register",

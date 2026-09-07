@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { prisma } = require("../data/db");
+const { sendOtpEmail } = require("../Services/mail.service");
+const { checkCooldown, generateAndStoreOTP, verifyOTP } = require("../Services/otp.service");
 
 const isProduction = process.env.NODE_ENV === "production";
 const cookieOptions = {
@@ -18,9 +20,100 @@ const logAuthError = (operation, error) => {
   });
 };
 
+const sendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    let existingUser = null;
+    try {
+      existingUser = await prisma.user.findUnique({
+        where: {
+          email,
+        },
+      });
+    } catch (dbError) {
+      console.warn("DB lookup notice during sendOTP (proceeding with generation):", dbError.message);
+    }
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "An account with this email already exists. Please log in.",
+      });
+    }
+
+    const cooldown = checkCooldown(email);
+    if (!cooldown.allowed) {
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${cooldown.remainingSeconds}s before requesting another OTP.`,
+        remainingSeconds: cooldown.remainingSeconds,
+      });
+    }
+
+    const otp = generateAndStoreOTP(email);
+    const emailResult = await sendOtpEmail(email, otp);
+
+    return res.status(200).json({
+      success: true,
+      message: emailResult?.simulated
+        ? "Verification code generated! (Check terminal console for dev code)"
+        : "Verification code sent to your email.",
+      devOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
+    });
+  } catch (error) {
+    logAuthError("SEND OTP", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to send verification code.",
+    });
+  }
+};
+
+const verifyOTPController = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required.",
+      });
+    }
+
+    const result = verifyOTP(email, otp, false);
+    if (!result.valid) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully.",
+    });
+  } catch (error) {
+    logAuthError("VERIFY OTP", error);
+    return res.status(500).json({
+      success: false,
+      message: "Verification failed.",
+    });
+  }
+};
+
 const registerUser = async (req, res) => {
   try {
-    const { fullName, email, password, age, gender, weight } = req.body;
+    const { fullName, email, password, age, gender, weight, otp } = req.body;
+
+    // Verify and consume OTP
+    const otpResult = verifyOTP(email, otp, true);
+    if (!otpResult.valid) {
+      return res.status(400).json({
+        success: false,
+        message: otpResult.message,
+      });
+    }
 
     const existingUser = await prisma.user.findUnique({
       where: {
@@ -300,10 +393,12 @@ const updateProfile = async (req, res) => {
 
 
 module.exports = {
+  sendOTP,
+  verifyOTPController,
   registerUser,
   loginUser,
   logoutUser,
   getCurrentUser,
-    getProfile,
+  getProfile,
   updateProfile,
 };
