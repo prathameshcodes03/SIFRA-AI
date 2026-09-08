@@ -1,139 +1,59 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// ==========================================
-// VERIFY SMTP CONNECTION
-// ==========================================
-
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("❌ Gmail SMTP verification failed:", error);
-  } else {
-    console.log("✅ Gmail SMTP authentication successful");
-  }
-});
-
-// ==========================================
-// SEND OTP EMAIL
-// ==========================================
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendOtpEmail = async (toEmail, otp) => {
   try {
-    const mailOptions = {
-      from: `"Sifra.AI" <${process.env.EMAIL_USER}>`,
-      to: toEmail,
+    const response = await resend.emails.send({
+      from: "Sifra.AI <onboarding@resend.dev>",
+      to: [toEmail],
       subject: `${otp} is your Sifra.AI verification code`,
-
       html: `
         <div style="
           font-family: Arial, sans-serif;
-          max-width: 600px;
-          margin: 40px auto;
+          max-width: 500px;
+          margin: auto;
           padding: 30px;
-          background: #f8fafc;
           border-radius: 16px;
-          border: 1px solid #e5e7eb;
+          background: #111827;
+          color: white;
         ">
+          <h1 style="margin-bottom: 10px;">Sifra.AI</h1>
 
-          <h1 style="
-            margin: 0 0 20px;
-            color: #111827;
-          ">
-            Sifra.AI
-          </h1>
-
-          <p style="
-            color: #4b5563;
-            font-size: 16px;
-          ">
-            Hello,
-          </p>
-
-          <p style="
-            color: #4b5563;
-            font-size: 16px;
-          ">
-            Use the following verification code to complete
-            your Sifra.AI registration:
-          </p>
+          <p>Your verification code is:</p>
 
           <div style="
-            margin: 30px 0;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 8px;
             padding: 20px;
             text-align: center;
-            background: #ffffff;
+            background: #1f2937;
             border-radius: 12px;
-            border: 1px solid #e5e7eb;
           ">
-
-            <span style="
-              font-size: 34px;
-              font-weight: bold;
-              letter-spacing: 8px;
-              color: #111827;
-            ">
-              ${otp}
-            </span>
-
+            ${otp}
           </div>
 
-          <p style="
-            color: #6b7280;
-            font-size: 14px;
-          ">
-            This verification code will expire in 10 minutes.
+          <p style="margin-top: 20px;">
+            This code will expire in 10 minutes.
           </p>
 
-          <p style="
-            color: #6b7280;
-            font-size: 14px;
-          ">
-            If you did not request this code, you can safely
-            ignore this email.
+          <p style="color: #9ca3af;">
+            If you didn't request this code, you can safely ignore this email.
           </p>
-
-          <hr style="
-            margin: 30px 0;
-            border: none;
-            border-top: 1px solid #e5e7eb;
-          " />
-
-          <p style="
-            color: #9ca3af;
-            font-size: 12px;
-            text-align: center;
-          ">
-            © Sifra.AI
-          </p>
-
         </div>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-
-    console.log("✅ OTP email sent successfully");
-    console.log("📩 Message ID:", info.messageId);
+    console.log("✅ OTP email sent through Resend");
+    console.log("📩 Resend response:", response);
 
     return {
       success: true,
-      messageId: info.messageId,
+      messageId: response.data?.id,
     };
-
   } catch (error) {
-
-    console.error("❌ Nodemailer error:", error);
+    console.error("❌ Resend HTTP API error:", error);
 
     return {
       success: false,
@@ -142,10 +62,6 @@ const sendOtpEmail = async (toEmail, otp) => {
     };
   }
 };
-
-// ==========================================
-// EXPORT
-// ==========================================
 
 module.exports = {
   sendOtpEmail,
