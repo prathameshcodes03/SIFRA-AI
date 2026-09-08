@@ -1,59 +1,40 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 const sendOtpEmail = async (toEmail, otp) => {
   try {
-    const response = await resend.emails.send({
-      from: "Sifra.AI <onboarding@resend.dev>",
-      to: [toEmail],
+    const info = await transporter.sendMail({
+      from: `"Sifra.AI" <${process.env.EMAIL_USER}>`,
+      to: toEmail,
       subject: `${otp} is your Sifra.AI verification code`,
       html: `
-        <div style="
-          font-family: Arial, sans-serif;
-          max-width: 500px;
-          margin: auto;
-          padding: 30px;
-          border-radius: 16px;
-          background: #111827;
-          color: white;
-        ">
-          <h1 style="margin-bottom: 10px;">Sifra.AI</h1>
-
+        <div style="font-family: Arial, sans-serif; max-width: 500px;">
+          <h1>Sifra.AI</h1>
           <p>Your verification code is:</p>
-
-          <div style="
-            font-size: 32px;
-            font-weight: bold;
-            letter-spacing: 8px;
-            padding: 20px;
-            text-align: center;
-            background: #1f2937;
-            border-radius: 12px;
-          ">
-            ${otp}
-          </div>
-
-          <p style="margin-top: 20px;">
-            This code will expire in 10 minutes.
-          </p>
-
-          <p style="color: #9ca3af;">
-            If you didn't request this code, you can safely ignore this email.
-          </p>
+          <h2 style="letter-spacing: 8px;">${otp}</h2>
+          <p>This code expires in 10 minutes.</p>
         </div>
       `,
     });
 
-    console.log("✅ OTP email sent through Resend");
-    console.log("📩 Resend response:", response);
+    console.log("✅ OTP email sent successfully");
+    console.log("📩 Message ID:", info.messageId);
 
     return {
       success: true,
-      messageId: response.data?.id,
+      messageId: info.messageId,
     };
   } catch (error) {
-    console.error("❌ Resend HTTP API error:", error);
+    console.error("❌ Nodemailer error:", error);
 
     return {
       success: false,
