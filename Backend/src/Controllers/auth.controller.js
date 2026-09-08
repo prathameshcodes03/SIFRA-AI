@@ -76,7 +76,8 @@ const sendOTP = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: "An account with this email already exists. Please log in.",
+        message:
+          "An account with this email already exists. Please log in.",
       });
     }
 
@@ -125,7 +126,8 @@ const sendOTP = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Verification code sent to your email! Please check your inbox.",
+      message:
+        "Verification code sent to your email! Please check your inbox.",
     });
 
   } catch (error) {
@@ -202,7 +204,8 @@ const registerUser = async (req, res) => {
     if (!fullName || !email || !password || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Required registration fields are missing.",
+        message:
+          "Required registration fields are missing.",
       });
     }
 
@@ -300,7 +303,9 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    console.log("LOGIN: request reached login controller");
+    console.log(
+      "LOGIN: request reached login controller"
+    );
 
     const { email, password } = req.body;
 
@@ -311,13 +316,17 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required.",
+        message:
+          "Email and password are required.",
       });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail =
+      email.toLowerCase().trim();
 
-    console.log("LOGIN: user lookup started");
+    console.log(
+      "LOGIN: user lookup started"
+    );
 
     const user = await prisma.user.findUnique({
       where: {
@@ -326,7 +335,9 @@ const loginUser = async (req, res) => {
     });
 
     if (!user) {
-      console.log("LOGIN: user not found");
+      console.log(
+        "LOGIN: user not found"
+      );
 
       return res.status(401).json({
         success: false,
@@ -338,16 +349,21 @@ const loginUser = async (req, res) => {
       userId: user.id,
     });
 
-    console.log("LOGIN: password comparison started");
+    console.log(
+      "LOGIN: password comparison started"
+    );
 
     const isMatch = await bcrypt.compare(
       password,
       user.password
     );
 
-    console.log("LOGIN: password comparison result", {
-      isMatch,
-    });
+    console.log(
+      "LOGIN: password comparison result",
+      {
+        isMatch,
+      }
+    );
 
     if (!isMatch) {
       return res.status(401).json({
@@ -360,7 +376,9 @@ const loginUser = async (req, res) => {
     // JWT
     // ==========================================
 
-    console.log("LOGIN: JWT generation started");
+    console.log(
+      "LOGIN: JWT generation started"
+    );
 
     const token = jwt.sign(
       {
@@ -380,7 +398,9 @@ const loginUser = async (req, res) => {
     // COOKIE
     // ==========================================
 
-    console.log("LOGIN: cookie creation started");
+    console.log(
+      "LOGIN: cookie creation started"
+    );
 
     res.cookie("token", token, {
       ...cookieOptions,
@@ -548,7 +568,8 @@ const updateProfile = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "All profile fields are required.",
+        message:
+          "All profile fields are required.",
       });
     }
 
@@ -579,7 +600,8 @@ const updateProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Profile updated successfully.",
+      message:
+        "Profile updated successfully.",
       user: updatedUser,
     });
 

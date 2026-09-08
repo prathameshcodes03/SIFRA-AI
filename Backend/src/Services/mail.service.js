@@ -1,238 +1,135 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-const resend = new Resend(
-  process.env.RESEND_API_KEY
-);
+// ==========================================
+// GMAIL TRANSPORTER
+// ==========================================
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // ==========================================
 // SEND OTP EMAIL
 // ==========================================
 
-const sendOtpEmail = async (
-  toEmail,
-  otp
-) => {
-
-  // ========================================
-  // CHECK API KEY
-  // ========================================
-
-  if (!process.env.RESEND_API_KEY) {
-    console.error(
-      "RESEND_API_KEY is not configured."
-    );
-
-    return {
-      success: false,
-      message:
-        "Email service is not configured.",
-    };
-  }
-
-  // ========================================
-  // EMAIL HTML
-  // ========================================
-
-  const htmlContent = `
-<!DOCTYPE html>
-
-<html>
-
-<head>
-  <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
-
-  <title>Sifra.AI Verification</title>
-</head>
-
-<body
-  style="
-    margin: 0;
-    padding: 0;
-    background: #09090b;
-    font-family: Arial, Helvetica, sans-serif;
-    color: #ffffff;
-  "
->
-
-  <div
-    style="
-      max-width: 520px;
-      margin: 40px auto;
-      padding: 32px;
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 16px;
-    "
-  >
-
-    <h1
-      style="
-        margin: 0 0 10px;
-        color: #ffffff;
-        font-size: 26px;
-      "
-    >
-      Sifra<span style="color:#8b5cf6">.AI</span>
-    </h1>
-
-    <p
-      style="
-        color: #a1a1aa;
-        font-size: 14px;
-        line-height: 1.6;
-      "
-    >
-      Use the verification code below
-      to complete your registration.
-    </p>
-
-    <div
-      style="
-        margin: 28px 0;
-        padding: 20px;
-        background: #27272a;
-        border-radius: 12px;
-        text-align: center;
-      "
-    >
-
-      <div
-        style="
-          color: #a1a1aa;
-          font-size: 12px;
-          margin-bottom: 8px;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-        "
-      >
-        Verification Code
-      </div>
-
-      <div
-        style="
-          color: #ffffff;
-          font-size: 36px;
-          font-weight: bold;
-          letter-spacing: 8px;
-        "
-      >
-        ${otp}
-      </div>
-
-    </div>
-
-    <p
-      style="
-        color: #71717a;
-        font-size: 12px;
-        line-height: 1.5;
-      "
-    >
-      This code expires in 10 minutes.
-      If you didn't request this code,
-      you can safely ignore this email.
-    </p>
-
-    <div
-      style="
-        margin-top: 25px;
-        padding-top: 20px;
-        border-top: 1px solid #27272a;
-        color: #52525b;
-        font-size: 11px;
-      "
-    >
-      © Sifra.AI
-    </div>
-
-  </div>
-
-</body>
-
-</html>
-`;
-
-  // ========================================
-  // SEND EMAIL
-  // ========================================
-
+const sendOtpEmail = async (toEmail, otp) => {
   try {
+    const mailOptions = {
+      from: `"Sifra.AI" <${process.env.EMAIL_USER}>`,
 
-    const {
-      data,
-      error,
-    } = await resend.emails.send({
+      to: toEmail,
 
-      from:
-        "Sifra.AI <onboarding@resend.dev>",
+      subject: `${otp} is your Sifra.AI verification code`,
 
-      to: [
-        toEmail,
-      ],
+      html: `
+        <div style="
+          font-family: Arial, sans-serif;
+          max-width: 600px;
+          margin: 40px auto;
+          padding: 30px;
+          background: #f8fafc;
+          border-radius: 16px;
+          border: 1px solid #e5e7eb;
+        ">
 
-      subject:
-        `${otp} is your Sifra.AI verification code`,
+          <h1 style="
+            margin: 0 0 20px;
+            color: #111827;
+          ">
+            Sifra.AI
+          </h1>
 
-      html:
-        htmlContent,
-    });
+          <p style="
+            color: #4b5563;
+            font-size: 16px;
+          ">
+            Hello,
+          </p>
 
-    // ======================================
-    // RESEND ERROR
-    // ======================================
+          <p style="
+            color: #4b5563;
+            font-size: 16px;
+          ">
+            Use the following verification code to complete
+            your Sifra.AI registration:
+          </p>
 
-    if (error) {
+          <div style="
+            margin: 30px 0;
+            padding: 20px;
+            text-align: center;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+          ">
 
-      console.error(
-        "RESEND EMAIL ERROR:",
-        error
-      );
+            <span style="
+              font-size: 34px;
+              font-weight: bold;
+              letter-spacing: 8px;
+              color: #111827;
+            ">
+              ${otp}
+            </span>
 
-      return {
-        success: false,
-        message:
-          "Failed to send verification email.",
-        error:
-          error.message ||
-          "Unknown email error",
-      };
-    }
+          </div>
 
-    // ======================================
-    // SUCCESS
-    // ======================================
+          <p style="
+            color: #6b7280;
+            font-size: 14px;
+          ">
+            This verification code will expire in 10 minutes.
+          </p>
 
-    console.log(
-      `Verification email sent to ${toEmail}.`
-    );
+          <p style="
+            color: #6b7280;
+            font-size: 14px;
+          ">
+            If you did not request this code, you can safely
+            ignore this email.
+          </p>
 
-    console.log(
-      `Resend ID: ${data.id}`
-    );
+          <hr style="
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #e5e7eb;
+          " />
+
+          <p style="
+            color: #9ca3af;
+            font-size: 12px;
+            text-align: center;
+          ">
+            © Sifra.AI
+          </p>
+
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("✅ OTP email sent successfully");
+    console.log("📩 Message ID:", info.messageId);
 
     return {
       success: true,
-      messageId: data.id,
+      messageId: info.messageId,
     };
 
   } catch (error) {
 
-    console.error(
-      "RESEND EMAIL EXCEPTION:",
-      error
-    );
+    console.error("❌ Nodemailer error:", error);
 
     return {
       success: false,
-      message:
-        "Failed to send verification email.",
-      error:
-        error.message,
+      message: "Failed to send verification email.",
+      error: error.message,
     };
   }
 };
