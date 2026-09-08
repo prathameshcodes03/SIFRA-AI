@@ -57,9 +57,8 @@ const sendOTP = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: emailResult?.simulated
-        ? "Verification code generated! (Check terminal console for dev code)"
-        : "Verification code sent to your email.",
-      devOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
+        ? "Verification code generated! (Add EMAIL_USER & EMAIL_PASS to Backend/.env to receive real emails in your inbox)."
+        : "Verification code sent to your email! Please check your inbox.",
     });
   } catch (error) {
     logAuthError("SEND OTP", error);

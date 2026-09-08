@@ -1,33 +1,29 @@
 const nodemailer = require("nodemailer");
 
-let transporter = null;
-
 const getTransporter = () => {
-  if (transporter) return transporter;
-
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+  const host = process.env.SMTP_HOST;
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
 
-  if (user && pass) {
-    if (host) {
-      transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465,
-        auth: { user, pass },
-      });
-    } else {
-      // Default to Gmail service if host is not explicitly specified
-      transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user, pass },
-      });
-    }
+  if (!user || !pass) {
+    return null;
   }
 
-  return transporter;
+  if (host) {
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+  }
+
+  // Default to Gmail service
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
 };
 
 /**
