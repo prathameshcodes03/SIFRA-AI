@@ -15,6 +15,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@getbrevo/brevo": "^6.0.3",
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
@@ -26,7 +27,6 @@
     "imagekit": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.3.0",
-    "nodemailer": "^10.0.1",
     "nodemon": "^3.1.14",
     "prisma": "^6.19.3",
     "router": "^2.2.0"
