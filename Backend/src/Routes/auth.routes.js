@@ -22,34 +22,40 @@ const {
 // AUTH & OTP
 // ==========================================
 
+// SEND OTP
 router.post(
   "/send-otp",
   validateSendOTP,
   sendOTP
 );
 
+// VERIFY OTP
 router.post(
   "/verify-otp",
   verifyOTPController
 );
 
+// REGISTER
 router.post(
   "/register",
   validateRegisterUser,
   registerUser
 );
 
+// LOGIN
 router.post(
   "/login",
   validateLoginUser,
   loginUser
 );
 
+// LOGOUT
 router.post(
   "/logout",
   logoutUser
 );
 
+// CURRENT USER
 router.get(
   "/me",
   protectRoute,

@@ -1,15 +1,31 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+
 const { prisma } = require("../data/db");
+
 const { sendOtpEmail } = require("../Services/mail.service");
-const { checkCooldown, generateAndStoreOTP, verifyOTP } = require("../Services/otp.service");
+
+const {
+  checkCooldown,
+  generateAndStoreOTP,
+  verifyOTP,
+} = require("../Services/otp.service");
+
+// ==========================================
+// COOKIE CONFIGURATION
+// ==========================================
 
 const isProduction = process.env.NODE_ENV === "production";
+
 const cookieOptions = {
   httpOnly: true,
   secure: isProduction,
   sameSite: isProduction ? "none" : "lax",
 };
+
+// ==========================================
+// ERROR LOGGER
+// ==========================================
 
 const logAuthError = (operation, error) => {
   console.error(`${operation} ERROR:`, {
@@ -20,19 +36,41 @@ const logAuthError = (operation, error) => {
   });
 };
 
+// ==========================================
+// SEND OTP
+// ==========================================
+
 const sendOTP = async (req, res) => {
   try {
     const { email } = req.body;
 
+    // Validate email
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // ==========================================
+    // CHECK IF USER ALREADY EXISTS
+    // ==========================================
+
     let existingUser = null;
+
     try {
       existingUser = await prisma.user.findUnique({
         where: {
-          email,
+          email: normalizedEmail,
         },
       });
     } catch (dbError) {
-      console.warn("DB lookup notice during sendOTP (proceeding with generation):", dbError.message);
+      console.warn(
+        "DB lookup notice during sendOTP:",
+        dbError.message
+      );
     }
 
     if (existingUser) {
@@ -42,7 +80,12 @@ const sendOTP = async (req, res) => {
       });
     }
 
-    const cooldown = checkCooldown(email);
+    // ==========================================
+    // CHECK OTP COOLDOWN
+    // ==========================================
+
+    const cooldown = checkCooldown(normalizedEmail);
+
     if (!cooldown.allowed) {
       return res.status(429).json({
         success: false,
@@ -51,23 +94,53 @@ const sendOTP = async (req, res) => {
       });
     }
 
-    const otp = generateAndStoreOTP(email);
-    const emailResult = await sendOtpEmail(email, otp);
+    // ==========================================
+    // GENERATE OTP
+    // ==========================================
+
+    const otp = generateAndStoreOTP(normalizedEmail);
+
+    // ==========================================
+    // SEND OTP EMAIL
+    // ==========================================
+
+    const emailResult = await sendOtpEmail(
+      normalizedEmail,
+      otp
+    );
+
+    // IMPORTANT:
+    // Only return success if email was actually sent.
+
+    if (!emailResult || !emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to send OTP. Please try again.",
+      });
+    }
+
+    // ==========================================
+    // SUCCESS
+    // ==========================================
 
     return res.status(200).json({
       success: true,
-      message: emailResult?.simulated
-        ? "Verification code generated! (Add EMAIL_USER & EMAIL_PASS to Backend/.env to receive real emails in your inbox)."
-        : "Verification code sent to your email! Please check your inbox.",
+      message: "Verification code sent to your email! Please check your inbox.",
     });
+
   } catch (error) {
     logAuthError("SEND OTP", error);
+
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to send verification code.",
+      message: "Failed to send verification code.",
     });
   }
 };
+
+// ==========================================
+// VERIFY OTP
+// ==========================================
 
 const verifyOTPController = async (req, res) => {
   try {
@@ -80,7 +153,14 @@ const verifyOTPController = async (req, res) => {
       });
     }
 
-    const result = verifyOTP(email, otp, false);
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const result = verifyOTP(
+      normalizedEmail,
+      otp,
+      false
+    );
+
     if (!result.valid) {
       return res.status(400).json({
         success: false,
@@ -92,8 +172,10 @@ const verifyOTPController = async (req, res) => {
       success: true,
       message: "OTP verified successfully.",
     });
+
   } catch (error) {
     logAuthError("VERIFY OTP", error);
+
     return res.status(500).json({
       success: false,
       message: "Verification failed.",
@@ -101,12 +183,41 @@ const verifyOTPController = async (req, res) => {
   }
 };
 
+// ==========================================
+// REGISTER USER
+// ==========================================
+
 const registerUser = async (req, res) => {
   try {
-    const { fullName, email, password, age, gender, weight, otp } = req.body;
+    const {
+      fullName,
+      email,
+      password,
+      age,
+      gender,
+      weight,
+      otp,
+    } = req.body;
 
-    // Verify and consume OTP
-    const otpResult = verifyOTP(email, otp, true);
+    if (!fullName || !email || !password || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Required registration fields are missing.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // ==========================================
+    // VERIFY AND CONSUME OTP
+    // ==========================================
+
+    const otpResult = verifyOTP(
+      normalizedEmail,
+      otp,
+      true
+    );
+
     if (!otpResult.valid) {
       return res.status(400).json({
         success: false,
@@ -114,9 +225,13 @@ const registerUser = async (req, res) => {
       });
     }
 
+    // ==========================================
+    // CHECK EXISTING USER
+    // ==========================================
+
     const existingUser = await prisma.user.findUnique({
       where: {
-        email,
+        email: normalizedEmail,
       },
     });
 
@@ -127,18 +242,33 @@ const registerUser = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // ==========================================
+    // HASH PASSWORD
+    // ==========================================
+
+    const hashedPassword = await bcrypt.hash(
+      password,
+      10
+    );
+
+    // ==========================================
+    // CREATE USER
+    // ==========================================
 
     const user = await prisma.user.create({
       data: {
-        fullName,
-        email,
+        fullName: fullName.trim(),
+        email: normalizedEmail,
         password: hashedPassword,
-        age,
+        age: Number(age),
         gender,
-        weight,
+        weight: Number(weight),
       },
     });
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
 
     return res.status(201).json({
       success: true,
@@ -153,9 +283,9 @@ const registerUser = async (req, res) => {
         weight: user.weight,
       },
     });
+
   } catch (error) {
     logAuthError("REGISTER", error);
-    console.error("REGISTER ERROR:", error);
 
     return res.status(500).json({
       success: false,
@@ -164,36 +294,60 @@ const registerUser = async (req, res) => {
   }
 };
 
-
-
+// ==========================================
+// LOGIN
+// ==========================================
 
 const loginUser = async (req, res) => {
   try {
     console.log("LOGIN: request reached login controller");
 
     const { email, password } = req.body;
-    console.log("LOGIN: email received", { email });
+
+    console.log("LOGIN: email received", {
+      email,
+    });
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
 
     console.log("LOGIN: user lookup started");
 
     const user = await prisma.user.findUnique({
       where: {
-        email,
+        email: normalizedEmail,
       },
     });
 
     if (!user) {
       console.log("LOGIN: user not found");
+
       return res.status(401).json({
         success: false,
         message: "Invalid Credentials",
       });
     }
 
-    console.log("LOGIN: user found", { userId: user.id });
+    console.log("LOGIN: user found", {
+      userId: user.id,
+    });
+
     console.log("LOGIN: password comparison started");
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log("LOGIN: password comparison result", { isMatch });
+
+    const isMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    console.log("LOGIN: password comparison result", {
+      isMatch,
+    });
 
     if (!isMatch) {
       return res.status(401).json({
@@ -202,29 +356,41 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // ==========================================
+    // JWT
+    // ==========================================
+
     console.log("LOGIN: JWT generation started");
+
     const token = jwt.sign(
       {
         id: user.id,
         email: user.email,
       },
-
       process.env.JWT_SECRET,
-
       {
         expiresIn: "7d",
-      },
+      }
     );
 
+    // Remove password from response
     const { password: _, ...userData } = user;
 
+    // ==========================================
+    // COOKIE
+    // ==========================================
+
     console.log("LOGIN: cookie creation started");
+
     res.cookie("token", token, {
       ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    console.log("LOGIN: response sent", { status: 200, userId: user.id });
+    console.log("LOGIN: response sent", {
+      status: 200,
+      userId: user.id,
+    });
 
     return res.status(200).json({
       success: true,
@@ -234,6 +400,7 @@ const loginUser = async (req, res) => {
 
       user: userData,
     });
+
   } catch (error) {
     console.error("LOGIN ERROR:", error);
 
@@ -244,14 +411,22 @@ const loginUser = async (req, res) => {
   }
 };
 
+// ==========================================
+// LOGOUT
+// ==========================================
+
 const logoutUser = async (req, res) => {
   try {
-    res.clearCookie("token", cookieOptions);
+    res.clearCookie(
+      "token",
+      cookieOptions
+    );
 
     return res.status(200).json({
       success: true,
       message: "Logout Successful",
     });
+
   } catch (error) {
     logAuthError("LOGOUT", error);
 
@@ -261,6 +436,10 @@ const logoutUser = async (req, res) => {
     });
   }
 };
+
+// ==========================================
+// GET CURRENT USER
+// ==========================================
 
 const getCurrentUser = async (req, res) => {
   try {
@@ -277,14 +456,21 @@ const getCurrentUser = async (req, res) => {
       });
     }
 
-    const { password, ...userData } = user;
+    const {
+      password,
+      ...userData
+    } = user;
 
     return res.status(200).json({
       success: true,
       user: userData,
     });
+
   } catch (error) {
-    logAuthError("GET CURRENT USER", error);
+    logAuthError(
+      "GET CURRENT USER",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -293,14 +479,17 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+// ==========================================
+// GET PROFILE
+// ==========================================
 
-// Get logged-in user's profile
 const getProfile = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: {
         id: req.user.id,
       },
+
       select: {
         id: true,
         fullName: true,
@@ -326,7 +515,10 @@ const getProfile = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("GET PROFILE ERROR:", error);
+    console.error(
+      "GET PROFILE ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -335,42 +527,55 @@ const getProfile = async (req, res) => {
   }
 };
 
+// ==========================================
+// UPDATE PROFILE
+// ==========================================
 
-// Update logged-in user's profile
 const updateProfile = async (req, res) => {
   try {
-    const { fullName, age, gender, weight } = req.body;
+    const {
+      fullName,
+      age,
+      gender,
+      weight,
+    } = req.body;
 
-    if (!fullName || !age || !gender || weight === undefined) {
+    if (
+      !fullName ||
+      !age ||
+      !gender ||
+      weight === undefined
+    ) {
       return res.status(400).json({
         success: false,
         message: "All profile fields are required.",
       });
     }
 
-    const updatedUser = await prisma.user.update({
-      where: {
-        id: req.user.id,
-      },
+    const updatedUser =
+      await prisma.user.update({
+        where: {
+          id: req.user.id,
+        },
 
-      data: {
-        fullName: fullName.trim(),
-        age: Number(age),
-        gender,
-        weight: Number(weight),
-      },
+        data: {
+          fullName: fullName.trim(),
+          age: Number(age),
+          gender,
+          weight: Number(weight),
+        },
 
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        age: true,
-        gender: true,
-        weight: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          age: true,
+          gender: true,
+          weight: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
     return res.status(200).json({
       success: true,
@@ -379,7 +584,10 @@ const updateProfile = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("UPDATE PROFILE ERROR:", error);
+    console.error(
+      "UPDATE PROFILE ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -388,8 +596,9 @@ const updateProfile = async (req, res) => {
   }
 };
 
-
-
+// ==========================================
+// EXPORT CONTROLLERS
+// ==========================================
 
 module.exports = {
   sendOTP,
