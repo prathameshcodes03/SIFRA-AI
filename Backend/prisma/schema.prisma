@@ -41,6 +41,10 @@ model Workout {
 
   reps Int
 
+  completed Boolean @default(false)
+
+  accuracy Float?
+
   userId String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -49,3 +53,4 @@ model Workout {
 
   updatedAt DateTime @updatedAt
 }
+
