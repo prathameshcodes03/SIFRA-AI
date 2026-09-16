@@ -40,10 +40,27 @@ const Exercises = () => {
         </span>
       </div>
 
+      <div className="flex gap-2 mb-3">
+        {["Squat", "Pushup", "Plank"].map((ex) => (
+          <button
+            key={ex}
+            type="button"
+            onClick={() => setExerciseName(ex)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all duration-200 ${
+              exerciseName.toLowerCase() === ex.toLowerCase()
+                ? "bg-violet-600 text-white border-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.3)]"
+                : "bg-white/5 text-gray-300 border-white/10 hover:bg-white/10"
+            }`}
+          >
+            {ex}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <input
           type="text"
-          placeholder="Exercise"
+          placeholder="Exercise (e.g. Squat)"
           value={exerciseName}
           onChange={(e) => setExerciseName(e.target.value)}
           className="col-span-2 h-11 rounded-lg bg-white/5 border border-white/10 px-3 text-white placeholder:text-gray-500 outline-none focus:border-violet-500"

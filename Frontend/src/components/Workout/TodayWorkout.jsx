@@ -1,7 +1,18 @@
+import { useNavigate } from "react-router-dom";
 import { useWorkout } from "../../Context/WorkoutContext";
 
 const TodayWorkout = () => {
-  const { workouts } = useWorkout();
+  const { workouts, setActiveWorkout } = useWorkout();
+  const navigate = useNavigate();
+
+  const handleStartWorkout = (exercise) => {
+    setActiveWorkout(exercise);
+    navigate(
+      `/Workout?exercise=${encodeURIComponent(
+        exercise.exercise.toLowerCase()
+      )}&workoutId=${exercise.id}&sets=${exercise.sets}&reps=${exercise.reps}`
+    );
+  };
 
   return (
     <div
@@ -46,7 +57,7 @@ const TodayWorkout = () => {
                 </div>
 
                 <div>
-                  <h2 className="text-base font-semibold text-white">
+                  <h2 className="text-base font-semibold text-white capitalize">
                     {exercise.exercise}
                   </h2>
 
@@ -56,9 +67,22 @@ const TodayWorkout = () => {
                 </div>
               </div>
 
-              <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs font-medium">
-                Ready
-              </span>
+              <div className="flex items-center gap-2">
+                {exercise.completed ? (
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium flex items-center gap-1">
+                    <i className="fa-solid fa-check text-[10px]"></i> Done
+                    {exercise.accuracy ? ` (${exercise.accuracy}%)` : ""}
+                  </span>
+                ) : null}
+
+                <button
+                  onClick={() => handleStartWorkout(exercise)}
+                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-1.5"
+                >
+                  <i className="fa-solid fa-play text-[10px]"></i>
+                  {exercise.completed ? "Restart" : "Start"}
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -68,3 +92,4 @@ const TodayWorkout = () => {
 };
 
 export default TodayWorkout;
+

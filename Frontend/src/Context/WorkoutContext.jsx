@@ -1,24 +1,49 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "../api/axios";
 
 const WorkoutContext = createContext();
 
 export const WorkoutProvider = ({ children }) => {
   const [workouts, setWorkouts] = useState([]);
+  const [stats, setStats] = useState({
+    accuracy: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+    completedDays: 0,
+    weeklyGoal: 7,
+    totalCompleted: 0,
+  });
+  const [activeWorkout, setActiveWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchWorkouts = async () => {
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await api.get("/api/workouts/stats");
+      if (res.data?.success && res.data.stats) {
+        setStats(res.data.stats);
+      }
+    } catch (error) {
+      console.error("FETCH STATS ERROR:", error);
+    }
+  }, []);
+
+  const fetchWorkouts = useCallback(async () => {
     try {
       const res = await api.get("/api/workouts");
-
-      setWorkouts(res.data.workouts);
+      if (res.data?.workouts) {
+        setWorkouts(res.data.workouts);
+      }
     } catch (error) {
-      console.log(error);
+      console.error("FETCH WORKOUTS ERROR:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([fetchWorkouts(), fetchStats()]);
+  }, [fetchWorkouts, fetchStats]);
 
   const addWorkout = async (exercise, sets, reps) => {
     try {
@@ -28,33 +53,57 @@ export const WorkoutProvider = ({ children }) => {
         reps,
       });
 
-      fetchWorkouts();
+      await refreshAll();
     } catch (error) {
-      console.log(error);
+      console.error("ADD WORKOUT ERROR:", error);
+    }
+  };
+
+  const completeWorkout = async ({ workoutId, exercise, sets, reps, accuracy }) => {
+    try {
+      const endpoint = workoutId ? `/api/workouts/${workoutId}/complete` : "/api/workouts/complete";
+      const res = await api.post(endpoint, {
+        workoutId,
+        exercise,
+        sets,
+        reps,
+        accuracy,
+      });
+
+      await refreshAll();
+      return res.data;
+    } catch (error) {
+      console.error("COMPLETE WORKOUT ERROR:", error);
+      throw error;
     }
   };
 
   const deleteWorkout = async (id) => {
     try {
       await api.delete(`/api/workouts/${id}`);
-
-      fetchWorkouts();
+      await refreshAll();
     } catch (error) {
-      console.log(error);
+      console.error("DELETE WORKOUT ERROR:", error);
     }
   };
 
   useEffect(() => {
-    fetchWorkouts();
-  }, []);
+    refreshAll();
+  }, [refreshAll]);
 
   return (
     <WorkoutContext.Provider
       value={{
         workouts,
+        stats,
+        activeWorkout,
+        setActiveWorkout,
         loading,
         fetchWorkouts,
+        fetchStats,
+        refreshAll,
         addWorkout,
+        completeWorkout,
         deleteWorkout,
       }}
     >
@@ -64,3 +113,4 @@ export const WorkoutProvider = ({ children }) => {
 };
 
 export const useWorkout = () => useContext(WorkoutContext);
+
