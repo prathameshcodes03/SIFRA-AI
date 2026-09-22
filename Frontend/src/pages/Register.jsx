@@ -1,11 +1,12 @@
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import Pushups from "../assets/Videos/Pushups.mp4";
 
 const Register = () => {
   const navigate = useNavigate();
+
+const [step, setStep] = useState(1);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -17,18 +18,22 @@ const Register = () => {
     otp: "",
   });
 
-  const [loading, setLoading] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [registering, setRegistering] = useState(false);
+
   const [otpSent, setOtpSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+
   const [statusMessage, setStatusMessage] = useState({
     type: "",
     text: "",
   });
 
-  // -----------------------------
-  // OTP COOLDOWN TIMER
-  // -----------------------------
+  // -----------------------------------------
+  // OTP COOLDOWN
+  // -----------------------------------------
+
   useEffect(() => {
     if (cooldown <= 0) return;
 
@@ -39,9 +44,10 @@ const Register = () => {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // -----------------------------
-  // HANDLE INPUT CHANGES
-  // -----------------------------
+  // -----------------------------------------
+  // INPUT HANDLER
+  // -----------------------------------------
+
   const handleChange = (event) => {
     const { name, value } = event.target;
 
@@ -51,16 +57,22 @@ const Register = () => {
     }));
   };
 
-  // -----------------------------
-  // SEND OTP
-  // -----------------------------
-  const handleSendOtp = async () => {
+  // -----------------------------------------
+  // STEP 1 VALIDATION
+  // -----------------------------------------
+
+  const goToPasswordStep = () => {
+    setStatusMessage({
+      type: "",
+      text: "",
+    });
+
     const email = formData.email.trim();
 
     if (!email) {
       setStatusMessage({
         type: "error",
-        text: "Please enter your email address first.",
+        text: "Please enter your email address.",
       });
       return;
     }
@@ -75,15 +87,53 @@ const Register = () => {
       return;
     }
 
-    if (cooldown > 0) {
-      return;
-    }
+    setStep(2);
+  };
 
-    setSendingOtp(true);
+  // -----------------------------------------
+  // STEP 2 VALIDATION
+  // -----------------------------------------
+
+  const goToPersonalDetails = () => {
     setStatusMessage({
       type: "",
       text: "",
     });
+
+    if (!formData.password) {
+      setStatusMessage({
+        type: "error",
+        text: "Please enter a password.",
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setStatusMessage({
+        type: "error",
+        text: "Password must be at least 6 characters.",
+      });
+      return;
+    }
+
+    setStep(3);
+  };
+
+  // -----------------------------------------
+  // SEND OTP
+  // -----------------------------------------
+
+  const sendOtp = async () => {
+    const email = formData.email.trim().toLowerCase();
+
+    setStatusMessage({
+      type: "",
+      text: "",
+    });
+
+    if (cooldown > 0) return;
+
+    setSendingOtp(true);
 
     try {
       const response = await api.post("/api/auth/send-otp", {
@@ -102,18 +152,18 @@ const Register = () => {
         type: "success",
         text:
           response.data?.message ||
-          "Verification code sent! Please check your email.",
+          "Verification code sent to your email.",
       });
+
+      setStep(4);
     } catch (error) {
       console.error("Send OTP error:", error);
 
-      const message =
-        error.response?.data?.message ||
-        "Failed to send verification code. Please try again.";
-
       setStatusMessage({
         type: "error",
-        text: message,
+        text:
+          error.response?.data?.message ||
+          "Failed to send OTP. Please try again.",
       });
 
       if (error.response?.data?.remainingSeconds) {
@@ -124,39 +174,20 @@ const Register = () => {
     }
   };
 
-  // -----------------------------
-  // REGISTER USER
-  // -----------------------------
-  const handleRegister = async (event) => {
-    event.preventDefault();
+  // -----------------------------------------
+  // STEP 3 VALIDATION
+  // -----------------------------------------
 
+  const goToOtpStep = async () => {
     setStatusMessage({
       type: "",
       text: "",
     });
 
-    // Check OTP
-    if (!formData.otp || formData.otp.trim().length !== 6) {
-      setStatusMessage({
-        type: "error",
-        text: "Please enter the 6-digit OTP sent to your email.",
-      });
-      return;
-    }
-
-    // Basic validation
     if (!formData.fullName.trim()) {
       setStatusMessage({
         type: "error",
         text: "Please enter your full name.",
-      });
-      return;
-    }
-
-    if (!formData.password || formData.password.length < 6) {
-      setStatusMessage({
-        type: "error",
-        text: "Password must be at least 6 characters.",
       });
       return;
     }
@@ -185,320 +216,472 @@ const Register = () => {
       return;
     }
 
-    setLoading(true);
+    await sendOtp();
+  };
+
+  // -----------------------------------------
+  // VERIFY OTP
+  // -----------------------------------------
+
+
+
+  // -----------------------------------------
+  // CREATE ACCOUNT
+  // -----------------------------------------
+
+  const createAccount = async () => {
+    setRegistering(true);
 
     try {
       const payload = {
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        age: Number(formData.age),
-        weight: Number(formData.weight),
-        gender: formData.gender,
-        otp: formData.otp.trim(),
-      };
-
-      console.log("Register request:", {
-        ...payload,
-        password: "***",
-        otp: "******",
-      });
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim().toLowerCase(),
+      password: formData.password,
+      age: Number(formData.age),
+      weight: Number(formData.weight),
+      gender: formData.gender,
+      otp: formData.otp.trim(),
+    };
 
       const response = await api.post(
         "/api/auth/register",
         payload
       );
 
-      // Save token if backend returns one
       if (response.data?.token) {
-        localStorage.setItem("token", response.data.token);
+        localStorage.setItem(
+          "token",
+          response.data.token
+        );
       }
 
       setStatusMessage({
         type: "success",
-        text: "Account created successfully! Redirecting to login...",
+        text: "Account created successfully!",
       });
 
-      // Redirect to login
       setTimeout(() => {
         navigate("/Login");
-      }, 1500);
+      }, 1000);
+
     } catch (error) {
       console.error("Registration error:", error);
 
-      const message =
-        error.response?.data?.message ||
-        "Registration failed. Please try again.";
-
       setStatusMessage({
         type: "error",
-        text: message,
+        text:
+          error.response?.data?.message ||
+          "Account creation failed. Please try again.",
       });
     } finally {
-      setLoading(false);
+      setRegistering(false);
     }
   };
 
+  // -----------------------------------------
+  // BACK BUTTON
+  // -----------------------------------------
+
+  const goBack = () => {
+    setStatusMessage({
+      type: "",
+      text: "",
+    });
+
+    if (step > 1) {
+      setStep((prev) => prev - 1);
+    }
+  };
+
+  // -----------------------------------------
+  // RENDER
+  // -----------------------------------------
+
   return (
-    <section className="relative flex h-[100svh] max-h-[100svh] w-full items-center justify-center overflow-hidden px-4 py-2">
+    <section className="relative flex min-h-screen ml-20 w-full items-center justify-center bg-[#070710] px-4 py-8">
 
-      {/* Background Video */}
-      <video
-        className="absolute inset-0 h-full w-full object-cover"
-        autoPlay
-        loop
-        muted
-        playsInline
-      >
-        <source src={Pushups} type="video/mp4" />
-      </video>
+        <video
+              className="absolute inset-0 h-full w-full object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            >
+              <source src={Pushups} type="video/mp4" />
+            </video>
 
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-[#070710]/75 backdrop-blur-[3px]" />
+            <div className="absolute inset-0 bg-[#070710]/75 backdrop-blur-[3px]" />
 
-      {/* Registration Form */}
-      <form
-        onSubmit={handleRegister}
-        className="relative z-10 my-auto w-full max-w-md rounded-2xl border border-white/15 bg-black/50 p-4 shadow-[0_0_50px_rgba(139,92,246,0.2)] backdrop-blur-2xl sm:p-6"
-      >
+      <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-black/50 p-6 shadow-2xl backdrop-blur-xl">
 
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-2xl font-black tracking-tight text-transparent sm:text-3xl">
+        {/* HEADER */}
+
+        <div className="mb-6 text-center">
+          <h1 className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-3xl font-black text-transparent">
             Sifra.AI
           </h1>
 
-          <p className="mt-0.5 text-xs text-zinc-400">
+          <p className="mt-1 text-sm text-zinc-400">
             Create your account to start training
           </p>
         </div>
 
-        <div className="mt-3.5 space-y-2.5">
+        {/* PROGRESS */}
 
-          {/* Full Name  */}
-    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-
-  <div className="sm:col-span-2">
-    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-      Full Name
-    </label>
-
-    <input
-      required
-      type="text"
-      name="fullName"
-      placeholder="Alex Johnson"
-      value={formData.fullName}
-      onChange={handleChange}
-      className="h-10 w-full rounded-lg border border-white/15 bg-white/5 px-3 text-xs text-white placeholder-zinc-500 transition focus:border-violet-400 focus:bg-white/10 focus:outline-none"
-    />
-  </div>
-
-</div>
-
-          {/* Email*/}
-          <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-              Email Address
-            </label>
-
-            <div className="flex gap-2">
-
-              <input
-                required
-                type="email"
-                name="email"
-                placeholder="name@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                className="h-10 w-full flex-1 rounded-lg border border-white/15 bg-white/5 px-3 text-xs text-white placeholder-zinc-500 transition focus:border-violet-400 focus:bg-white/10 focus:outline-none"
-              />
-
-            
-
-            </div>
+        <div className="mb-6">
+          <div className="mb-2 flex justify-between text-xs text-zinc-500">
+            <span>Step {step} of 4</span>
+            <span>{step * 25}%</span>
           </div>
 
-<div>
-                <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-                Password
-              </label>
-
-              <input
-                required
-                type="password"
-                name="password"
-                placeholder="Min. 6 chars"
-                minLength={6}
-                value={formData.password}
-                onChange={handleChange}
-                className="h-10 w-[75%] rounded-lg border border-white/15 bg-white/5 px-3 text-xs text-white placeholder-zinc-500 transition focus:border-violet-400 focus:bg-white/10 focus:outline-none"
-              />
-            
-
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                disabled={sendingOtp || cooldown > 0}
-                className="h-10 shrink-0 gap-[2rem] cursor-pointer rounded-lg border border-violet-500/40 bg-gradient-to-r from-violet-600/90 to-indigo-600/90 px-3 text-xs font-semibold text-white shadow-[0_0_12px_rgba(139,92,246,0.3)] transition hover:from-violet-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sendingOtp
-                  ? "Sending..."
-                  : cooldown > 0
-                  ? `${cooldown}s`
-                  : otpSent
-                  ? "Resend"
-                  : "Send OTP"}
-              </button>
-
-              </div>
-             </div>
-
-          {/* OTP */}
-          <div className="rounded-xl border border-violet-500/25 bg-violet-950/20 px-3 py-2">
-
-            <div className="flex items-center justify-between">
-
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-violet-300">
-                Email OTP Code
-              </label>
-
-              <span className="text-[10px]">
-                {otpSent ? (
-                  <span className="font-medium text-emerald-400">
-                    ✓ Sent to inbox
-                  </span>
-                ) : (
-                  <span className="text-zinc-400">
-                    Valid for 10 min
-                  </span>
-                )}
-              </span>
-
-            </div>
-
-            <input
-              required
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              name="otp"
-              placeholder="Enter 6-digit OTP"
-              value={formData.otp}
-              onChange={(event) => {
-                const value = event.target.value
-                  .replace(/\D/g, "")
-                  .slice(0, 6);
-
-                setFormData((prev) => ({
-                  ...prev,
-                  otp: value,
-                }));
+          <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-violet-500 transition-all duration-500"
+              style={{
+                width: `${step * 25}%`,
               }}
-              className="mt-1 h-9 w-full rounded-lg border border-white/20 bg-black/40 px-3 text-center font-mono text-base font-bold tracking-[0.3em] text-violet-200 placeholder-zinc-600 transition focus:border-violet-400 focus:outline-none"
             />
-
-          </div>
-
-          {/* Age / Weight / Gender */}
-          <div className="grid grid-cols-3 gap-2">
-
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-                Age
-              </label>
-
-              <input
-                required
-                type="number"
-                min={10}
-                max={100}
-                name="age"
-                placeholder="24"
-                value={formData.age}
-                onChange={handleChange}
-                className="h-9 w-full rounded-lg border border-white/15 bg-white/5 px-2 text-center text-xs text-white placeholder-zinc-500 transition focus:border-violet-400 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-                Weight (kg)
-              </label>
-
-              <input
-                required
-                type="number"
-                step="0.5"
-                min={20}
-                max={300}
-                name="weight"
-                placeholder="70"
-                value={formData.weight}
-                onChange={handleChange}
-                className="h-9 w-full rounded-lg border border-white/15 bg-white/5 px-2 text-center text-xs text-white placeholder-zinc-500 transition focus:border-violet-400 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-zinc-300">
-                Gender
-              </label>
-
-              <select
-                required
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className="h-9 w-full rounded-lg border border-white/15 bg-[#141224] px-1.5 text-center text-xs text-white transition focus:border-violet-400 focus:outline-none"
-              >
-                <option value="" disabled>
-                  Gender
-                </option>
-
-                <option value="MALE">
-                  Male
-                </option>
-
-                <option value="FEMALE">
-                  Female
-                </option>
-
-                <option value="OTHER">
-                  Other
-                </option>
-              </select>
-            </div>
-
           </div>
         </div>
 
-  
+        {/* STATUS MESSAGE */}
 
+        {statusMessage.text && (
+          <div
+            className={`mb-4 rounded-lg border px-3 py-2 text-sm ${
+              statusMessage.type === "error"
+                ? "border-red-500/30 bg-red-500/10 text-red-400"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+            }`}
+          >
+            {statusMessage.text}
+          </div>
+        )}
 
-        {/* Register Button */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-3.5 h-10 w-full cursor-pointer rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-xs font-semibold text-white shadow-[0_0_20px_rgba(139,92,246,0.35)] transition hover:brightness-110 hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
-        >
-          {loading ? "Creating Account..." : "Create Account"}
-        </button>
+        {/* ===================================== */}
+        {/* STEP 1 — EMAIL */}
+        {/* ===================================== */}
 
-        {/* Login */}
-        <p className="mt-3 text-center text-xs text-zinc-400">
+        {step === 1 && (
+          <div className="animate-in fade-in duration-300">
+
+            <h2 className="mb-2 text-2xl font-bold text-white">
+              Create your account
+            </h2>
+
+            <p className="mb-6 text-sm text-zinc-400">
+              Start with your email address.
+            </p>
+
+            <label className="mb-2 block text-sm font-semibold text-zinc-300">
+              Email Address
+            </label>
+
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="name@example.com"
+              className="h-12 w-full rounded-lg border border-white/15 bg-white/5 px-4 text-sm text-white outline-none transition focus:border-violet-400"
+            />
+
+            <button
+              type="button"
+              onClick={goToPasswordStep}
+              className="mt-6 h-12 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 font-semibold text-white transition hover:brightness-110 active:scale-[0.99]"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {/* ===================================== */}
+        {/* STEP 2 — PASSWORD */}
+        {/* ===================================== */}
+
+        {step === 2 && (
+          <div className="animate-in slide-in-from-right duration-300">
+
+            <button
+              type="button"
+              onClick={goBack}
+              className="mb-4 text-sm text-zinc-400 hover:text-white"
+            >
+              ← Back
+            </button>
+
+            <h2 className="mb-2 text-2xl font-bold text-white">
+              Create a password
+            </h2>
+
+            <p className="mb-6 text-sm text-zinc-400">
+              Use at least 6 characters.
+            </p>
+
+            <label className="mb-2 block text-sm font-semibold text-zinc-300">
+              Password
+            </label>
+
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Enter password"
+              className="h-12 w-full rounded-lg border border-white/15 bg-white/5 px-4 text-sm text-white outline-none transition focus:border-violet-400"
+            />
+
+            <button
+              type="button"
+              onClick={goToPersonalDetails}
+              className="mt-6 h-12 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 font-semibold text-white transition hover:brightness-110"
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {/* ===================================== */}
+        {/* STEP 3 — PERSONAL DETAILS */}
+        {/* ===================================== */}
+
+        {step === 3 && (
+          <div className="animate-in slide-in-from-right duration-300">
+
+            <button
+              type="button"
+              onClick={goBack}
+              className="mb-4 text-sm text-zinc-400 hover:text-white"
+            >
+              ← Back
+            </button>
+
+            <h2 className="mb-2 text-2xl font-bold text-white">
+              Tell us about yourself
+            </h2>
+
+            <p className="mb-6 text-sm text-zinc-400">
+              This information helps personalize your workouts.
+            </p>
+
+            {/* NAME */}
+
+            <label className="mb-2 block text-sm font-semibold text-zinc-300">
+              Full Name
+            </label>
+
+            <input
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="Your name"
+              className="mb-4 h-11 w-full rounded-lg border border-white/15 bg-white/5 px-4 text-sm text-white outline-none focus:border-violet-400"
+            />
+
+            {/* AGE + WEIGHT */}
+
+            <div className="mb-4 grid grid-cols-2 gap-3">
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-300">
+                  Age
+                </label>
+
+                <input
+                  type="number"
+                  name="age"
+                  min="10"
+                  max="100"
+                  value={formData.age}
+                  onChange={handleChange}
+                  placeholder="Age"
+                  className="h-11 w-full rounded-lg border border-white/15 bg-white/5 px-3 text-sm text-white outline-none focus:border-violet-400"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-300">
+                  Weight (kg)
+                </label>
+
+                <input
+                  type="number"
+                  name="weight"
+                  min="20"
+                  max="300"
+                  step="0.5"
+                  value={formData.weight}
+                  onChange={handleChange}
+                  placeholder="70"
+                  className="h-11 w-full rounded-lg border border-white/15 bg-white/5 px-3 text-sm text-white outline-none focus:border-violet-400"
+                />
+              </div>
+
+            </div>
+
+            {/* GENDER */}
+
+            <label className="mb-2 block text-sm font-semibold text-zinc-300">
+              Gender
+            </label>
+
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              className="h-11 w-full rounded-lg border border-white/15 bg-[#141224] px-3 text-sm text-white outline-none focus:border-violet-400"
+            >
+              <option value="">
+                Select gender
+              </option>
+
+              <option value="MALE">
+                Male
+              </option>
+
+              <option value="FEMALE">
+                Female
+              </option>
+
+              <option value="OTHER">
+                Other
+              </option>
+            </select>
+
+            <button
+              type="button"
+              onClick={goToOtpStep}
+              disabled={sendingOtp}
+              className="mt-6 h-12 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {sendingOtp
+                ? "Sending OTP..."
+                : "Continue"}
+            </button>
+          </div>
+        )}
+
+        {/* ===================================== */}
+        {/* STEP 4 — OTP */}
+        {/* ===================================== */}
+{/* ===================================== */}
+{/* STEP 4 — OTP */}
+{/* ===================================== */}
+
+{step === 4 && (
+  <div className="animate-in slide-in-from-right duration-300">
+
+    <button
+      type="button"
+      onClick={() => setStep(3)}
+      className="mb-4 text-sm text-zinc-400 hover:text-white"
+    >
+      ← Back
+    </button>
+
+    <h2 className="mb-2 text-2xl font-bold text-white">
+      Verify your email
+    </h2>
+
+    <p className="mb-6 text-sm text-zinc-400">
+      Enter the 6-digit OTP 
+      <br />
+
+      <span className="font-semibold text-violet-300">
+        {formData.email}
+      </span>
+    </p>
+
+    <label className="mb-2 block text-sm font-semibold text-zinc-300">
+      Verification Code
+    </label>
+
+    <input
+      type="text"
+      name="otp"
+      value={formData.otp}
+      maxLength={6}
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      placeholder="Enter 6-digit OTP"
+      onChange={(e) => {
+        const value = e.target.value
+          .replace(/\D/g, "")
+          .slice(0, 6);
+
+        setFormData((prev) => ({
+          ...prev,
+          otp: value,
+        }));
+      }}
+      className="h-14 w-full rounded-lg border border-white/15 bg-white/5 px-4 text-center font-mono text-2xl tracking-[0.4em] text-white outline-none focus:border-violet-400"
+    />
+
+    {/* CREATE ACCOUNT */}
+
+    <button
+      type="button"
+      onClick={createAccount}
+      disabled={
+        registering ||
+        formData.otp.length !== 6
+      }
+      className="mt-5 h-12 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {registering
+        ? "Creating Account..."
+        : "Verify & Create Account"}
+    </button>
+
+    {/* RESEND OTP */}
+
+    <div className="mt-5 text-center">
+
+      <p className="text-sm text-zinc-500">
+        Didn't receive the code?
+      </p>
+
+      <button
+        type="button"
+        onClick={sendOtp}
+        disabled={
+          sendingOtp ||
+          cooldown > 0
+        }
+        className="mt-2 text-sm font-semibold text-violet-300 hover:text-white disabled:cursor-not-allowed disabled:text-zinc-600"
+      >
+        {cooldown > 0
+          ? `Resend OTP in ${cooldown}s`
+          : "Resend OTP"}
+      </button>
+
+    </div>
+
+  </div>
+)}
+       </div>
+        
+
+        {/* LOGIN */}
+
+        <p className="mt-6 text-center text-sm text-zinc-500">
           Already have an account?{" "}
-
           <Link
             to="/Login"
-            className="font-semibold text-violet-300 transition hover:text-white hover:underline"
+            className="font-semibold text-violet-300 hover:text-white hover:underline"
           >
             Sign in
           </Link>
         </p>
 
-      </form>
+       
+
+  
+
+
+
     </section>
   );
 };
