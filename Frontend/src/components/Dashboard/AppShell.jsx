@@ -5,15 +5,18 @@ import DashSidebar from "./DashSidebar";
 const AppShell = ({ children, footer }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <section className="min-h-screen overflow-x-hidden bg-[#05050A] text-white">
-      <DashNavbar onMenuToggle={() => setMenuOpen((open) => !open)} />
+    <div className="min-h-screen overflow-x-hidden bg-[#FAFAFC] text-slate-900 font-sans">
       <DashSidebar isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
-      <main className="mx-auto w-full max-w-[90rem] px-4 pb-12 pt-5 sm:px-6 lg:ml-[15rem] lg:w-[calc(100%-15rem)] lg:px-8">
-        {children}
-      </main>
-      {footer && <div className="lg:ml-[15rem]">{footer}</div>}
-    </section>
+      <div className="flex flex-col min-h-screen lg:pl-64">
+        <DashNavbar onMenuToggle={() => setMenuOpen((open) => !open)} />
+        <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          {children}
+        </main>
+        {footer && <div className="mt-auto">{footer}</div>}
+      </div>
+    </div>
   );
 };
 
 export default AppShell;
+

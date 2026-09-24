@@ -1,9 +1,4 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-
+import React, { useEffect, useRef, useState } from "react";
 import {
   UserRound,
   CalendarDays,
@@ -14,31 +9,23 @@ import {
   X,
   Save,
   Camera,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 
 import Footer from "../components/Footer";
 import AppShell from "../components/Dashboard/AppShell";
-
 import api from "../api/axios";
 import { useAuth } from "../Context/AuthContext";
-
 import Avatar from "../assets/Images/defaultavatar.png";
 
 const Profile = () => {
-  const {
-    user: authUser,
-    updateUser,
-  } = useAuth();
-
+  const { user: authUser, updateUser } = useAuth();
   const [user, setUser] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] =
-    useState(false);
-
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [editMode, setEditMode] = useState(false);
-
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -48,56 +35,25 @@ const Profile = () => {
     weight: "",
   });
 
-  // ==========================================
-  // FETCH PROFILE
-  // ==========================================
-
   const fetchProfile = async () => {
     try {
       setLoading(true);
-
-      const response = await api.get(
-        "/api/profile"
-      );
-
-      console.log(
-        "PROFILE RESPONSE:",
-        response.data
-      );
-
+      const response = await api.get("/api/profile");
       if (response.data.success) {
         const profile = response.data.user;
-
         setUser(profile);
-
         setFormData({
           fullName: profile.fullName || "",
           age: profile.age ?? "",
           gender: profile.gender || "",
           weight: profile.weight ?? "",
         });
-
         if (updateUser) {
           updateUser(profile);
         }
       }
     } catch (error) {
-      console.error(
-        "PROFILE FETCH ERROR:",
-        error
-      );
-
-      if (error.response) {
-        console.error(
-          "Status:",
-          error.response.status
-        );
-
-        console.error(
-          "Backend response:",
-          error.response.data
-        );
-      }
+      console.error("PROFILE FETCH ERROR:", error);
     } finally {
       setLoading(false);
     }
@@ -107,163 +63,70 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
-  // ==========================================
-  // INPUT CHANGE
-  // ==========================================
-
   const handleChange = (e) => {
-    const {
-      name,
-      value,
-    } = e.target;
-
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  // ==========================================
-  // PROFILE IMAGE CLICK
-  // ==========================================
-
   const handleImageClick = () => {
     if (uploadingImage) return;
-
     fileInputRef.current?.click();
   };
 
-  // ==========================================
-  // PROFILE IMAGE UPLOAD
-  // ==========================================
-
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert(
-        "Please select an image file."
-      );
-
+      alert("Please select an image file.");
       e.target.value = "";
-
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert(
-        "Image size must be less than 5 MB."
-      );
-
+      alert("Image size must be less than 5 MB.");
       e.target.value = "";
-
       return;
     }
 
     try {
       setUploadingImage(true);
-
       const imageFormData = new FormData();
+      imageFormData.append("profileImage", file);
 
-      imageFormData.append(
-        "profileImage",
-        file
-      );
-
-      console.log(
-        "Uploading profile image..."
-      );
-
-      // IMPORTANT:
-      // Backend route is:
-      // POST /api/profile/image
-
-      const response = await api.post(
-        "/api/profile/image",
-        imageFormData
-      );
-
-      console.log(
-        "IMAGE UPLOAD RESPONSE:",
-        response.data
-      );
+      const response = await api.post("/api/profile/image", imageFormData);
 
       if (response.data.success) {
-        const updatedUser =
-          response.data.user;
-
+        const updatedUser = response.data.user;
         setUser(updatedUser);
-
         setFormData({
-          fullName:
-            updatedUser.fullName || "",
-          age:
-            updatedUser.age ?? "",
-          gender:
-            updatedUser.gender || "",
-          weight:
-            updatedUser.weight ?? "",
+          fullName: updatedUser.fullName || "",
+          age: updatedUser.age ?? "",
+          gender: updatedUser.gender || "",
+          weight: updatedUser.weight ?? "",
         });
-
         if (updateUser) {
           updateUser(updatedUser);
         }
-
-        console.log(
-          "Profile image updated:",
-          updatedUser.profileImage
-        );
       }
     } catch (error) {
-      console.error(
-        "PROFILE IMAGE UPLOAD ERROR:",
-        error
-      );
-
-      if (error.response) {
-        console.error(
-          "Status:",
-          error.response.status
-        );
-
-        console.error(
-          "Backend response:",
-          error.response.data
-        );
-
-        alert(
-          error.response.data?.message ||
-            "Failed to upload profile image."
-        );
-      } else {
-        alert(
-          "Failed to upload profile image."
-        );
-      }
+      console.error("PROFILE IMAGE UPLOAD ERROR:", error);
+      alert(error.response?.data?.message || "Failed to upload profile image.");
     } finally {
       setUploadingImage(false);
-
       e.target.value = "";
     }
   };
-
-  // ==========================================
-  // EDIT PROFILE
-  // ==========================================
 
   const handleEdit = () => {
     setEditMode(true);
   };
 
-  // ==========================================
-  // CANCEL
-  // ==========================================
-
   const handleCancel = () => {
     setEditMode(false);
-
     setFormData({
       fullName: user?.fullName || "",
       age: user?.age ?? "",
@@ -272,220 +135,92 @@ const Profile = () => {
     });
   };
 
-  // ==========================================
-  // SAVE PROFILE
-  // ==========================================
-
   const handleSave = async () => {
     try {
       setSaving(true);
-
-      const response = await api.put(
-        "/api/profile",
-        {
-          fullName: formData.fullName,
-          age: Number(formData.age),
-          gender: formData.gender,
-          weight: Number(formData.weight),
-        }
-      );
-
-      console.log(
-        "PROFILE UPDATE RESPONSE:",
-        response.data
-      );
+      const response = await api.put("/api/profile", {
+        fullName: formData.fullName,
+        age: Number(formData.age),
+        gender: formData.gender,
+        weight: Number(formData.weight),
+      });
 
       if (response.data.success) {
-        const updatedUser =
-          response.data.user;
-
+        const updatedUser = response.data.user;
         setUser(updatedUser);
-
         setFormData({
-          fullName:
-            updatedUser.fullName || "",
-          age:
-            updatedUser.age ?? "",
-          gender:
-            updatedUser.gender || "",
-          weight:
-            updatedUser.weight ?? "",
+          fullName: updatedUser.fullName || "",
+          age: updatedUser.age ?? "",
+          gender: updatedUser.gender || "",
+          weight: updatedUser.weight ?? "",
         });
-
         if (updateUser) {
           updateUser(updatedUser);
         }
-
         setEditMode(false);
       }
     } catch (error) {
-      console.error(
-        "PROFILE UPDATE ERROR:",
-        error
-      );
-
-      if (error.response) {
-        console.error(
-          "Status:",
-          error.response.status
-        );
-
-        console.error(
-          "Backend response:",
-          error.response.data
-        );
-
-        alert(
-          error.response.data?.message ||
-            "Failed to update profile."
-        );
-      }
+      console.error("PROFILE UPDATE ERROR:", error);
+      alert(error.response?.data?.message || "Failed to update profile.");
     } finally {
       setSaving(false);
     }
   };
 
-  // ==========================================
-  // LOADING
-  // ==========================================
-
   if (loading) {
     return (
       <AppShell footer={<Footer />}>
-        <div className="flex min-h-[70vh] items-center justify-center text-white">
-          Loading profile...
+        <div className="flex min-h-[60vh] items-center justify-center text-slate-500 text-sm">
+          Loading profile settings...
         </div>
       </AppShell>
     );
   }
 
-  // ==========================================
-  // PROFILE NOT FOUND
-  // ==========================================
-
   if (!user) {
     return (
       <AppShell footer={<Footer />}>
-        <div className="flex min-h-[70vh] flex-col items-center justify-center gap-3 text-red-400">
-          <p>
-            Unable to load profile.
-          </p>
-
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-slate-600">
+          <p className="text-rose-600 font-medium text-sm">Unable to load profile.</p>
           <button
             onClick={fetchProfile}
-            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500"
+            className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
           >
-            Try again
+            Try Again
           </button>
         </div>
       </AppShell>
     );
   }
 
-  // ==========================================
-  // PROFILE IMAGE
-  // ==========================================
-
-  const profileImage =
-    user.profileImage ||
-    authUser?.profileImage ||
-    Avatar;
-
-  // ==========================================
-  // UI
-  // ==========================================
+  const profileImage = user.profileImage || authUser?.profileImage || Avatar;
 
   return (
     <AppShell footer={<Footer />}>
-      <div className="space-y-5">
-
-        {/* PROFILE HEADER */}
-
-        <section
-          className="
-            flex flex-col items-center gap-6
-            rounded-2xl
-            border border-violet-400/20
-            bg-[#2A194F]/75
-            p-6
-            text-center
-            sm:flex-row
-            sm:items-center
-            sm:p-7
-            sm:text-left
-          "
-        >
-          {/* PROFILE IMAGE */}
+      <div className="space-y-6 max-w-4xl mx-auto">
+        {/* Profile Header Banner */}
+        <section className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:p-8">
+          {/* Avatar with Camera Overlay */}
           <div className="relative shrink-0">
             <button
               type="button"
               onClick={handleImageClick}
               disabled={uploadingImage}
-              className="
-                group
-                relative
-                flex
-                size-32
-                shrink-0
-                items-center
-                justify-center
-                overflow-hidden
-                rounded-full
-                border-2
-                border-violet-400/40
-                bg-gradient-to-br
-                from-violet-500
-                to-cyan-500
-                shadow-xl
-                transition
-                duration-300
-                hover:scale-105
-                hover:border-violet-400
-                sm:size-36
-              "
+              className="group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-indigo-100 bg-indigo-50 shadow-sm transition hover:scale-105 hover:border-indigo-400 sm:h-32 sm:w-32"
             >
               <img
                 src={profileImage}
                 alt="Profile"
-                className="h-full w-full object-cover object-center"
+                className="h-full w-full object-cover"
               />
 
-              <div
-                className="
-                  absolute
-                  inset-0
-                  flex
-                  items-center
-                  justify-center
-                  bg-black/40
-                  opacity-0
-                  transition
-                  duration-300
-                  group-hover:opacity-100
-                "
-              >
-                <Camera size={28} className="text-white" />
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 transition group-hover:opacity-100">
+                <Camera size={24} className="text-white" />
               </div>
             </button>
 
-            <div
-              className="
-                pointer-events-none
-                absolute
-                bottom-1
-                right-1
-                grid
-                size-9
-                place-items-center
-                rounded-full
-                border-2
-                border-[#2A194F]
-                bg-violet-600
-                text-white
-                shadow-lg
-              "
-            >
-              <Camera size={16} />
+            <div className="pointer-events-none absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white shadow-md border-2 border-white">
+              <Camera size={14} />
             </div>
 
             <input
@@ -497,268 +232,141 @@ const Profile = () => {
             />
           </div>
 
-          {/* PROFILE DETAILS */}
+          {/* User Summary Info */}
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <h1 className="truncate text-2xl font-extrabold tracking-tight text-slate-900">
+                {user.fullName}
+              </h1>
+              <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 border border-indigo-200">
+                Athlete
+              </span>
+            </div>
 
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-2xl font-extrabold text-white sm:text-3xl">
-              {user.fullName}
-            </h1>
+            <p className="mt-1 text-sm text-slate-500 truncate">{user.email}</p>
 
-            <p className="mt-1.5 truncate text-sm text-white/65">
-              {user.email}
-            </p>
-
-            <p className="mt-4 text-sm font-medium text-white/85 sm:text-base">
-              Stay consistent and strong — you've got this. 💪
-            </p>
-
-            <p className="mt-1.5 text-xs text-white/40">
-              Click your profile picture to change it
-            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs font-medium text-slate-600 sm:justify-start">
+              <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                <ShieldCheck size={14} />
+                Biometrics Active
+              </span>
+              <span className="text-slate-400">Click photo to update avatar</span>
+            </div>
           </div>
         </section>
 
-        {/* PERSONAL INFORMATION */}
-
-        <section
-          className="
-            rounded-2xl
-            border border-violet-400/20
-            bg-[#2A194F]/75
-            p-5
-            sm:p-7
-          "
-        >
-          <div
-            className="
-              mb-3
-              flex
-              items-center
-              justify-between
-              border-b
-              border-white/20
-              pb-4
-            "
-          >
-            <h2 className="text-lg font-bold">
-              Personal information
-            </h2>
+        {/* Personal Metrics Form Card */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                Personal Biometrics & Details
+              </h2>
+              <p className="text-xs text-slate-500">
+                Used to personalize workout cadence and range-of-motion parameters
+              </p>
+            </div>
 
             {!editMode ? (
               <button
                 onClick={handleEdit}
-                className="
-                  flex
-                  cursor-pointer
-                  items-center
-                  gap-2
-                  text-sm
-                  font-semibold
-                  text-violet-300
-                  transition
-                  hover:text-violet-200
-                "
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
               >
-                <Pencil size={16} />
-                Edit profile
+                <Pencil size={14} />
+                <span>Edit Details</span>
               </button>
             ) : (
               <button
                 onClick={handleCancel}
-                className="
-                  flex
-                  cursor-pointer
-                  items-center
-                  gap-2
-                  text-sm
-                  font-semibold
-                  text-red-400
-                  transition
-                  hover:text-red-300
-                "
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
               >
-                <X size={16} />
-                Cancel
+                <X size={14} />
+                <span>Cancel</span>
               </button>
             )}
           </div>
 
-          {/* FULL NAME */}
+          <div className="divide-y divide-slate-100">
+            {/* Full Name */}
+            <ProfileRow icon={UserRound} label="Full Name">
+              {editMode ? (
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                />
+              ) : (
+                <span className="font-semibold text-slate-900">{user.fullName}</span>
+              )}
+            </ProfileRow>
 
-          <ProfileRow
-            icon={UserRound}
-            label="Full name"
-          >
-            {editMode ? (
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                className="
-                  w-full
-                  rounded-lg
-                  border
-                  border-white/10
-                  bg-white/5
-                  px-3
-                  py-2
-                  text-white
-                  outline-none
-                  focus:border-violet-500
-                  sm:w-72
-                "
-              />
-            ) : (
-              user.fullName
-            )}
-          </ProfileRow>
+            {/* Email */}
+            <ProfileRow icon={Mail} label="Email Address">
+              <span className="text-slate-600 font-mono text-xs">{user.email}</span>
+            </ProfileRow>
 
-          {/* EMAIL */}
+            {/* Age */}
+            <ProfileRow icon={CalendarDays} label="Age">
+              {editMode ? (
+                <input
+                  type="number"
+                  name="age"
+                  value={formData.age}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                />
+              ) : (
+                <span className="font-semibold text-slate-900">{user.age} years</span>
+              )}
+            </ProfileRow>
 
-          <ProfileRow
-            icon={Mail}
-            label="Email"
-          >
-            {user.email}
-          </ProfileRow>
+            {/* Gender */}
+            <ProfileRow icon={VenusAndMars} label="Gender">
+              {editMode ? (
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                >
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              ) : (
+                <span className="font-semibold text-slate-900 capitalize">{user.gender || "Not specified"}</span>
+              )}
+            </ProfileRow>
 
-          {/* AGE */}
+            {/* Weight */}
+            <ProfileRow icon={Weight} label="Weight (kg)">
+              {editMode ? (
+                <input
+                  type="number"
+                  name="weight"
+                  step="0.5"
+                  value={formData.weight}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                />
+              ) : (
+                <span className="font-semibold text-slate-900">{user.weight} kg</span>
+              )}
+            </ProfileRow>
+          </div>
 
-          <ProfileRow
-            icon={CalendarDays}
-            label="Age"
-          >
-            {editMode ? (
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                onChange={handleChange}
-                className="
-                  w-full
-                  rounded-lg
-                  border
-                  border-white/10
-                  bg-white/5
-                  px-3
-                  py-2
-                  text-white
-                  outline-none
-                  focus:border-violet-500
-                  sm:w-72
-                "
-              />
-            ) : (
-              `${user.age} years`
-            )}
-          </ProfileRow>
-
-          {/* GENDER */}
-
-          <ProfileRow
-            icon={VenusAndMars}
-            label="Gender"
-          >
-            {editMode ? (
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                className="
-                  w-full
-                  rounded-lg
-                  border
-                  border-white/10
-                  bg-[#171020]
-                  px-3
-                  py-2
-                  text-white
-                  outline-none
-                  focus:border-violet-500
-                  sm:w-72
-                "
-              >
-                <option value="MALE">
-                  Male
-                </option>
-
-                <option value="FEMALE">
-                  Female
-                </option>
-
-                <option value="OTHER">
-                  Other
-                </option>
-              </select>
-            ) : (
-              user.gender
-            )}
-          </ProfileRow>
-
-          {/* WEIGHT */}
-
-          <ProfileRow
-            icon={Weight}
-            label="Weight"
-          >
-            {editMode ? (
-              <input
-                type="number"
-                name="weight"
-                value={formData.weight}
-                onChange={handleChange}
-                className="
-                  w-full
-                  rounded-lg
-                  border
-                  border-white/10
-                  bg-white/5
-                  px-3
-                  py-2
-                  text-white
-                  outline-none
-                  focus:border-violet-500
-                  sm:w-72
-                "
-              />
-            ) : (
-              `${user.weight} kg`
-            )}
-          </ProfileRow>
-
-          {/* SAVE */}
-
+          {/* Save Changes Button */}
           {editMode && (
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="
-                  flex
-                  cursor-pointer
-                  items-center
-                  gap-2
-                  rounded-xl
-                  bg-gradient-to-r
-                  from-violet-600
-                  to-purple-600
-                  px-6
-                  py-3
-                  font-semibold
-                  text-white
-                  transition
-                  duration-300
-                  hover:scale-105
-                  disabled:cursor-not-allowed
-                  disabled:opacity-50
-                "
+                className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:opacity-50"
               >
-                <Save size={17} />
-
-                {saving
-                  ? "Saving..."
-                  : "Save changes"}
+                <Save size={16} />
+                <span>{saving ? "Saving Changes..." : "Save Changes"}</span>
               </button>
             </div>
           )}
@@ -768,39 +376,15 @@ const Profile = () => {
   );
 };
 
-// ==========================================
-// PROFILE ROW
-// ==========================================
-
-const ProfileRow = ({
-  icon,
-  label,
-  children,
-}) => {
-  const Icon = icon;
+const ProfileRow = ({ icon: Icon, label, children }) => {
   return (
-    <div
-      className="
-        flex
-        flex-col
-        gap-2
-        border-b
-        border-white/15
-        py-4
-        last:border-0
-        sm:flex-row
-        sm:items-center
-        sm:justify-between
-      "
-    >
-      <span className="flex items-center gap-2 font-medium">
-        {Icon && <Icon size={18} />}
-        {label}
-      </span>
+    <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
+        {Icon && <Icon size={16} className="text-slate-400" />}
+        <span>{label}</span>
+      </div>
 
-      <span className="break-all text-sm text-white/70 sm:text-base">
-        {children}
-      </span>
+      <div className="text-sm">{children}</div>
     </div>
   );
 };

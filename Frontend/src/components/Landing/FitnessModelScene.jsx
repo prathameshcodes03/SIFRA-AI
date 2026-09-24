@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as THREE from "three";
@@ -29,11 +29,7 @@ const disposeModel = (model) => {
 };
 
 /**
- * Transforms flat, statue-like GLTF materials into realistic, lifelike PBR materials:
- * 1. Zeros out emissive blowout (which causes flat white glowing statue look).
- * 2. Repurposes emissive map as Ambient Occlusion (aoMap) to deepen muscle/crease shadows.
- * 3. Tunes roughness, metalness, and environment reflection for realistic athletic skin & fabric.
- * 4. Calibrates normalMap intensity and 16x anisotropic filtering for crisp anatomical definition.
+ * Transforms flat GLTF materials into realistic, lifelike PBR materials
  */
 const enhanceModelMaterials = (model, renderer) => {
   const maxAniso = renderer.capabilities.getMaxAnisotropy() || 16;
@@ -45,7 +41,6 @@ const enhanceModelMaterials = (model, renderer) => {
     child.receiveShadow = true;
 
     const tuneMaterial = (mat) => {
-      // If basic material, convert to Standard PBR
       if (mat.isMeshBasicMaterial) {
         const upgraded = new THREE.MeshStandardMaterial({
           map: mat.map || null,
@@ -62,25 +57,21 @@ const enhanceModelMaterials = (model, renderer) => {
         mat = upgraded;
       }
 
-      // Eliminate unlit white emissive blowout that causes statue-like appearance
       if (mat.emissive) {
         mat.emissive.set(0x000000);
       }
       mat.emissiveIntensity = 0;
 
-      // Re-route dummy emissive map into Ambient Occlusion for natural muscle shading
       if (mat.emissiveMap) {
         mat.aoMap = mat.emissiveMap;
         mat.aoMapIntensity = 0.85;
         mat.emissiveMap = null;
       }
 
-      // Natural athletic skin & performance fabric micro-surface response
       mat.roughness = 0.52;
       mat.metalness = 0.04;
       mat.envMapIntensity = 1.35;
 
-      // Ensure proper color spaces and high quality filtering on all textures
       if (mat.map) {
         mat.map.colorSpace = THREE.SRGBColorSpace;
         mat.map.anisotropy = maxAniso;
@@ -127,13 +118,33 @@ const centerAndScaleModel = (model, targetHeight) => {
   return { scale, bounds: scaledBounds };
 };
 
-const FitnessModelScene = ({
+const FitnessModelScene = forwardRef(({
   modelUrl,
-  variant = "coach", // "hero-features-sticky" | "coach" | "workout"
+  variant = "coach", // "unified-journey" | "hero" | "workout" | "coach"
   scrollTriggerElement = null,
-}) => {
+  onModelLoaded = null,
+}, ref) => {
   const containerRef = useRef(null);
   const [loadError, setLoadError] = useState(false);
+
+  // Direct transform state for master timeline control
+  const liveTransformRef = useRef({
+    x: variant === "unified-journey" ? -1.85 : 0,
+    y: 0,
+    z: 0,
+    rotX: 0,
+    rotY: 0,
+    rotZ: 0,
+  });
+
+  useImperativeHandle(ref, () => ({
+    setTransform: (x, rotY, rotZ = 0, y = 0) => {
+      liveTransformRef.current.x = x;
+      liveTransformRef.current.rotY = rotY;
+      liveTransformRef.current.rotZ = rotZ;
+      liveTransformRef.current.y = y;
+    },
+  }));
 
   useEffect(() => {
     const container = containerRef.current;
@@ -150,7 +161,6 @@ const FitnessModelScene = ({
       0.1,
       1000
     );
-    // Adjusted camera distance and height so the entire model (head to shoes) fits with ample headroom
     camera.position.set(0, -0.05, 8.4);
 
     const renderer = new THREE.WebGLRenderer({
@@ -175,7 +185,7 @@ const FitnessModelScene = ({
     container.appendChild(renderer.domElement);
 
     // --------------------------------------------------
-    // ENVIRONMENT MAP (Physically Based Studio Reflections)
+    // ENVIRONMENT MAP (Daylight Studio Reflections)
     // --------------------------------------------------
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
@@ -183,18 +193,17 @@ const FitnessModelScene = ({
     scene.environment = envTexture;
 
     // --------------------------------------------------
-    // CINEMATIC 4-POINT ATHLETIC LIGHTING RIG
+    // CINEMATIC ATHLETIC LIGHTING RIG
     // --------------------------------------------------
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
 
     const hemisphereLight = new THREE.HemisphereLight(
-      0xa5b4fc, // Soft cool sky
-      0x0a0a14, // Dark ground
-      0.65
+      0xf1f5f9,
+      0x1e1b4b,
+      0.75
     );
 
-    // Key Light: Warm directional light casting soft shadows
-    const keyLight = new THREE.DirectionalLight(0xfff5eb, 3.4);
+    const keyLight = new THREE.DirectionalLight(0xfff5eb, 3.2);
     keyLight.position.set(4, 5, 4.5);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.set(1024, 1024);
@@ -202,25 +211,17 @@ const FitnessModelScene = ({
     keyLight.shadow.radius = 4;
     keyLight.shadow.camera.near = 0.5;
     keyLight.shadow.camera.far = 20;
-    keyLight.shadow.camera.left = -5;
-    keyLight.shadow.camera.right = 5;
-    keyLight.shadow.camera.top = 5;
-    keyLight.shadow.camera.bottom = -5;
 
-    // Fill Light: Soft cyan/indigo fill for realistic shadow contrast
-    const fillLight = new THREE.DirectionalLight(0x818cf8, 1.1);
+    const fillLight = new THREE.DirectionalLight(0x818cf8, 1.3);
     fillLight.position.set(-4, 2, 3.5);
 
-    // Rim Light 1: Vivid cyan athletic edge rim
-    const rimLight1 = new THREE.DirectionalLight(0x06b6d4, 3.6);
+    const rimLight1 = new THREE.DirectionalLight(0x06b6d4, 3.0);
     rimLight1.position.set(-4.5, 4, -4.5);
 
-    // Rim Light 2: Neon violet/magenta athletic edge rim
-    const rimLight2 = new THREE.DirectionalLight(0xa855f7, 3.0);
+    const rimLight2 = new THREE.DirectionalLight(0xa855f7, 2.6);
     rimLight2.position.set(4.5, 3.5, -4);
 
-    // Floor accent up-light: adds subtle ground bounce
-    const groundBounceLight = new THREE.PointLight(0x38bdf8, 1.2, 8);
+    const groundBounceLight = new THREE.PointLight(0x38bdf8, 1.0, 8);
     groundBounceLight.position.set(0, -2.5, 2);
 
     scene.add(
@@ -235,7 +236,7 @@ const FitnessModelScene = ({
 
     // Contact shadow plane
     const groundGeometry = new THREE.PlaneGeometry(20, 20);
-    const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.35 });
+    const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.25 });
     const ground = new THREE.Mesh(groundGeometry, groundMaterial);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -297,6 +298,7 @@ const FitnessModelScene = ({
     };
 
     const handleContainerPointerDown = (e) => {
+      if (variant !== "workout") return;
       pointer.isDragging = true;
       pointer.dragStartX = e.clientX - pointer.targetDragYaw / 0.007;
       pointer.dragStartY = e.clientY - pointer.targetDragPitch / 0.005;
@@ -304,6 +306,7 @@ const FitnessModelScene = ({
     };
 
     const handleContainerPointerUp = () => {
+      if (variant !== "workout") return;
       if (pointer.isDragging) {
         pointer.isDragging = false;
         container.style.cursor = "grab";
@@ -333,7 +336,7 @@ const FitnessModelScene = ({
     window.addEventListener("pointermove", handleWindowMouseMove, { passive: true });
 
     // --------------------------------------------------
-    // RESIZE HANDLER (DYNMIC CAMERA PROJECTION FOR ALL DEVICES)
+    // RESIZE HANDLER
     // --------------------------------------------------
     const resizeRenderer = () => {
       if (!container) return;
@@ -342,11 +345,6 @@ const FitnessModelScene = ({
       const aspect = width / Math.max(height, 1);
       camera.aspect = aspect;
 
-      // Dynamically calculate camera Z distance so the model fits with headroom on all screens:
-      // - Tall mobile phones (portrait): aspect < 0.7 -> Z = 10.4
-      // - Tablets / Foldables: 0.7 <= aspect < 1.3 -> Z = 9.2
-      // - Laptops (13"-16", MacBook, 1080p): 1.3 <= aspect < 1.8 -> Z = 8.4
-      // - Ultrawide / 4K desktops: aspect >= 1.8 -> Z = 8.2
       if (aspect < 0.7) {
         camera.position.z = 10.4;
         camera.position.y = 0.0;
@@ -369,203 +367,25 @@ const FitnessModelScene = ({
     window.addEventListener("resize", resizeRenderer);
 
     // --------------------------------------------------
-    // MODEL & ANIMATION STATE
+    // MODEL STATE
     // --------------------------------------------------
     let model = null;
     let baseScale = 1;
-    let basePosition = new THREE.Vector3(0, 0, 0);
-    let baseRotation = new THREE.Euler(0, 0, 0);
-    let scrollTimeline = null;
-    let scrollTriggerInstance = null;
     let animationFrameId = null;
-
     const clock = new THREE.Clock();
 
-    // --------------------------------------------------
-    // SCROLL ANIMATIONS CONFIGURATION
-    // --------------------------------------------------
-    const setupScrollAnimation = (loadedModel) => {
-      const getOffsets = () => {
-        const w = window.innerWidth;
-        if (w < 768) return { startX: 0, midRightX: 0 };
-        if (w < 1024) return { startX: -1.35, midRightX: 1.35 };
-        if (w < 1280) return { startX: -1.6, midRightX: 1.6 };
-        if (w < 1536) return { startX: -1.85, midRightX: 1.85 };
-        return { startX: -2.1, midRightX: 2.1 };
-      };
-
-      const { startX, midRightX } = getOffsets();
-
-      // ==================================================
-      // 1. UNIFIED CONTINUOUS JOURNEY (STARTING FROM HOME):
-      // Starts in Hero (Page 1) on the left side with FACE FORWARD (rotation.y = 0).
-      // Immediately on scroll: glides left -> right (-x to +x) on Slide 1,
-      // glides right -> left (+x to -x) on Slide 2,
-      // and glides left -> right (-x to +x) on Slide 3,
-      // rotating continuously with each transition!
-      // ==================================================
-      if (
-        variant === "unified-journey" ||
-        variant === "hero-features-sticky" ||
-        variant === "features" ||
-        variant === "hero" ||
-        variant === "coach"
-      ) {
-        const FACE_FORWARD = 0; // Starts face-forward facing camera directly
-
-        basePosition.set(startX, 0, 0);
-        baseRotation.set(0, FACE_FORWARD, 0);
-
-        loadedModel.position.x = startX;
-        loadedModel.rotation.y = FACE_FORWARD;
-
-        const triggerTarget =
-          scrollTriggerElement ||
-          document.querySelector("#home-features-pin") ||
-          document.querySelector("#home") ||
-          container;
-
-        scrollTimeline = gsap.timeline({
-          scrollTrigger: {
-            trigger: triggerTarget,
-            start: "top top",
-            end: "+=360%",
-            scrub: 0.8,
-            invalidateOnRefresh: true,
-          },
-        });
-
-        // Step 1 (Home -> Slide 1): Glides from LEFT (-x) to RIGHT (+x) & rotates 180° to face Slide 1 text on left
-        scrollTimeline
-          .to(
-            basePosition,
-            {
-              x: midRightX,
-              ease: "power1.inOut",
-              duration: 1.2,
-            },
-            0
-          )
-          .to(
-            baseRotation,
-            {
-              y: FACE_FORWARD + Math.PI, // 180 deg turn, facing left toward Slide 1 text
-              ease: "power1.inOut",
-              duration: 1.2,
-            },
-            0
-          )
-          // Step 2 (Slide 1 -> Slide 2): Glides from RIGHT (+x) to LEFT (-x) & rotates to 360° to face Slide 2 text on right
-          .to(
-            basePosition,
-            {
-              x: startX,
-              ease: "power1.inOut",
-              duration: 1.2,
-            },
-            1.4
-          )
-          .to(
-            baseRotation,
-            {
-              y: FACE_FORWARD + Math.PI * 2, // 360 deg full turn, facing right toward Slide 2 text
-              ease: "power1.inOut",
-              duration: 1.2,
-            },
-            1.4
-          )
-          // Step 3 (Slide 2 -> Slide 3): Glides from LEFT (-x) to RIGHT (+x) & rotates to 540° to face Slide 3 text on left
-          .to(
-            basePosition,
-            {
-              x: midRightX,
-              ease: "power1.inOut",
-              duration: 1.2,
-            },
-            2.8
-          )
-          .to(
-            baseRotation,
-            {
-              y: FACE_FORWARD + Math.PI * 3, // 540 deg turn, facing left toward Slide 3 text
-              ease: "power1.inOut",
-              duration: 1.2,
-            },
-            2.8
-          );
-
-        return;
-      }
-
-      // ==================================================
-      // 2ND MODEL (AVA STEELE - DUMBBELL TRAINER):
-      // Kept at a dynamic 3/4 front athletic angle (-0.38 rad).
-      // Her face, eyes, shoulders, and dumbbells are clearly visible.
-      // Her backside/glutes are NOT facing the camera!
-      // Slides in gracefully on scroll from the left.
-      // ==================================================
-      if (variant === "workout") {
-        const isMobile = window.innerWidth < 768;
-        const triggerSection = container.closest("[data-model-section]") || container;
-        // Dynamic 3/4 athletic front angle (~22 deg) where face and dumbbells are visible
-        const TARGET_ROTATION = -0.38;
-        const targetX = isMobile ? 0 : 0.05;
-        const offscreenLeftX = isMobile ? -3.5 : -5.0;
-
-        // Start off-screen left and angled slightly
-        basePosition.set(offscreenLeftX, 0, 0);
-        baseRotation.set(0, TARGET_ROTATION - 0.4, 0);
-        loadedModel.position.x = offscreenLeftX;
-        loadedModel.rotation.y = TARGET_ROTATION - 0.4;
-        gsap.set(container, { opacity: 0, scale: 0.95 });
-
-        scrollTriggerInstance = ScrollTrigger.create({
-          trigger: triggerSection,
-          start: "top 78%",
-          onEnter: () => {
-            // Animate container fade & scale
-            gsap.to(container, {
-              opacity: 1,
-              scale: 1,
-              duration: 1.2,
-              ease: "power3.out",
-            });
-
-            // Smoothly slide 3D model in from left to resting position
-            gsap.to(basePosition, {
-              x: targetX,
-              duration: 1.4,
-              ease: "power3.out",
-            });
-
-            // Settle into ready stance with face and dumbbells clearly visible
-            gsap.to(baseRotation, {
-              y: TARGET_ROTATION,
-              duration: 1.4,
-              ease: "power3.out",
-            });
-          },
-          onLeaveBack: () => {
-            gsap.to(container, {
-              opacity: 0,
-              scale: 0.95,
-              duration: 0.7,
-              ease: "power2.in",
-            });
-            gsap.to(basePosition, {
-              x: offscreenLeftX,
-              duration: 0.8,
-              ease: "power2.in",
-            });
-            gsap.to(baseRotation, {
-              y: TARGET_ROTATION - 0.4,
-              duration: 0.8,
-              ease: "power2.in",
-            });
-          },
-        });
-      }
+    // Responsive start position based on viewport
+    const getInitialX = () => {
+      const w = window.innerWidth;
+      if (w < 768) return 0;
+      if (w < 1024) return -1.35;
+      if (w < 1280) return -1.6;
+      if (w < 1536) return -1.85;
+      return -2.1;
     };
+
+    const initialX = variant === "unified-journey" ? getInitialX() : 0;
+    liveTransformRef.current.x = initialX;
 
     // --------------------------------------------------
     // LOAD GLB MODEL
@@ -577,20 +397,55 @@ const FitnessModelScene = ({
       (gltf) => {
         model = gltf.scene;
 
-        // Calibrated heights so head, torso, dumbbells, and shoes fit cleanly with headroom
-        const targetHeight = variant === "hero-features-sticky" || variant === "coach" ? 3.55 : 3.4;
+        const targetHeight = variant === "hero-features-sticky" || variant === "coach" || variant === "unified-journey" ? 3.55 : 3.4;
         const { scale, bounds } = centerAndScaleModel(model, targetHeight);
         baseScale = scale;
 
-        // Apply realistic PBR materials, remove emissive glow, setup AO
         enhanceModelMaterials(model, renderer);
 
-        // Ground shadow plane alignment
         ground.position.y = bounds.min.y;
         ground.visible = true;
 
+        model.position.x = liveTransformRef.current.x;
+        model.rotation.y = liveTransformRef.current.rotY;
+
         scene.add(model);
-        setupScrollAnimation(model);
+
+        if (variant === "workout") {
+          // Ava Steele entry animation
+          const isMobile = window.innerWidth < 768;
+          const TARGET_ROTATION = -0.38;
+          const targetX = isMobile ? 0 : 0.05;
+          const offscreenLeftX = isMobile ? -3.5 : -5.0;
+
+          liveTransformRef.current.x = offscreenLeftX;
+          liveTransformRef.current.rotY = TARGET_ROTATION - 0.4;
+          model.position.x = offscreenLeftX;
+          model.rotation.y = TARGET_ROTATION - 0.4;
+
+          ScrollTrigger.create({
+            trigger: container.closest("[data-model-section]") || container,
+            start: "top 78%",
+            onEnter: () => {
+              gsap.to(liveTransformRef.current, {
+                x: targetX,
+                rotY: TARGET_ROTATION,
+                duration: 1.4,
+                ease: "power3.out",
+              });
+            },
+            onLeaveBack: () => {
+              gsap.to(liveTransformRef.current, {
+                x: offscreenLeftX,
+                rotY: TARGET_ROTATION - 0.4,
+                duration: 0.8,
+                ease: "power2.in",
+              });
+            },
+          });
+        }
+
+        if (onModelLoaded) onModelLoaded();
         ScrollTrigger.refresh();
       },
       undefined,
@@ -608,7 +463,6 @@ const FitnessModelScene = ({
 
       const elapsedTime = clock.getElapsedTime();
 
-      // Smooth pointer lerping with adaptive speed
       const lerpSpeed = pointer.isHovered || pointer.isDragging ? 0.08 : 0.045;
       pointer.x += (pointer.targetX - pointer.x) * lerpSpeed;
       pointer.y += (pointer.targetY - pointer.y) * lerpSpeed;
@@ -617,50 +471,45 @@ const FitnessModelScene = ({
       pointer.dragPitch += (pointer.targetDragPitch - pointer.dragPitch) * 0.12;
 
       if (model) {
-        // 1. Lifelike diaphragmatic breathing
+        // 1. Lifelike breathing
         const breathY = Math.sin(elapsedTime * 1.9) * 0.025;
         const breathScale = 1.0 + Math.sin(elapsedTime * 1.9) * 0.003;
 
-        // 2. Natural organic posture sway
+        // 2. Natural sway
         const idleSwayZ = Math.sin(elapsedTime * 0.9) * 0.01;
         const idleSwayX = Math.cos(elapsedTime * 1.3) * 0.007;
 
         if (variant === "workout") {
-          // Responsive 3D tracking for weightlifter:
-          // Pronounced yaw (turn left/right) and pitch (tilt up/down) tracking the mouse
           const hoverYaw = pointer.x * 0.65;
           const hoverPitch = -pointer.y * 0.28;
           const hoverRoll = -pointer.x * 0.08;
 
-          model.rotation.x = baseRotation.x + hoverPitch + pointer.dragPitch + idleSwayX;
-          model.rotation.y = baseRotation.y + hoverYaw + pointer.dragYaw;
-          model.rotation.z = baseRotation.z + hoverRoll + idleSwayZ;
+          model.rotation.x = liveTransformRef.current.rotX + hoverPitch + pointer.dragPitch + idleSwayX;
+          model.rotation.y = liveTransformRef.current.rotY + hoverYaw + pointer.dragYaw;
+          model.rotation.z = liveTransformRef.current.rotZ + hoverRoll + idleSwayZ;
 
-          // Subtle spatial 3D translation parallax:
           const parallaxX = pointer.x * 0.28;
           const parallaxY = pointer.y * 0.2;
           const hoverPopZ = pointer.isHovered ? 0.16 : 0;
 
-          model.position.x = basePosition.x + parallaxX;
-          model.position.y = basePosition.y + breathY + parallaxY;
-          model.position.z = basePosition.z + hoverPopZ;
+          model.position.x = liveTransformRef.current.x + parallaxX;
+          model.position.y = liveTransformRef.current.y + breathY + parallaxY;
+          model.position.z = liveTransformRef.current.z + hoverPopZ;
 
-          // Real-time lighting modulation to highlight muscular definition & dumbbells
           keyLight.position.x = 4 + pointer.x * 2.2;
           keyLight.position.y = 5 + pointer.y * 1.8;
           rimLight1.position.x = -4.5 - pointer.x * 1.2;
         } else {
-          // Unified hero & features model
-          model.position.x = basePosition.x + pointer.x * 0.1;
-          model.position.y = basePosition.y + breathY + pointer.y * 0.08;
-          model.position.z = basePosition.z;
+          // Unified hero & features model (Directly scrubs with liveTransformRef)
+          model.position.x = liveTransformRef.current.x + pointer.x * 0.1;
+          model.position.y = liveTransformRef.current.y + breathY + pointer.y * 0.08;
+          model.position.z = liveTransformRef.current.z;
 
-          model.rotation.x = baseRotation.x + pointer.y * 0.18 + idleSwayX;
-          model.rotation.y = baseRotation.y + pointer.x * 0.35;
-          model.rotation.z = baseRotation.z + idleSwayZ;
+          model.rotation.x = liveTransformRef.current.rotX + pointer.y * 0.18 + idleSwayX;
+          model.rotation.y = liveTransformRef.current.rotY + pointer.x * 0.35;
+          model.rotation.z = liveTransformRef.current.rotZ + idleSwayZ;
         }
 
-        // Subtle micro-pulse on torso for organic breathing
         model.scale.set(
           baseScale * breathScale,
           baseScale,
@@ -688,10 +537,6 @@ const FitnessModelScene = ({
       window.removeEventListener("pointermove", handleWindowMouseMove);
       window.removeEventListener("resize", resizeRenderer);
 
-      scrollTimeline?.scrollTrigger?.kill();
-      scrollTimeline?.kill();
-      scrollTriggerInstance?.kill();
-
       if (model) {
         scene.remove(model);
         disposeModel(model);
@@ -705,7 +550,7 @@ const FitnessModelScene = ({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [modelUrl, variant, scrollTriggerElement]);
+  }, [modelUrl, variant]);
 
   return (
     <div
@@ -714,12 +559,12 @@ const FitnessModelScene = ({
       aria-hidden="true"
     >
       {loadError && (
-        <p className="absolute inset-0 grid place-items-center text-sm text-violet-200">
+        <p className="absolute inset-0 grid place-items-center text-sm text-slate-400">
           Model unavailable.
         </p>
       )}
     </div>
   );
-};
+});
 
 export default FitnessModelScene;

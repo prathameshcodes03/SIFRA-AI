@@ -2,30 +2,53 @@
 
 @theme {
   --breakpoint-xs: 23rem;
+  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 html {
-  background: #05050a;
+  background: #FAFAFC;
+  color: #0F172A;
   scroll-behavior: smooth;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
+
 body {
   min-width: 320px;
   overflow-x: hidden;
-  background: #05050a;
+  background: #FAFAFC;
+  color: #0F172A;
+  font-family: var(--font-sans);
 }
+
+/* Subtle Technical Grid & Dot Patterns for SaaS Aesthetic */
+.bg-grid-slate {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(226, 232, 240, 0.6) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 232, 240, 0.6) 1px, transparent 1px);
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(rgba(148, 163, 184, 0.3) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 button,
 a,
 input,
 select {
   -webkit-tap-highlight-color: transparent;
 }
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #a78bfa;
-  outline-offset: 3px;
+  outline: 2px solid #6366F1;
+  outline-offset: 2px;
 }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -37,6 +60,20 @@ select:focus-visible {
   }
 }
 
+/* Clean Custom Scrollbar */
 ::-webkit-scrollbar {
-  display: none;
+display: none;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

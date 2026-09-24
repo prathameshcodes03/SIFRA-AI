@@ -1,4 +1,5 @@
 import React from "react";
+import { Volume2, VolumeX, Sparkles, RefreshCw, Mic } from "lucide-react";
 
 const VoiceFeedback = ({
   message = "AI Voice Coach is ready. Keep your back straight.",
@@ -9,55 +10,63 @@ const VoiceFeedback = ({
   onReplay,
 }) => {
   return (
-    <div
-      className="
-      min-h-20
-      w-full
-      rounded-2xl
-      border border-white/10
-      bg-[#11111B]
-      px-6
-      py-4
-      flex
-      flex-wrap
-      items-center
-      justify-between
-      gap-3
-      shadow-[0_0_25px_rgba(139,92,246,0.12)]
-      "
-    >
-      <div className="flex-1 min-w-[200px]">
-        <div className="flex items-center gap-2">
-          <h2 className="text-white text-lg font-semibold">AI Voice Coach</h2>
-          {isSpeaking && (
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-            </span>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-start gap-3.5 flex-1 min-w-[220px]">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 ${
+            isSpeaking
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-105"
+              : isMuted
+              ? "bg-slate-100 text-slate-400"
+              : "bg-indigo-50 text-indigo-600"
+          }`}
+        >
+          {isMuted ? (
+            <VolumeX className="h-5 w-5" />
+          ) : (
+            <Volume2 className={`h-5 w-5 ${isSpeaking ? "animate-pulse" : ""}`} />
           )}
         </div>
 
-        <p className="text-sm text-gray-300 mt-1 transition-all duration-300">
-          {isLoading ? (
-            <span className="text-violet-400 animate-pulse">Generating voice tip...</span>
-          ) : message ? (
-            message
-          ) : (
-            <span className="text-gray-500">Waiting for exercise start...</span>
-          )}
-        </p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+              AI Voice Coach
+            </h3>
+            {isSpeaking && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 border border-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-ping" />
+                Speaking
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1 text-sm font-medium text-slate-700 leading-relaxed">
+            {isLoading ? (
+              <span className="text-indigo-600 animate-pulse font-normal">
+                Synthesizing real-time coaching cue...
+              </span>
+            ) : message ? (
+              message
+            ) : (
+              <span className="text-slate-400 font-normal">
+                Waiting for exercise movement...
+              </span>
+            )}
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {onReplay && (
           <button
             onClick={onReplay}
             disabled={isLoading}
-            title="Hear coaching tip"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-violet-400/20 bg-violet-500/10 text-violet-300 text-xs font-semibold hover:bg-violet-500/20 hover:scale-105 active:scale-95 transition-all duration-200"
+            title="Replay Voice Cue"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
           >
-            <i className="fa-solid fa-volume-high text-xs"></i>
-            <span>Speak Tip</span>
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+            <span>Replay Cue</span>
           </button>
         )}
 
@@ -65,51 +74,20 @@ const VoiceFeedback = ({
           <button
             onClick={onToggleMute}
             title={isMuted ? "Unmute Voice Coach" : "Mute Voice Coach"}
-            className={`h-9 w-9 rounded-xl border flex items-center justify-center text-xs transition-all duration-200 ${
+            className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border transition ${
               isMuted
-                ? "border-red-500/30 bg-red-500/10 text-red-400"
-                : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
+                ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+                : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
             }`}
           >
-            <i
-              className={`fa-solid ${
-                isMuted ? "fa-volume-xmark" : "fa-volume-high"
-              }`}
-            ></i>
+            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
         )}
-
-        <div
-          className={`
-          h-12
-          w-12
-          rounded-full
-          bg-gradient-to-r
-          from-violet-600
-          to-purple-600
-          flex
-          items-center
-          justify-center
-          shadow-[0_0_15px_rgba(139,92,246,0.35)]
-          transition-all
-          duration-300
-          ${isSpeaking ? "scale-110 animate-pulse shadow-[0_0_25px_rgba(168,85,247,0.6)]" : ""}
-          `}
-        >
-          <i
-            className={`fa-solid ${
-              isSpeaking
-                ? "fa-waveform-lines text-white"
-                : isMuted
-                ? "fa-volume-xmark text-white/60"
-                : "fa-volume-high text-white"
-            } text-lg`}
-          ></i>
-        </div>
       </div>
     </div>
   );
 };
 
 export default VoiceFeedback;
+
 

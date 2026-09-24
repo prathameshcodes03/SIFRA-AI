@@ -1,4 +1,5 @@
 import React from "react";
+import { Flame, Calendar, Trophy, Target } from "lucide-react";
 
 const WorkoutStreak = ({
   currentStreak = 0,
@@ -7,40 +8,59 @@ const WorkoutStreak = ({
   weeklyGoal = 7,
 }) => {
   return (
-    <div
-      className="min-h-[18rem] w-full rounded-3xl bg-white/5
-            backdrop-blur-xl
-            border
-            border-white/10
-            shadow-[0_0_30px_rgba(139,92,246,0.15)]"
-    >
-      <div className="flex flex-wrap items-center gap-4">
-        <i className="mt-4 ml-6 font-bold text-2xl text-white fa-regular fa-calendar"></i>
-
-        <h1 className="mt-4 ml-2 font-bold text-xl text-white">
-          Workout Streak
-        </h1>
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <Flame className="h-4 w-4" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900">Workout Streak</h3>
+          </div>
+          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200">
+            Daily Goal
+          </span>
+        </div>
+        <p className="mt-1.5 text-xs text-slate-500">
+          Build long-term training consistency
+        </p>
       </div>
 
-      <div className="flex flex-col items-center mt-8">
-        <h1 className="text-7xl font-extrabold text-white">{currentStreak}</h1>
-
-        <p className="text-white/80 mt-2">Current Streak</p>
+      {/* Main Streak Counter */}
+      <div className="my-6 flex flex-col items-center justify-center text-center">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-mono text-5xl font-extrabold text-slate-900">
+            {currentStreak}
+          </span>
+          <span className="text-sm font-semibold text-slate-500">
+            {currentStreak === 1 ? "day" : "days"}
+          </span>
+        </div>
+        <p className="mt-1 text-xs font-medium text-slate-500">
+          Current Daily Streak
+        </p>
       </div>
 
-      <div className="flex justify-around mt-10">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-white">{bestStreak}</h2>
-
-          <p className="text-white/70">Best Streak</p>
+      {/* Bottom Summary Grid */}
+      <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+        <div className="rounded-xl bg-slate-50 p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-slate-400">
+            <Trophy className="h-3.5 w-3.5 text-amber-500" />
+            <span className="text-[11px] font-semibold text-slate-500">Best Streak</span>
+          </div>
+          <p className="mt-1 font-mono text-base font-bold text-slate-900">
+            {bestStreak} {bestStreak === 1 ? "Day" : "Days"}
+          </p>
         </div>
 
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-white">
-            {completedDays}/{weeklyGoal}
-          </h2>
-
-          <p className="text-white/70">Weekly Goal</p>
+        <div className="rounded-xl bg-slate-50 p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-slate-400">
+            <Target className="h-3.5 w-3.5 text-indigo-500" />
+            <span className="text-[11px] font-semibold text-slate-500">Weekly Goal</span>
+          </div>
+          <p className="mt-1 font-mono text-base font-bold text-slate-900">
+            {completedDays} / {weeklyGoal}
+          </p>
         </div>
       </div>
     </div>
@@ -48,3 +68,4 @@ const WorkoutStreak = ({
 };
 
 export default WorkoutStreak;
+

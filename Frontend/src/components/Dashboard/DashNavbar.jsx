@@ -1,366 +1,144 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-
-import api from "../../api/axios";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../Context/AuthContext";
-
+import api from "../../api/axios";
+import {
+  Menu,
+  Bell,
+  User,
+  LogOut,
+  Dumbbell,
+  ChevronDown,
+  Sparkles,
+} from "lucide-react";
 import Avatar from "../../assets/Images/defaultavatar.png";
 
 const DashNavbar = ({ onMenuToggle }) => {
   const navigate = useNavigate();
-
   const { user, logout } = useAuth();
-
-  const [showDropdown, setShowDropdown] =
-    useState(false);
-
+  const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
-
-  // ==========================================
-  // CLOSE DROPDOWN
-  // ==========================================
 
   useEffect(() => {
     const close = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(
-          event.target
-        )
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
       }
     };
-
-    document.addEventListener(
-      "mousedown",
-      close
-    );
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        close
-      );
-    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
   }, []);
-
-  // ==========================================
-  // LOGOUT
-  // ==========================================
 
   const handleLogout = async () => {
     try {
       await api.post("/api/auth/logout");
     } catch (error) {
-      console.error(
-        "LOGOUT ERROR:",
-        error
-      );
+      console.error("LOGOUT ERROR:", error);
     }
-
     await logout();
-
-    navigate("/Login", {
-      replace: true,
-    });
+    navigate("/Login", { replace: true });
   };
 
-  // ==========================================
-  // PROFILE IMAGE
-  // ==========================================
-
-  const profileImage =
-    user?.profileImage || Avatar;
-
-  // ==========================================
-  // INITIAL
-  // ==========================================
-
-  const userInitial = (
-    user?.fullName || "A"
-  )
-    .trim()
-    .charAt(0)
-    .toUpperCase();
+  const userInitial = (user?.fullName || "A").trim().charAt(0).toUpperCase();
 
   return (
-    <nav
-      className="
-        sticky
-        top-0
-        z-20
-        border-b
-        border-white/5
-        bg-[#05050A]/85
-        px-4
-        py-3
-        backdrop-blur-xl
-        sm:px-6
-        lg:ml-[15rem]
-        lg:px-8
-      "
-    >
-      <div
-        className="
-          mx-auto
-          flex
-          w-full
-          max-w-[90rem]
-          items-center
-          justify-between
-          rounded-2xl
-          border
-          border-white/10
-          bg-white/5
-          px-4
-          py-3
-          sm:px-6
-        "
-      >
-        {/* LEFT */}
-
-        <div className="min-w-0">
-          <p
-            className="
-              text-xs
-              font-medium
-              uppercase
-              tracking-[0.18em]
-              text-violet-300/80
-            "
-          >
-            Your space
-          </p>
-
-          <h1
-            className="
-              truncate
-              text-base
-              font-bold
-              text-white
-              sm:text-lg
-            "
-          >
-            Welcome back,{" "}
-            {user?.fullName || "Athlete"}
-          </h1>
-        </div>
-
-        {/* RIGHT */}
-
-        <div className="flex items-center gap-2 sm:gap-4">
-
-          {/* MOBILE MENU */}
-
+    <nav className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 px-4 py-3 backdrop-blur-md sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
+        {/* Left: Mobile Toggle & Page Context */}
+        <div className="flex items-center gap-3">
           <button
             onClick={onMenuToggle}
-            aria-label="Open navigation"
-            className="
-              grid
-              size-10
-              place-items-center
-              rounded-xl
-              border
-              border-white/10
-              text-white
-              transition
-              hover:bg-white/10
-              lg:hidden
-            "
+            aria-label="Open navigation menu"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 lg:hidden"
           >
-            <i className="fa-solid fa-bars" />
+            <Menu className="h-4 w-4" />
           </button>
 
-          {/* NOTIFICATIONS */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600">
+              Training Workspace
+            </p>
+            <h1 className="text-sm font-bold text-slate-900 sm:text-base">
+              Welcome back, {user?.fullName || "Athlete"}
+            </h1>
+          </div>
+        </div>
 
+        {/* Right: Quick Action & Profile */}
+        <div className="flex items-center gap-3">
           <button
-            aria-label="Notifications"
-            className="
-              relative
-              grid
-              size-10
-              place-items-center
-              rounded-xl
-              text-white
-              transition-colors
-              hover:bg-white/10
-              hover:text-violet-400
-            "
+            onClick={() => navigate("/Workout")}
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]"
           >
-            <i className="fa-regular fa-bell text-lg" />
-
-            <span
-              className="
-                absolute
-                right-2
-                top-2
-                size-2
-                rounded-full
-                bg-red-500
-              "
-            />
+            <Dumbbell className="h-3.5 w-3.5" />
+            <span>Quick Workout</span>
           </button>
 
-          {/* ACCOUNT */}
-
-          <div
-            className="relative"
-            ref={dropdownRef}
-          >
+          {/* Account Dropdown */}
+          <div className="relative" ref={dropdownRef}>
             <button
-              onClick={() =>
-                setShowDropdown(
-                  (prev) => !prev
-                )
-              }
-              aria-label="Open account menu"
-              className="
-                grid
-                size-10
-                overflow-hidden
-                rounded-full
-                border
-                border-violet-400/40
-                bg-gradient-to-br
-                from-violet-500
-                to-cyan-500
-                text-sm
-                font-bold
-                text-white
-                transition
-                hover:ring-2
-                hover:ring-violet-500
-              "
+              onClick={() => setShowDropdown((prev) => !prev)}
+              aria-label="Open user menu"
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 p-1 transition hover:bg-slate-100"
             >
-              {user?.profileImage ? (
-                <img
-                  src={user.profileImage}
-                  alt="Profile"
-                  className="size-full object-cover"
-                />
-              ) : (
-                userInitial
-              )}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white overflow-hidden">
+                {user?.profileImage ? (
+                  <img
+                    src={user.profileImage}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  userInitial
+                )}
+              </div>
+              <ChevronDown className="h-3.5 w-3.5 text-slate-500 mr-1 hidden sm:block" />
             </button>
 
-            {/* DROPDOWN */}
-
             {showDropdown && (
-              <div
-                className="
-                  absolute
-                  right-0
-                  z-50
-                  mt-3
-                  w-60
-                  overflow-hidden
-                  rounded-2xl
-                  border
-                  border-violet-500/20
-                  bg-[#161225]/95
-                  shadow-2xl
-                  backdrop-blur-2xl
-                "
-              >
-                {/* USER INFO */}
-
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-3
-                    border-b
-                    border-white/10
-                    px-5
-                    py-4
-                  "
-                >
-                  <div
-                    className="
-                      size-10
-                      shrink-0
-                      overflow-hidden
-                      rounded-full
-                      border
-                      border-violet-400/40
-                      bg-gradient-to-br
-                      from-violet-500
-                      to-cyan-500
-                    "
-                  >
-                    {user?.profileImage ? (
-                      <img
-                        src={user.profileImage}
-                        alt="Profile"
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className="
-                          grid
-                          size-full
-                          place-items-center
-                          text-sm
-                          font-bold
-                          text-white
-                        "
-                      >
-                        {userInitial}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="min-w-0">
-                    <h3 className="truncate font-semibold text-white">
-                      {user?.fullName ||
-                        "Athlete"}
-                    </h3>
-
-                    <p className="truncate text-sm text-gray-400">
-                      {user?.email}
-                    </p>
-                  </div>
+              <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                <div className="border-b border-slate-100 px-4 py-3">
+                  <p className="truncate text-xs font-bold text-slate-900">
+                    {user?.fullName || "Athlete"}
+                  </p>
+                  <p className="truncate text-[11px] text-slate-500">
+                    {user?.email || "athlete@sifra.ai"}
+                  </p>
                 </div>
 
-                {/* PROFILE */}
+                <div className="p-1">
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      navigate("/Profile");
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <User className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Profile & Settings</span>
+                  </button>
 
-                <button
-                  onClick={() => {
-                    setShowDropdown(false);
-                    navigate("/Profile");
-                  }}
-                  className="
-                    w-full
-                    px-5
-                    py-4
-                    text-left
-                    text-white
-                    transition
-                    hover:bg-white/5
-                  "
-                >
-                  <i className="fa-regular fa-user mr-3" />
-                  Profile
-                </button>
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      navigate("/WorkoutPlan");
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <Dumbbell className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Workout Plan</span>
+                  </button>
+                </div>
 
-                {/* LOGOUT */}
-
-                <button
-                  onClick={handleLogout}
-                  className="
-                    w-full
-                    px-5
-                    py-4
-                    text-left
-                    text-red-400
-                    transition
-                    hover:bg-red-500/10
-                  "
-                >
-                  <i className="fa-solid fa-right-from-bracket mr-3" />
-                  Logout
-                </button>
+                <div className="border-t border-slate-100 p-1">
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

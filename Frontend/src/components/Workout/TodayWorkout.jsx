@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useWorkout } from "../../Context/WorkoutContext";
+import { Dumbbell, Play, RotateCcw, CheckCircle2, Flame, ArrowRight } from "lucide-react";
 
 const TodayWorkout = () => {
   const { workouts, setActiveWorkout } = useWorkout();
@@ -14,75 +15,96 @@ const TodayWorkout = () => {
     );
   };
 
-  return (
-    <div
-      className="
-            w-full
-            max-w-none
-            rounded-2xl
-            bg-white/5
-            backdrop-blur-xl
-            border
-            border-white/10
-            shadow-[0_0_25px_rgba(139,92,246,0.12)]
-            p-5
-            "
-    >
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Today's Workout</h1>
+  const completedCount = workouts.filter((w) => w.completed).length;
 
-        <span className="text-sm text-violet-400">
-          {workouts.length} Exercise{workouts.length !== 1 ? "s" : ""}
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Today&apos;s Workout Queue</h2>
+          <p className="text-xs text-slate-500">
+            {completedCount} of {workouts.length} completed
+          </p>
+        </div>
+
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          Queue: {workouts.length}
         </span>
       </div>
 
       <div className="mt-5 space-y-3">
         {workouts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <i className="fa-solid fa-dumbbell text-4xl text-violet-500"></i>
-
-            <p className="text-gray-400 text-sm mt-3">
-              No workout plan added yet.
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+              <Dumbbell className="h-5 w-5" />
+            </div>
+            <p className="mt-2 text-sm font-medium text-slate-600">
+              No workout plan queued.
+            </p>
+            <p className="text-xs text-slate-400">
+              Add exercises using the builder on the left to start.
             </p>
           </div>
         ) : (
           workouts.map((exercise) => (
             <div
               key={exercise.id}
-              className="flex items-center justify-between rounded-xl bg-white/5 border border-white/10 px-4 py-3 hover:bg-violet-500/10 transition-all duration-300"
+              className={`flex items-center justify-between rounded-xl border p-4 transition-all duration-200 ${
+                exercise.completed
+                  ? "border-emerald-200 bg-emerald-50/40"
+                  : "border-slate-200 bg-slate-50/60 hover:bg-slate-100/70"
+              }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-violet-500/15 flex items-center justify-center">
-                  <i className="fa-solid fa-dumbbell text-violet-400"></i>
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    exercise.completed
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-indigo-50 text-indigo-600"
+                  }`}
+                >
+                  <Dumbbell className="h-5 w-5" />
                 </div>
 
                 <div>
-                  <h2 className="text-base font-semibold text-white capitalize">
-                    {exercise.exercise}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold capitalize text-slate-900">
+                      {exercise.exercise}
+                    </h3>
+                    {exercise.completed && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Done {exercise.accuracy ? `(${exercise.accuracy}%)` : ""}
+                      </span>
+                    )}
+                  </div>
 
-                  <p className="text-xs text-gray-400">
-                    {exercise.sets} Sets • {exercise.reps} Reps
+                  <p className="text-xs text-slate-500">
+                    Target: {exercise.sets} Sets • {exercise.reps} Reps
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleStartWorkout(exercise)}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-sm transition-all active:scale-[0.98] ${
+                  exercise.completed
+                    ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    : "bg-indigo-600 text-white shadow-indigo-600/20 hover:bg-indigo-700"
+                }`}
+              >
                 {exercise.completed ? (
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium flex items-center gap-1">
-                    <i className="fa-solid fa-check text-[10px]"></i> Done
-                    {exercise.accuracy ? ` (${exercise.accuracy}%)` : ""}
-                  </span>
-                ) : null}
-
-                <button
-                  onClick={() => handleStartWorkout(exercise)}
-                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold hover:scale-105 active:scale-95 transition-all duration-200 flex items-center gap-1.5"
-                >
-                  <i className="fa-solid fa-play text-[10px]"></i>
-                  {exercise.completed ? "Restart" : "Start"}
-                </button>
-              </div>
+                  <>
+                    <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Restart</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-3.5 w-3.5 fill-white" />
+                    <span>Launch</span>
+                  </>
+                )}
+              </button>
             </div>
           ))
         )}
@@ -92,4 +114,5 @@ const TodayWorkout = () => {
 };
 
 export default TodayWorkout;
+
 
