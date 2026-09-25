@@ -87,7 +87,7 @@ const Login = () => {
           <div className="flex items-center gap-4 text-xs font-mono">
       
             <Link 
-              to="/Landing_Page" 
+              to="/" 
               className="text-slate-600 hover:text-slate-900 font-sans text-xs font-medium transition-colors"
             >
               Back to Home
