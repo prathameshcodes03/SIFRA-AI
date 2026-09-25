@@ -1,4 +1,4 @@
-const ML_REQUEST_TIMEOUT_MS = 5000;
+const ML_REQUEST_TIMEOUT_MS = 15000;
 
 class MlServiceError extends Error {
   constructor(message, statusCode) {
@@ -19,7 +19,11 @@ const getPredictionUrl = () => {
   }
 
   try {
-    return new URL("/predict", serviceUrl).toString();
+    let normalizedUrl = serviceUrl.trim();
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = `https://${normalizedUrl}`;
+    }
+    return new URL("/predict", normalizedUrl).toString();
   } catch {
     throw new MlServiceError(
       "ML prediction service is not configured correctly.",
