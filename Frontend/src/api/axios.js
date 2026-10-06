@@ -16,7 +16,13 @@ const resolveBaseURL = () => {
       : "http://localhost:3000";
   }
 
-  return envUrl || "https://sifra-ai.onrender.com";
+  // In production, if envUrl is a localhost URL (misconfigured), fall back to
+  // the production backend URL that matches the CORS-allowed origin.
+  if (envUrl && (envUrl.includes("localhost") || envUrl.includes("127.0.0.1"))) {
+    return "https://sifra-ai-backend.onrender.com";
+  }
+
+  return envUrl || "https://sifra-ai-backend.onrender.com";
 };
 
 const api = axios.create({

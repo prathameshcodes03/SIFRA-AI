@@ -20,7 +20,7 @@ const calculateStreakStats = (completedWorkouts) => {
   }
 
   const dateSet = new Set(
-    completedWorkouts.map((w) => formatDateKey(w.updatedAt || w.createdAt))
+    completedWorkouts.map((w) => formatDateKey(w.completedAt || w.createdAt))
   );
 
   const sortedDates = Array.from(dateSet).sort();
@@ -166,6 +166,7 @@ const completeWorkout = async (req, res) => {
           where: { id: workoutId },
           data: {
             completed: true,
+            completedAt: new Date(),
             accuracy:
               accuracy !== undefined && accuracy !== null
                 ? Math.min(100, Math.max(0, Math.round(Number(accuracy))))
@@ -183,6 +184,7 @@ const completeWorkout = async (req, res) => {
           sets: Number(sets || 1),
           reps: Number(reps || 10),
           completed: true,
+          completedAt: new Date(),
           accuracy:
             accuracy !== undefined && accuracy !== null
               ? Math.min(100, Math.max(0, Math.round(Number(accuracy))))

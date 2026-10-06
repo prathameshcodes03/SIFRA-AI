@@ -17,13 +17,25 @@ const EXERCISE_TIPS = {
 const Workout = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { activeWorkout } = useWorkout();
+  const { activeWorkout, workouts } = useWorkout();
 
   const exercise =
     (searchParams.get("exercise") || activeWorkout?.exercise || "squat").toLowerCase();
   const workoutId = searchParams.get("workoutId") || activeWorkout?.id || null;
   const sets = Number(searchParams.get("sets") || activeWorkout?.sets || 3);
   const reps = Number(searchParams.get("reps") || activeWorkout?.reps || 10);
+
+  // Find the current exercise index in the workout plan for auto-advance
+  const currentIndex = useMemo(() => {
+    if (workoutId) {
+      const idx = workouts.findIndex((w) => w.id === workoutId);
+      if (idx !== -1) return idx;
+    }
+    const idx = workouts.findIndex(
+      (w) => w.exercise.toLowerCase() === exercise
+    );
+    return idx !== -1 ? idx : 0;
+  }, [workouts, workoutId, exercise]);
 
   const initialTip = useMemo(() => {
     return (
@@ -106,6 +118,8 @@ const Workout = () => {
           sets={sets}
           reps={reps}
           onFormFeedback={handleFormFeedback}
+          workoutPlan={workouts}
+          currentIndex={currentIndex}
         />
 
         {/* Real-Time Voice Coach HUD Card */}
