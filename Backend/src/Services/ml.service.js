@@ -33,6 +33,21 @@ const getPredictionUrl = () => {
 };
 
 const requestFormPrediction = async (features) => {
+  const result = await requestFormPredictionDetailed(features);
+  return result.prediction;
+};
+
+/**
+ * Same request as `requestFormPrediction`, but also returns the model's own
+ * confidence so callers can log it.
+ *
+ * NOTE: confidence is reported ONLY when the service provides it. The shipped
+ * model returns high confidence (0.70-1.00) even for poses far outside its
+ * training distribution, so confidence is a diagnostic, NOT a trust signal -
+ * see Frontend/src/exercises/modelSupport.js for the support envelope that is
+ * used instead.
+ */
+const requestFormPredictionDetailed = async (features) => {
   const abortController = new AbortController();
   const timeout = setTimeout(
     () => abortController.abort(),
@@ -82,7 +97,20 @@ const requestFormPrediction = async (features) => {
       );
     }
 
-    return responseBody.prediction;
+    return {
+      prediction: responseBody.prediction,
+      // Optional, additive: absent on older ML deployments.
+      confidence:
+        typeof responseBody.confidence === "number" &&
+        Number.isFinite(responseBody.confidence)
+          ? responseBody.confidence
+          : null,
+      probabilities:
+        responseBody.probabilities &&
+        typeof responseBody.probabilities === "object"
+          ? responseBody.probabilities
+          : null,
+    };
   } catch (error) {
     if (error instanceof MlServiceError) {
       throw error;
@@ -102,4 +130,5 @@ const requestFormPrediction = async (features) => {
 module.exports = {
   MlServiceError,
   requestFormPrediction,
+  requestFormPredictionDetailed,
 };

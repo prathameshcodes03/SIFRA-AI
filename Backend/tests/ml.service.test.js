@@ -209,3 +209,33 @@ test("a missing ML_SERVICE_URL is reported clearly", async () => {
 
   process.env.ML_SERVICE_URL = `http://127.0.0.1:${stubPort}`;
 });
+
+/**
+ * The /predict response gained OPTIONAL diagnostics. The label contract must
+ * not move, and an older ML service that sends no confidence must still work.
+ */
+test("the detailed call adds confidence without changing the label contract", async () => {
+  const { requestFormPredictionDetailed, requestFormPrediction } = loadService();
+
+  const features = {
+    exercise: "squat",
+    knee_angle: 90,
+    elbow_angle: 20,
+    hip_angle: 95,
+    body_angle: 170,
+    symmetry_score: 0.9,
+    landmark_visibility: 0.9,
+  };
+
+  const detailed = await requestFormPredictionDetailed(features);
+
+  assert.equal(typeof detailed.prediction, "string");
+  assert.ok(detailed.prediction.length > 0);
+  // The stub sends no confidence, so it must be null, never invented.
+  assert.equal(detailed.confidence, null);
+  assert.equal(detailed.probabilities, null);
+
+  // The legacy call still returns the bare label string.
+  const legacy = await requestFormPrediction(features);
+  assert.equal(legacy, detailed.prediction);
+});

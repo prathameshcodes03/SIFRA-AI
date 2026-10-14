@@ -93,6 +93,13 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
   const hipDiff = Math.abs(leftHipAngle - rightHipAngle) / 180;
   const symmetryScore = Math.max(0, Math.min(1, 1 - (kneeDiff + hipDiff) / 2));
 
+  // Measured left/right difference in DEGREES, before it is squashed into the
+  // 0-1 symmetry score. `symmetry_score` alone cannot distinguish a genuinely
+  // collapsed knee from ordinary side-to-side variation - both lower it - so
+  // the caving check needs the raw magnitude.
+  const kneeAsymmetry = Math.abs(leftKneeAngle - rightKneeAngle);
+  const hipAsymmetry = Math.abs(leftHipAngle - rightHipAngle);
+
   // Overall landmark visibility
   const avgVisibility = Math.max(0.7, Math.min(1.0, Math.max(leftVis, rightVis)));
 
@@ -106,6 +113,9 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
     body_angle: Number(bodyAngle.toFixed(2)),
     symmetry_score: Number(symmetryScore.toFixed(3)),
     landmark_visibility: Number(avgVisibility.toFixed(3)),
+    // Diagnostic only: ignored by /predict, used to judge knees caving.
+    knee_asymmetry: Number(kneeAsymmetry.toFixed(2)),
+    hip_asymmetry: Number(hipAsymmetry.toFixed(2)),
   };
 }
 

@@ -84,6 +84,40 @@ class FormPredictor:
         encoded_prediction = self.model.predict(input_data)
         return self.label_encoder.inverse_transform(encoded_prediction)[0]
 
+    def class_probabilities(
+        self,
+        exercise,
+        knee_angle,
+        elbow_angle,
+        hip_angle,
+        body_angle,
+        symmetry_score,
+        landmark_visibility,
+    ):
+        """Return {label: probability} for diagnostics.
+
+        Reporting the model's own confidence, not a threshold: the shipped
+        RandomForest scores poses far outside its training distribution with
+        high confidence (a standing squat pose yields "shallow" at ~0.70-1.00),
+        so callers must not treat this as evidence that a label is valid.
+        """
+        input_data = self.prepare_features(
+            exercise=exercise,
+            knee_angle=knee_angle,
+            elbow_angle=elbow_angle,
+            hip_angle=hip_angle,
+            body_angle=body_angle,
+            symmetry_score=symmetry_score,
+            landmark_visibility=landmark_visibility,
+        )
+
+        if not hasattr(self.model, "predict_proba"):
+            return {}
+
+        probabilities = self.model.predict_proba(input_data)[0]
+        labels = self.label_encoder.inverse_transform(self.model.classes_)
+        return {str(label): float(value) for label, value in zip(labels, probabilities)}
+
 
 @lru_cache(maxsize=1)
 def get_predictor():

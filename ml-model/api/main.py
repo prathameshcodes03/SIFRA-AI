@@ -4,7 +4,7 @@ import math
 import sys
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 ML_MODEL_DIRECTORY = Path(__file__).resolve().parents[1]
 if str(ML_MODEL_DIRECTORY) not in sys.path:
@@ -19,6 +19,11 @@ SCORE_FIELDS = {"symmetry_score", "landmark_visibility"}
 
 
 class PredictionRequest(BaseModel):
+    # The browser also sends derived diagnostics (knee_asymmetry, hip_asymmetry).
+    # They must be ignored, never rejected, so adding telemetry cannot break
+    # prediction.
+    model_config = ConfigDict(extra="ignore")
+
     exercise: str
     knee_angle: float
     elbow_angle: float
@@ -111,7 +116,25 @@ def predict_form(payload: PredictionRequest):
             detail="The form model could not complete this prediction.",
         ) from error
 
-    return {
+    response = {
         "exercise": payload.exercise,
         "prediction": str(prediction),
     }
+
+    # Additive diagnostics. The browser never trusts confidence on its own:
+    # the shipped model reports high confidence even for poses far outside its
+    # training distribution (e.g. a standing squat pose returns "shallow" with
+    # confidence 0.70). It is logged, not used as a gate.
+    try:
+        probabilities = predictor.class_probabilities(**payload.model_dump())
+        if probabilities:
+            label = str(prediction)
+            response["confidence"] = float(probabilities.get(label, 0.0))
+            response["probabilities"] = {
+                key: float(value) for key, value in probabilities.items()
+            }
+    except Exception:
+        # Diagnostics must never break a prediction.
+        pass
+
+    return response

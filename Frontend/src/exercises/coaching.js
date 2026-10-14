@@ -20,6 +20,7 @@
 
 import { PHASE } from "./repTracker.js";
 import { getFeedbackForPrediction } from "./featureExtractor.js";
+import { isWithinModelSupport } from "./modelSupport.js";
 
 /** Pseudo-label used when the pose itself is not measurable. Never sent to the model. */
 export const POSE_UNRELIABLE = "pose_unreliable";
@@ -188,6 +189,80 @@ export function resolveCoachingCue({ decision, exercise } = {}) {
   if (!message) return null;
 
   return { label: decision.label, message };
+}
+
+/**
+ * Choose the form label that is allowed to become coaching.
+ *
+ * The movement-aware assessment owns the claim: it is computed from the user's
+ * actual movement state and validated geometry, so it stays correct when the
+ * ML service is unreachable, slow, or answering from outside its training
+ * distribution. The model still runs and is still trusted - but only when
+ * (a) the frame is inside the training support envelope and (b) it agrees with
+ * the assessment. A model label can therefore never override validated
+ * evidence, and the disagreement is reported for diagnostics rather than
+ * swallowed.
+ *
+ * @param {object}   params
+ * @param {object}   params.assessment  assessSquatForm() result
+ * @param {string?}  params.mlLabel     raw model label, if one came back
+ * @param {object}   params.features    features the label was produced from
+ * @param {string}   params.exercise
+ * @returns {{label:string|null, source:string, reason:string, mlLabel:?string,
+ *            mlSupported:boolean, message:?string}}
+ */
+export function resolveFormCoaching({
+  assessment,
+  mlLabel = null,
+  features = null,
+  exercise,
+} = {}) {
+  const base = {
+    label: null,
+    source: "none",
+    reason: "no_assessment",
+    mlLabel: mlLabel ?? null,
+    mlSupported: false,
+    message: null,
+  };
+
+  if (!assessment) return base;
+
+  const support = isWithinModelSupport(features, exercise);
+  const withSupport = { ...base, mlSupported: support.supported };
+
+  // Nothing worth saying (standing / resting / unreliable).
+  if (!assessment.label) {
+    return { ...withSupport, reason: assessment.reason };
+  }
+
+  const usableModelLabel =
+    mlLabel && isLabelForExercise(mlLabel, exercise) ? mlLabel : null;
+  const message = getFeedbackForPrediction(assessment.label);
+
+  if (usableModelLabel && support.supported && usableModelLabel === assessment.label) {
+    return {
+      ...withSupport,
+      label: assessment.label,
+      source: "model_corroborated",
+      reason: "model_agrees_with_movement",
+      message,
+    };
+  }
+
+  const reason = !usableModelLabel
+    ? "model_unavailable_or_foreign"
+    : !support.supported
+    ? "model_out_of_support"
+    : "model_disagrees_with_movement";
+
+  return {
+    ...withSupport,
+    label: assessment.label,
+    source: "geometry",
+    reason,
+    message,
+  };
 }
 
 export { PHASE };

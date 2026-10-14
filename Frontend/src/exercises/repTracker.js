@@ -76,6 +76,16 @@ export function createRepTracker({
   let lastFrameAt = 0;
   let holdFormOk = false;
   let finished = false;
+  /**
+   * Deepest (smallest) smoothed angle reached during the CURRENT descent
+   * attempt, cleared once the joint returns to the top.
+   *
+   * Form coaching must judge the rep, not the instant: a squat lasts ~1-2s
+   * while the ML cadence is 600ms, so a prediction rarely lands exactly at the
+   * bottom. Without this, the assessment would miss the bottom of most reps
+   * and either say nothing or judge a stale mid-descent angle.
+   */
+  let repMinAngle = null;
 
   const isHold = normalized === "plank";
 
@@ -106,6 +116,7 @@ export function createRepTracker({
       setReps,
       holdSeconds,
       smoothedAngle: smoothed,
+      repMinAngle,
       setJustCompleted: false,
       exerciseJustCompleted: false,
       holdFormOk,
@@ -160,6 +171,7 @@ export function createRepTracker({
         setReps,
         holdSeconds,
         smoothedAngle: smoothed,
+        repMinAngle,
         setJustCompleted,
         exerciseJustCompleted,
         holdFormOk,
@@ -171,6 +183,14 @@ export function createRepTracker({
 
     const angle = smooth(features[thresholds.signal]);
     if (angle === null) return empty;
+
+    // Track the depth of the current descent attempt. Reaching the top clears
+    // it, so standing between reps never inherits an old minimum.
+    if (angle >= thresholds.up) {
+      repMinAngle = null;
+    } else if (repMinAngle === null || angle < repMinAngle) {
+      repMinAngle = angle;
+    }
 
     const canTransition = nowMs - lastTransitionAt >= minTransitionMs;
 
@@ -204,6 +224,7 @@ export function createRepTracker({
       setReps,
       holdSeconds: 0,
       smoothedAngle: smoothed,
+      repMinAngle,
       setJustCompleted,
       exerciseJustCompleted,
       holdFormOk: false,
@@ -221,6 +242,7 @@ export function createRepTracker({
     lastFrameAt = 0;
     holdFormOk = false;
     finished = false;
+    repMinAngle = null;
   }
 
   return { update, reset, isFinished: () => finished };

@@ -1,6 +1,6 @@
 const {
   MlServiceError,
-  requestFormPrediction,
+  requestFormPredictionDetailed,
 } = require("../Services/ml.service");
 
 const SUPPORTED_EXERCISES = new Set(["squat", "pushup", "plank"]);
@@ -61,13 +61,26 @@ const predictWorkoutForm = async (req, res) => {
 
   try {
     // Prediction label is returned exactly as produced by the trained model.
-    const prediction = await requestFormPrediction(validation.features);
+    const result = await requestFormPredictionDetailed(validation.features);
 
-    return res.status(200).json({
+    const payload = {
       success: true,
       exercise: validation.features.exercise,
-      prediction,
-    });
+      prediction: result.prediction,
+    };
+
+    // Additive, optional: only present when the ML service supplies it.
+    // Confidence is a diagnostic only - the model reports high confidence even
+    // for poses outside its training distribution, so the frontend does not use
+    // it as a trust signal.
+    if (typeof result.confidence === "number") {
+      payload.confidence = result.confidence;
+    }
+    if (result.probabilities) {
+      payload.probabilities = result.probabilities;
+    }
+
+    return res.status(200).json(payload);
   } catch (error) {
     if (error instanceof MlServiceError) {
       return res.status(error.statusCode).json({

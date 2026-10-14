@@ -20,6 +20,7 @@ import {
   createCoachingGate,
   arbitrateCoaching,
   resolveCoachingCue,
+  resolveFormCoaching,
   isLabelForExercise,
   CORRECT_LABEL_BY_EXERCISE,
   MIN_RELIABLE_VISIBILITY,
@@ -29,6 +30,9 @@ import {
   createVisibilityWarningController,
   VISIBILITY_FAILURE_REASONS,
 } from "../../exercises/visibilityWarning";
+import { assessSquatForm } from "../../exercises/formAssessment";
+import { createSquatRepSummary } from "../../exercises/squatRepSummary";
+import { createCoachDiagnostics } from "../../utils/diagnostics";
 
 /** ML classification cadence. Form is not a per-frame signal. */
 const PREDICT_INTERVAL_MS = 600;
@@ -86,6 +90,15 @@ const Camerafeed = ({
   // Edge-triggered camera-visibility warning. Held in a ref so that re-renders,
   // effect restarts and prediction responses can never reset its cooldown.
   const visibilityWarningRef = useRef(null);
+  // EMA-smoothed knee angle from the rep tracker: the movement evidence the
+  // squat assessment needs, available without waiting for any prediction.
+  const smoothedKneeAngleRef = useRef(null);
+  // Deepest frame of the rep in progress; judged once the rep completes.
+  const squatRepRef = useRef(null);
+  // Completed rep awaiting a coaching decision from the next prediction.
+  const pendingRepRef = useRef(null);
+  // Dev-only, self-disabling in production builds.
+  const diagnosticsRef = useRef(null);
 
   if (trackerRef.current === null) {
     trackerRef.current = createRepTracker({
@@ -95,6 +108,8 @@ const Camerafeed = ({
     });
     gateRef.current = createCoachingGate();
     visibilityWarningRef.current = createVisibilityWarningController();
+    squatRepRef.current = createSquatRepSummary();
+    diagnosticsRef.current = createCoachDiagnostics();
   }
 
   const videoConstraints = {
@@ -128,8 +143,12 @@ const Camerafeed = ({
     liveAccuracyRef.current = null;
     lastSetRepsRef.current = 0;
     lastSetsRef.current = 1;
-    // A new exercise must not inherit the previous one's warning cooldown.
+    // A new exercise must not inherit the previous one's warning cooldown or
+    // smoothed movement history.
     visibilityWarningRef.current?.reset();
+    smoothedKneeAngleRef.current = null;
+    squatRepRef.current?.reset();
+    pendingRepRef.current = null;
     setCurrentSet(1);
     setCompletedReps(0);
     setPhase(PHASE.UP);
@@ -203,6 +222,14 @@ const Camerafeed = ({
       if (!tracker) return;
 
       const result = tracker.update(features, nowMs);
+      smoothedKneeAngleRef.current = result.smoothedAngle;
+
+      // Frame-driven rep summary: remembers the deepest frame of the rep so a
+      // prediction landing anywhere in the rep can judge it correctly.
+      const completedRep = exercise === "squat"
+        ? squatRepRef.current?.observe(features, result)
+        : null;
+      if (completedRep) pendingRepRef.current = completedRep;
 
       // Rep counting is local and frame-driven: no network, no ML dependency.
       // Mirrors are compared against the tracker's last emitted values so an
@@ -233,27 +260,41 @@ const Camerafeed = ({
       }
     };
 
-    const handlePrediction = async (features, reliable) => {
+    const handlePrediction = async (features, reliable, reliability) => {
+      const requestedAt = performance.now();
       let label = null;
       let fromModel = false;
+      let modelReport = { ok: false, label: null, status: "not_requested" };
 
       try {
         const response = await api.post("/api/workout/predict", features);
         if (response.data?.prediction) {
           label = response.data.prediction;
           fromModel = true;
+          modelReport = {
+            ok: true,
+            label,
+            // Only reported when the service sends it; never invented here.
+            confidence: response.data?.confidence ?? null,
+            probabilities: response.data?.probabilities ?? null,
+            status: response.status ?? null,
+          };
+        } else {
+          modelReport = { ok: false, label: null, status: "empty_response" };
         }
-      } catch {
-        // Model unavailable: fall through to rule-based coaching only.
+      } catch (error) {
+        // Model unavailable. Coaching continues from the movement-aware
+        // assessment below - it does not depend on the network.
+        modelReport = {
+          ok: false,
+          label: null,
+          status: error?.response?.status ?? "network_error",
+        };
       }
 
       predictionInFlightRef.current = false;
 
       if (!mountedRef.current) return;
-
-      if (!label) {
-        label = evaluateFormRuleBased(features);
-      }
 
       // Accuracy accounting: infrastructure fallbacks must not be scored as
       // incorrect form, so they are excluded from the denominator.
@@ -272,13 +313,34 @@ const Camerafeed = ({
         setLiveAccuracy(sessionAccuracy);
       }
 
-      const gate = gateRef.current;
-      if (gate) gate.consider(label);
+      // Movement-aware assessment: the authoritative form claim. It uses the
+      // rep tracker's smoothed knee angle, so standing between reps can never
+      // be mistaken for a shallow squat.
+      // Squat form is judged from the completed rep's deepest frame, never from
+      // a single mid-descent instant (the smoothed angle lags and would fire
+      // false "go lower" cues).
+      const rep = exercise === "squat" ? pendingRepRef.current : null;
+      if (rep) pendingRepRef.current = null;
 
-      const decision = arbitrateCoaching({
-        label: gate ? gate.dominant() || label : label,
-        phase: phaseRef.current,
-        reliable,
+      const assessment =
+        exercise === "squat"
+          ? rep && rep.features
+            ? assessSquatForm({
+                features: rep.features,
+                deepestKneeAngle: rep.deepestAngle,
+                phase: phaseRef.current,
+              })
+            : null
+          : null;
+
+      // Stabilise the label that will be spoken with the existing majority gate.
+      const gate = gateRef.current;
+      if (gate && assessment?.label) gate.consider(assessment.label);
+
+      const resolution = resolveFormCoaching({
+        assessment: assessment ?? { label: null, reason: "no_completed_rep" },
+        mlLabel: label,
+        features: rep?.features ?? features,
         exercise,
       });
 
@@ -288,21 +350,46 @@ const Camerafeed = ({
         setLivePrediction(isLabelForExercise(label, exercise) ? label : null);
       }
 
-      // Only a genuine, non-gated, exercise-specific cue is worth speaking.
-      // A gated depth cue, a missing label, a network failure or a label from
-      // another exercise used to fall back to the camera message and repeat it
-      // on every prediction; they now say nothing at all.
-      const cue = resolveCoachingCue({ decision, exercise });
+      let message = null;
+      if (resolution.message && exercise === "squat") {
+        message = resolution.message;
+      } else if (exercise !== "squat") {
+        // Push-up and plank keep their existing arbitration path untouched.
+        const decision = arbitrateCoaching({
+          label: label || evaluateFormRuleBased(features),
+          phase: phaseRef.current,
+          reliable,
+          exercise,
+        });
+        message = resolveCoachingCue({ decision, exercise })?.message ?? null;
+      }
 
-      if (cue && feedbackHandlerRef.current) {
+      const isSpoken = Boolean(message) && reliable;
+      if (isSpoken && feedbackHandlerRef.current) {
         feedbackHandlerRef.current({
           kind: "coaching",
-          prediction: cue.label,
-          message: cue.message,
-          isCorrect: cue.label === CORRECT_LABEL_BY_EXERCISE[exercise],
+          prediction: resolution.label,
+          message,
+          isCorrect: resolution.label === CORRECT_LABEL_BY_EXERCISE[exercise],
           accuracy: sessionAccuracy,
         });
       }
+
+      diagnosticsRef.current?.log({
+        exercise,
+        features: rep?.features ?? features,
+        reliability,
+        reliable,
+        phase: phaseRef.current,
+        smoothedKneeAngle: smoothedKneeAngleRef.current,
+        elapsedMs: Math.round(performance.now() - requestedAt),
+        model: modelReport,
+        ruleFallback: label ? null : "movement_assessment_used",
+        assessment,
+        resolution,
+        spoken: isSpoken,
+        message,
+      });
     };
 
     /**
@@ -380,7 +467,7 @@ const Camerafeed = ({
           ) {
             lastPredictionTimeRef.current = now;
             predictionInFlightRef.current = true;
-            handlePrediction(features, reliable).catch(() => {
+            handlePrediction(features, reliable, reliability).catch(() => {
               predictionInFlightRef.current = false;
             });
           }
@@ -448,6 +535,9 @@ const Camerafeed = ({
     trackerRef.current?.reset();
     gateRef.current?.reset();
     visibilityWarningRef.current?.reset();
+    smoothedKneeAngleRef.current = null;
+    squatRepRef.current?.reset();
+    pendingRepRef.current = null;
     completionSentRef.current = false;
     phaseRef.current = PHASE.UP;
     setCompletedInfo(null);
