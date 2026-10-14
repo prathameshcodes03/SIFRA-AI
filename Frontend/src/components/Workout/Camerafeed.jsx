@@ -12,7 +12,6 @@ import {
 import { DrawingUtils } from "@mediapipe/tasks-vision";
 import {
   extractExerciseFeatures,
-  getFeedbackForPrediction,
   evaluateFormRuleBased,
   getPoseReliability,
 } from "../../exercises/featureExtractor";
@@ -20,10 +19,16 @@ import { createRepTracker, PHASE } from "../../exercises/repTracker";
 import {
   createCoachingGate,
   arbitrateCoaching,
+  resolveCoachingCue,
   isLabelForExercise,
   CORRECT_LABEL_BY_EXERCISE,
   MIN_RELIABLE_VISIBILITY,
+  POSE_UNRELIABLE,
 } from "../../exercises/coaching";
+import {
+  createVisibilityWarningController,
+  VISIBILITY_FAILURE_REASONS,
+} from "../../exercises/visibilityWarning";
 
 /** ML classification cadence. Form is not a per-frame signal. */
 const PREDICT_INTERVAL_MS = 600;
@@ -75,7 +80,12 @@ const Camerafeed = ({
   const phaseRef = useRef(PHASE.UP);
   const gateRef = useRef(null);
   const finishHandlerRef = useRef(null);
+  const feedbackHandlerRef = useRef(null);
   const setFlashTimerRef = useRef(null);
+
+  // Edge-triggered camera-visibility warning. Held in a ref so that re-renders,
+  // effect restarts and prediction responses can never reset its cooldown.
+  const visibilityWarningRef = useRef(null);
 
   if (trackerRef.current === null) {
     trackerRef.current = createRepTracker({
@@ -84,6 +94,7 @@ const Camerafeed = ({
       requiredReps: reps,
     });
     gateRef.current = createCoachingGate();
+    visibilityWarningRef.current = createVisibilityWarningController();
   }
 
   const videoConstraints = {
@@ -98,6 +109,7 @@ const Camerafeed = ({
       mountedRef.current = false;
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       if (setFlashTimerRef.current) clearTimeout(setFlashTimerRef.current);
+      visibilityWarningRef.current?.reset();
     };
   }, []);
 
@@ -116,6 +128,8 @@ const Camerafeed = ({
     liveAccuracyRef.current = null;
     lastSetRepsRef.current = 0;
     lastSetsRef.current = 1;
+    // A new exercise must not inherit the previous one's warning cooldown.
+    visibilityWarningRef.current?.reset();
     setCurrentSet(1);
     setCompletedReps(0);
     setPhase(PHASE.UP);
@@ -176,9 +190,13 @@ const Camerafeed = ({
 
   // Keep the newest handler reachable from the rAF loop without re-binding it.
   finishHandlerRef.current = completeExercise;
+  feedbackHandlerRef.current = onFormFeedback;
 
   useEffect(() => {
-    if (!cameraOn) return;
+    if (!cameraOn) {
+      visibilityWarningRef.current?.reset();
+      return undefined;
+    }
 
     const updateRepsFromFeatures = (features, nowMs) => {
       const tracker = trackerRef.current;
@@ -264,26 +282,45 @@ const Camerafeed = ({
         exercise,
       });
 
-      const spokenLabel = decision.gated ? null : decision.label;
-
       // Show the model's label in the HUD only when it belongs to this
       // exercise, so the telemetry never contradicts the spoken cue.
       if (fromModel && label) {
         setLivePrediction(isLabelForExercise(label, exercise) ? label : null);
       }
 
-      const message = getFeedbackForPrediction(
-        spokenLabel || "pose_unreliable"
-      );
+      // Only a genuine, non-gated, exercise-specific cue is worth speaking.
+      // A gated depth cue, a missing label, a network failure or a label from
+      // another exercise used to fall back to the camera message and repeat it
+      // on every prediction; they now say nothing at all.
+      const cue = resolveCoachingCue({ decision, exercise });
 
-      if (onFormFeedback && message) {
-        onFormFeedback({
-          prediction: spokenLabel,
-          message,
-          isCorrect: spokenLabel === CORRECT_LABEL_BY_EXERCISE[exercise],
+      if (cue && feedbackHandlerRef.current) {
+        feedbackHandlerRef.current({
+          kind: "coaching",
+          prediction: cue.label,
+          message: cue.message,
+          isCorrect: cue.label === CORRECT_LABEL_BY_EXERCISE[exercise],
           accuracy: sessionAccuracy,
         });
       }
+    };
+
+    /**
+     * Camera visibility is evaluated every frame, independently of the ML
+     * request, so the warning appears and clears without waiting for the
+     * network and without depending on a prediction landing.
+     */
+    const checkVisibility = (frame) => {
+      const warning = visibilityWarningRef.current?.update(frame);
+      if (!warning?.visible) return;
+      feedbackHandlerRef.current?.({
+        kind: "visibility",
+        prediction: POSE_UNRELIABLE,
+        message: warning.message,
+        isCorrect: false,
+        isReminder: warning.isReminder,
+        accuracy: liveAccuracyRef.current,
+      });
     };
 
     const detect = () => {
@@ -300,7 +337,13 @@ const Camerafeed = ({
 
         const landmarks = results?.landmarks?.[0];
 
-        if (landmarks) {
+        if (!landmarks) {
+          // Nobody (or nothing) in frame at all.
+          checkVisibility({
+            reliable: false,
+            reason: VISIBILITY_FAILURE_REASONS.NO_POSE,
+          });
+        } else {
           const drawingUtils = new DrawingUtils(ctx);
           drawingUtils.drawLandmarks(landmarks, {
             radius: 4,
@@ -311,7 +354,17 @@ const Camerafeed = ({
           const reliability = getPoseReliability(landmarks);
           const reliable = reliability >= MIN_RELIABLE_VISIBILITY;
 
-          // 1) Rep / set counting: every frame, purely local.
+          checkVisibility(
+            features
+              ? { reliable, reason: VISIBILITY_FAILURE_REASONS.LOW_VISIBILITY }
+              : {
+                  reliable: false,
+                  reason: VISIBILITY_FAILURE_REASONS.MISSING_POINTS,
+                }
+          );
+
+          // 1) Rep / set counting: every frame, purely local. Untouched by the
+          //    warning cooldown so counters stay responsive.
           if (features && !completionSentRef.current) {
             updateRepsFromFeatures(features, Date.now());
           }
@@ -341,8 +394,13 @@ const Camerafeed = ({
 
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      // Camera stopped (or exercise changed): drop any armed warning so a new
+      // session never inherits an old cooldown.
+      visibilityWarningRef.current?.reset();
     };
-  }, [cameraOn, exercise, onFormFeedback]);
+    // onFormFeedback is read through feedbackHandlerRef so that a parent
+    // re-render cannot tear down and re-arm the camera loop.
+  }, [cameraOn, exercise]);
 
   const handleEndWorkout = async () => {
     // Guard against a double submit while a completion request is in flight.
@@ -389,6 +447,7 @@ const Camerafeed = ({
     lastSetsRef.current = 1;
     trackerRef.current?.reset();
     gateRef.current?.reset();
+    visibilityWarningRef.current?.reset();
     completionSentRef.current = false;
     phaseRef.current = PHASE.UP;
     setCompletedInfo(null);

@@ -19,9 +19,16 @@
  */
 
 import { PHASE } from "./repTracker.js";
+import { getFeedbackForPrediction } from "./featureExtractor.js";
 
 /** Pseudo-label used when the pose itself is not measurable. Never sent to the model. */
 export const POSE_UNRELIABLE = "pose_unreliable";
+
+/** Decision reasons that describe the camera view. */
+export const UNRELIABLE_POSE_REASON = "unreliable_pose";
+export const CROSS_EXERCISE_REASON = "cross_exercise_label";
+export const NO_LABEL_REASON = "no_label";
+export const DEPTH_GATED_REASON = "depth_not_actionable_while_upright";
 
 /**
  * Labels the shipped model legitimately emits for each exercise.
@@ -128,23 +135,59 @@ export function createCoachingGate({
  */
 export function arbitrateCoaching({ label, phase, reliable, exercise }) {
   if (!reliable) {
-    return { label: POSE_UNRELIABLE, gated: false, reason: "unreliable_pose" };
+    return {
+      label: POSE_UNRELIABLE,
+      gated: false,
+      reason: UNRELIABLE_POSE_REASON,
+    };
   }
 
   if (!label) {
-    return { label, gated: true, reason: "no_label" };
+    return { label, gated: true, reason: NO_LABEL_REASON };
   }
 
   // A label from another exercise is not a valid classification here.
   if (!isLabelForExercise(label, exercise)) {
-    return { label: POSE_UNRELIABLE, gated: false, reason: "cross_exercise_label" };
+    return {
+      label: POSE_UNRELIABLE,
+      gated: false,
+      reason: CROSS_EXERCISE_REASON,
+    };
   }
 
   if (PHASE_GATED_LABELS.has(label) && phase === PHASE.UP) {
-    return { label, gated: true, reason: "depth_not_actionable_while_upright" };
+    return { label, gated: true, reason: DEPTH_GATED_REASON };
   }
 
   return { label, gated: false, reason: "ok" };
+}
+
+/**
+ * Turn a coaching decision into a cue worth showing and speaking.
+ *
+ * Returns null for every case the old caller used to answer with the camera
+ * message: gated depth cues, missing labels, unreliable poses and
+ * cross-exercise labels. Those are distinct problems, and only the first two
+ * families are about the camera - and even those are spoken by the per-frame
+ * visibility controller, which owns their cooldown.
+ *
+ * @param {{decision:{label:string,gated:boolean,reason:string}, exercise:string}} params
+ * @returns {{label:string, message:string}|null}
+ */
+export function resolveCoachingCue({ decision, exercise } = {}) {
+  if (!decision || decision.gated) return null;
+
+  // Pose visibility is reported by the visibility controller, never here, so a
+  // slow or failing prediction cannot re-announce it.
+  if (decision.reason === UNRELIABLE_POSE_REASON) return null;
+
+  // A label from another exercise is discarded, not coached as a camera fault.
+  if (!isLabelForExercise(decision.label, exercise)) return null;
+
+  const message = getFeedbackForPrediction(decision.label);
+  if (!message) return null;
+
+  return { label: decision.label, message };
 }
 
 export { PHASE };

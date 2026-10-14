@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import api from "../api/axios";
+import { createVoiceCueGate } from "./voiceCueGate";
 
 // In-memory cache for audio blob URLs to prevent duplicate ElevenLabs calls.
 // Bounded so a long session cannot grow without limit.
@@ -24,15 +25,16 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
   const [isLoading, setIsLoading] = useState(false);
 
   const currentAudioRef = useRef(null);
-  const lastSpokenTimeRef = useRef(0);
-  const lastSpokenTextRef = useRef("");
   const requestIdRef = useRef(0);
   const isMutedRef = useRef(isMuted);
 
-  // Identical cue must not be re-requested in a tight loop.
-  const REPEAT_SUPPRESSION_MS = 12000;
-  // Minimum spacing between two DIFFERENT coaching cues.
-  const COOLDOWN_MS = 2500;
+  // Per-cue dedup. A repeat is recognised even when other cues were spoken in
+  // between, which is what stops the same warning being requested from
+  // ElevenLabs every couple of seconds.
+  const cueGateRef = useRef(null);
+  if (cueGateRef.current === null) {
+    cueGateRef.current = createVoiceCueGate();
+  }
 
   isMutedRef.current = isMuted;
 
@@ -85,22 +87,11 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
 
       if (isMutedRef.current) return;
 
-      const now = Date.now();
-      const isRepeat = trimmedText === lastSpokenTextRef.current;
+      // Dedup BEFORE any audio work: a suppressed repeat costs no request, no
+      // ElevenLabs credit and never interrupts the cue already playing.
+      const verdict = cueGateRef.current.consider(trimmedText, { force });
+      if (!verdict.accepted) return;
 
-      if (!force) {
-        // Same cue still recent: suppress entirely.
-        if (isRepeat && now - lastSpokenTimeRef.current < REPEAT_SUPPRESSION_MS) {
-          return;
-        }
-        // A DIFFERENT cue is new information and must not be swallowed.
-        if (!isRepeat && now - lastSpokenTimeRef.current < COOLDOWN_MS) {
-          return;
-        }
-      }
-
-      lastSpokenTimeRef.current = now;
-      lastSpokenTextRef.current = trimmedText;
       stop();
 
       const requestId = requestIdRef.current + 1;
