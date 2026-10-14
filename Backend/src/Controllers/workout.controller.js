@@ -107,6 +107,59 @@ const calculateStreakStats = (completedWorkouts) => {
   };
 };
 
+// Normalise prediction counters supplied by the client.
+// Non-finite / negative values are clamped so a bad payload cannot poison
+// the aggregate Dashboard accuracy.
+const normaliseCounts = (total, correct) => {
+  const totalCount = Number.isFinite(Number(total)) ? Math.max(0, Math.trunc(Number(total))) : 0;
+  const correctCount = Number.isFinite(Number(correct)) ? Math.max(0, Math.trunc(Number(correct))) : 0;
+  return {
+    totalPredictions: totalCount,
+    correctPredictions: Math.min(correctCount, totalCount),
+  };
+};
+
+/**
+ * Aggregate Dashboard accuracy from persisted prediction counts.
+ *
+ * Accuracy (%) = correctPredictions / totalPredictions * 100
+ *
+ * Only genuine model classifications contribute. Rows with zero predictions
+ * (network failure, invalid payload, unavailable model) are excluded from the
+ * denominator rather than counted as incorrect form.
+ *
+ * @param {Array<{totalPredictions?:number, correctPredictions?:number}>} workouts
+ * @returns {{accuracy:number|null, hasAccuracyData:boolean, totalPredictions:number, correctPredictions:number}}
+ */
+const summariseAccuracy = (workouts = []) => {
+  let totalPredictions = 0;
+  let correctPredictions = 0;
+
+  for (const workout of workouts) {
+    const total = Number(workout?.totalPredictions);
+    const correct = Number(workout?.correctPredictions);
+
+    if (!Number.isFinite(total) || total <= 0) continue;
+
+    totalPredictions += Math.trunc(total);
+    const boundedCorrect = Number.isFinite(correct)
+      ? Math.min(Math.max(0, Math.trunc(correct)), Math.trunc(total))
+      : 0;
+    correctPredictions += boundedCorrect;
+  }
+
+  const hasAccuracyData = totalPredictions > 0;
+
+  return {
+    accuracy: hasAccuracyData
+      ? Math.round((correctPredictions / totalPredictions) * 100)
+      : null,
+    hasAccuracyData,
+    totalPredictions,
+    correctPredictions,
+  };
+};
+
 // Create Workout
 const createWorkout = async (req, res) => {
   try {
@@ -153,6 +206,10 @@ const completeWorkout = async (req, res) => {
   try {
     const workoutId = req.params.id || req.body.workoutId;
     const { exercise, sets, reps, accuracy } = req.body;
+    const counts = normaliseCounts(
+      req.body.totalPredictions,
+      req.body.correctPredictions
+    );
 
     let workout = null;
 
@@ -167,10 +224,16 @@ const completeWorkout = async (req, res) => {
           data: {
             completed: true,
             completedAt: new Date(),
+            totalPredictions: counts.totalPredictions,
+            correctPredictions: counts.correctPredictions,
             accuracy:
-              accuracy !== undefined && accuracy !== null
+              counts.totalPredictions > 0
+                ? Math.round(
+                    (counts.correctPredictions / counts.totalPredictions) * 100
+                  )
+                : accuracy !== undefined && accuracy !== null
                 ? Math.min(100, Math.max(0, Math.round(Number(accuracy))))
-                : existing.accuracy || 100,
+                : existing.accuracy || null,
             updatedAt: new Date(),
           },
         });
@@ -185,10 +248,16 @@ const completeWorkout = async (req, res) => {
           reps: Number(reps || 10),
           completed: true,
           completedAt: new Date(),
+          totalPredictions: counts.totalPredictions,
+          correctPredictions: counts.correctPredictions,
           accuracy:
-            accuracy !== undefined && accuracy !== null
+            counts.totalPredictions > 0
+              ? Math.round(
+                  (counts.correctPredictions / counts.totalPredictions) * 100
+                )
+              : accuracy !== undefined && accuracy !== null
               ? Math.min(100, Math.max(0, Math.round(Number(accuracy))))
-              : 100,
+              : null,
           userId: req.user.id,
         },
       });
@@ -224,22 +293,20 @@ const getWorkoutStats = async (req, res) => {
 
     const streakStats = calculateStreakStats(completedWorkouts);
 
-    const workoutsWithAccuracy = completedWorkouts.filter(
-      (w) => typeof w.accuracy === "number" && !isNaN(w.accuracy)
-    );
-
-    const overallAccuracy =
-      workoutsWithAccuracy.length > 0
-        ? Math.round(
-            workoutsWithAccuracy.reduce((sum, w) => sum + w.accuracy, 0) /
-              workoutsWithAccuracy.length
-          )
-        : 0;
+    const {
+      accuracy: overallAccuracy,
+      hasAccuracyData,
+      totalPredictions,
+      correctPredictions,
+    } = summariseAccuracy(completedWorkouts);
 
     return res.status(200).json({
       success: true,
       stats: {
         accuracy: overallAccuracy,
+        hasAccuracyData,
+        totalPredictions,
+        correctPredictions,
         currentStreak: streakStats.currentStreak,
         bestStreak: streakStats.bestStreak,
         completedDays: streakStats.completedDays,
@@ -381,5 +448,7 @@ module.exports = {
   getAllWorkouts,
   updateWorkout,
   deleteWorkout,
+  summariseAccuracy,
+  normaliseCounts,
 };
 

@@ -1,0 +1,150 @@
+/**
+ * Coaching arbitration.
+ *
+ * The trained model is a SINGLE-FRAME pose classifier. Probing the shipped
+ * artifact showed, for squats:
+ *
+ *   hip_angle 60-100 -> "correct"      hip_angle 110-180 -> "shallow"
+ *   body_angle 130-150 -> "forward_lean"  body_angle >= 155 -> "shallow"
+ *
+ * hip_angle is shoulder-hip-knee. A person standing upright sits near 170-180,
+ * so the model reports "shallow" for almost the whole ascent unless the user
+ * folds very deeply. Firing that message every cycle is what made the coach
+ * repeat "go deeper" / "keep your chest upright" and feel like it demanded
+ * touching the floor.
+ *
+ * This module therefore gates *when* a form label is allowed to become spoken
+ * coaching, without altering the model, its thresholds, or the /predict
+ * contract. It only decides whether the model's current label is actionable.
+ */
+
+import { PHASE } from "./repTracker.js";
+
+/** Pseudo-label used when the pose itself is not measurable. Never sent to the model. */
+export const POSE_UNRELIABLE = "pose_unreliable";
+
+/**
+ * Labels the shipped model legitimately emits for each exercise.
+ *
+ * Verified by probing the trained artifact: the model occasionally returns a
+ * label belonging to a DIFFERENT exercise (a push-up frame receiving
+ * "knees_caving", a squat frame receiving "pushup_elbow_flare"). Speaking such
+ * a cue verbatim would tell a push-up user to align their knees.
+ *
+ * Such a label is therefore treated as an unreliable classification for the
+ * exercise in progress, rather than being coached literally.
+ */
+export const EXERCISE_LABELS = {
+  squat: new Set(["correct", "shallow", "forward_lean", "knees_caving"]),
+  pushup: new Set([
+    "pushup_correct",
+    "pushup_elbow_flare",
+    "pushup_body_sag",
+    "pushup_hips_high",
+  ]),
+  plank: new Set(["plank_correct", "plank_hips_high", "plank_hips_low"]),
+};
+
+/** Correct-form label per exercise, used for accuracy accounting. */
+export const CORRECT_LABEL_BY_EXERCISE = {
+  squat: "correct",
+  pushup: "pushup_correct",
+  plank: "plank_correct",
+};
+
+/**
+ * Is this label valid for the exercise actually being performed?
+ * @param {string|null} label
+ * @param {string} exercise
+ */
+export function isLabelForExercise(label, exercise) {
+  if (!label) return false;
+  const allowed = EXERCISE_LABELS[String(exercise || "").toLowerCase()];
+  // Unknown exercise: don't invent a restriction.
+  if (!allowed) return true;
+  return allowed.has(label);
+}
+
+/** Below this raw landmark visibility the form features are not trustworthy. */
+export const MIN_RELIABLE_VISIBILITY = 0.55;
+
+/** Number of recent labels considered for the majority vote. */
+export const DEFAULT_SMOOTHING_WINDOW = 5;
+
+/**
+ * Labels that describe depth/posture are only actionable once the user has
+ * actually descended. While upright there is nothing useful to say about
+ * depth, so these are suppressed to stop the "go deeper" spam.
+ */
+const PHASE_GATED_LABELS = new Set(["shallow"]);
+
+/**
+ * Majority vote over a short window so a single noisy frame cannot flip the
+ * spoken cue. Keeps the *model's* label, only stabilises it.
+ */
+export function createCoachingGate({
+  windowSize = DEFAULT_SMOOTHING_WINDOW,
+} = {}) {
+  let history = [];
+
+  function consider(label) {
+    if (!label) return;
+    history.push(label);
+    if (history.length > windowSize) history = history.slice(-windowSize);
+  }
+
+  function dominant() {
+    if (history.length === 0) return null;
+    const tally = new Map();
+    for (const item of history) {
+      tally.set(item, (tally.get(item) || 0) + 1);
+    }
+    let best = null;
+    let bestCount = 0;
+    for (const [item, count] of tally) {
+      if (count > bestCount) {
+        best = item;
+        bestCount = count;
+      }
+    }
+    return best;
+  }
+
+  function reset() {
+    history = [];
+  }
+
+  return { consider, dominant, reset, history: () => [...history] };
+}
+
+/**
+ * Decide whether the current model label should become coaching.
+ *
+ * @param {object} params
+ * @param {string} params.label        raw label produced by the model / fallback
+ * @param {string} params.phase        PHASE.UP or PHASE.DOWN from repTracker
+ * @param {boolean} params.reliable    false when visibility is too low
+ * @returns {{label:string, gated:boolean, reason:string}}
+ */
+export function arbitrateCoaching({ label, phase, reliable, exercise }) {
+  if (!reliable) {
+    return { label: POSE_UNRELIABLE, gated: false, reason: "unreliable_pose" };
+  }
+
+  if (!label) {
+    return { label, gated: true, reason: "no_label" };
+  }
+
+  // A label from another exercise is not a valid classification here.
+  if (!isLabelForExercise(label, exercise)) {
+    return { label: POSE_UNRELIABLE, gated: false, reason: "cross_exercise_label" };
+  }
+
+  if (PHASE_GATED_LABELS.has(label) && phase === PHASE.UP) {
+    return { label, gated: true, reason: "depth_not_actionable_while_upright" };
+  }
+
+  return { label, gated: false, reason: "ok" };
+}
+
+export { PHASE };

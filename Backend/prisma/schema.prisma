@@ -45,6 +45,13 @@ model Workout {
 
   accuracy Float?
 
+  /// Count of genuine form classifications received from the model.
+  /// Excludes network failures, invalid payloads and unavailable-model fallbacks.
+  totalPredictions Int @default(0)
+
+  /// Subset of totalPredictions that were correct form for the exercise.
+  correctPredictions Int @default(0)
+
   userId String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -54,5 +61,7 @@ model Workout {
   createdAt DateTime @default(now())
 
   updatedAt DateTime @updatedAt
+
+  @@index([userId, completed])
 }
 

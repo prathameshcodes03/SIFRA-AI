@@ -14,7 +14,19 @@ import {
   extractExerciseFeatures,
   getFeedbackForPrediction,
   evaluateFormRuleBased,
+  getPoseReliability,
 } from "../../exercises/featureExtractor";
+import { createRepTracker, PHASE } from "../../exercises/repTracker";
+import {
+  createCoachingGate,
+  arbitrateCoaching,
+  isLabelForExercise,
+  CORRECT_LABEL_BY_EXERCISE,
+  MIN_RELIABLE_VISIBILITY,
+} from "../../exercises/coaching";
+
+/** ML classification cadence. Form is not a per-frame signal. */
+const PREDICT_INTERVAL_MS = 600;
 
 const Camerafeed = ({
   exercise = "squat",
@@ -29,12 +41,12 @@ const Camerafeed = ({
   const [completedInfo, setCompletedInfo] = useState(null);
   const [saving, setSaving] = useState(false);
   const [livePrediction, setLivePrediction] = useState(null);
-  const [liveAccuracy, setLiveAccuracy] = useState(100);
+  const [liveAccuracy, setLiveAccuracy] = useState(null);
 
-  // Rep/set tracking state
+  // Rep/set tracking state (mirrors of the tracker, updated per frame)
   const [currentSet, setCurrentSet] = useState(1);
   const [completedReps, setCompletedReps] = useState(0);
-  const [setCompleted, setSetCompleted] = useState([]);
+  const [phase, setPhase] = useState(PHASE.UP);
   const [exerciseCompleted, setExerciseCompleted] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showSetComplete, setShowSetComplete] = useState(false);
@@ -46,14 +58,33 @@ const Camerafeed = ({
   const canvasRef = useRef(null);
   const requestRef = useRef(null);
   const lastPredictionTimeRef = useRef(0);
-  const totalChecksRef = useRef(0);
-  const correctChecksRef = useRef(0);
-
-  // Rep counting refs
-  const exercisePhaseRef = useRef("up"); // "up" or "down" for dynamic exercises
-  const plankHoldTimeRef = useRef(0);
-  const lastPlankTickRef = useRef(0);
+  const predictionInFlightRef = useRef(false);
   const completionSentRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  // Accuracy denominators. Only genuine model classifications are counted;
+  // network failures and rule-based fallbacks are excluded.
+  const totalPredictionsRef = useRef(0);
+  const correctPredictionsRef = useRef(0);
+  const liveAccuracyRef = useRef(null);
+
+  // Live mirrors of the tracker to avoid re-renders when nothing changed.
+  const lastSetRepsRef = useRef(0);
+  const lastSetsRef = useRef(1);
+  const trackerRef = useRef(null);
+  const phaseRef = useRef(PHASE.UP);
+  const gateRef = useRef(null);
+  const finishHandlerRef = useRef(null);
+  const setFlashTimerRef = useRef(null);
+
+  if (trackerRef.current === null) {
+    trackerRef.current = createRepTracker({
+      exercise,
+      requiredSets: sets,
+      requiredReps: reps,
+    });
+    gateRef.current = createCoachingGate();
+  }
 
   const videoConstraints = {
     facingMode: "user",
@@ -63,179 +94,37 @@ const Camerafeed = ({
 
   useEffect(() => {
     initializePoseDetector();
+    return () => {
+      mountedRef.current = false;
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      if (setFlashTimerRef.current) clearTimeout(setFlashTimerRef.current);
+    };
   }, []);
 
+  // Rebuild trackers when the exercise or its targets change.
   useEffect(() => {
-    if (!cameraOn) return;
-
-    const detect = async () => {
-      if (
-        webcamRef.current &&
-        webcamRef.current.video &&
-        webcamRef.current.video.readyState === 4
-      ) {
-        const video = webcamRef.current.video;
-        const canvas = canvasRef.current;
-
-        if (canvas) {
-          const ctx = canvas.getContext("2d");
-
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-
-          const results = detectPose(video);
-
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          if (results && results.landmarks && results.landmarks.length > 0) {
-            const drawingUtils = new DrawingUtils(ctx);
-
-            for (const landmarks of results.landmarks) {
-              drawingUtils.drawLandmarks(landmarks, {
-                radius: 4,
-                color: "#8B5CF6",
-              });
-            }
-
-            // Real-time ML Prediction throttled every 600ms
-            const now = performance.now();
-            if (now - lastPredictionTimeRef.current > 600) {
-              lastPredictionTimeRef.current = now;
-
-              const features = extractExerciseFeatures(
-                results.landmarks[0],
-                exercise
-              );
-
-              if (features) {
-                let pred = null;
-                try {
-                  const response = await api.post(
-                    "/api/workout/predict",
-                    features
-                  );
-
-                  if (response.data?.prediction) {
-                    pred = response.data.prediction;
-                  }
-                } catch (predErr) {
-                  // Fallback to rule-based evaluation if API is unavailable
-                  pred = evaluateFormRuleBased(features);
-                }
-
-                if (!pred) {
-                  pred = evaluateFormRuleBased(features);
-                }
-
-                if (pred) {
-                  setLivePrediction(pred);
-
-                  totalChecksRef.current += 1;
-                  const isCorrect =
-                    pred === "correct" ||
-                    pred === "pushup_correct" ||
-                    pred === "plank_correct";
-
-                  if (isCorrect) {
-                    correctChecksRef.current += 1;
-                  }
-
-                  const currentAcc = Math.round(
-                    (correctChecksRef.current / totalChecksRef.current) * 100
-                  );
-                  setLiveAccuracy(currentAcc);
-
-                  // Rep/set counting — only if exercise not already completed
-                  if (!exerciseCompleted && !isCompleting && !completionSentRef.current) {
-                    if (exercise === "plank") {
-                      // Plank: count seconds of correct hold as reps
-                      const now = Date.now();
-                      if (lastPlankTickRef.current === 0) {
-                        lastPlankTickRef.current = now;
-                      }
-                      const elapsed = (now - lastPlankTickRef.current) / 1000;
-                      if (elapsed >= 1) {
-                        plankHoldTimeRef.current += 1;
-                        setCompletedReps(plankHoldTimeRef.current);
-                        lastPlankTickRef.current = now;
-
-                        if (plankHoldTimeRef.current >= reps) {
-                          completeSet();
-                        }
-                      }
-                    } else {
-                      // Squat/Pushup: count reps via phase transitions
-                      const angle = exercise === "squat" ? features.knee_angle : features.elbow_angle;
-                      const downThreshold = exercise === "squat" ? 110 : 100;
-                      const upThreshold = exercise === "squat" ? 140 : 140;
-
-                      if (exercisePhaseRef.current === "up" && angle < downThreshold) {
-                        exercisePhaseRef.current = "down";
-                      } else if (exercisePhaseRef.current === "down" && angle > upThreshold) {
-                        exercisePhaseRef.current = "up";
-                        // Rep completed
-                        setCompletedReps((prev) => {
-                          const newReps = prev + 1;
-                          if (newReps >= reps) {
-                            completeSet();
-                          }
-                          return newReps;
-                        });
-                      }
-                    }
-                  }
-
-                  const feedbackMsg = getFeedbackForPrediction(pred);
-
-                  if (onFormFeedback) {
-                    onFormFeedback({
-                      prediction: pred,
-                      message: feedbackMsg,
-                      isCorrect,
-                      accuracy: currentAcc,
-                    });
-                  }
-                }
-              }
-
-            }
-          }
-        }
-      }
-
-      requestRef.current = requestAnimationFrame(detect);
-    };
-
-    requestRef.current = requestAnimationFrame(detect);
-
-    return () => {
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-      }
-    };
-  }, [cameraOn, exercise, onFormFeedback]);
-
-  const completeSet = () => {
-    setSetCompleted((prev) => {
-      const newSetCompleted = [...prev, true];
-
-      if (newSetCompleted.length >= sets) {
-        // All sets done — exercise complete
-        completeExercise();
-      } else {
-        // Move to next set
-        setCurrentSet(newSetCompleted.length + 1);
-        setCompletedReps(0);
-        plankHoldTimeRef.current = 0;
-        lastPlankTickRef.current = 0;
-        exercisePhaseRef.current = "up";
-        setShowSetComplete(true);
-        setTimeout(() => setShowSetComplete(false), 2000);
-      }
-
-      return newSetCompleted;
+    trackerRef.current = createRepTracker({
+      exercise,
+      requiredSets: sets,
+      requiredReps: reps,
     });
-  };
+    gateRef.current = createCoachingGate();
+    phaseRef.current = PHASE.UP;
+    completionSentRef.current = false;
+    totalPredictionsRef.current = 0;
+    correctPredictionsRef.current = 0;
+    liveAccuracyRef.current = null;
+    lastSetRepsRef.current = 0;
+    lastSetsRef.current = 1;
+    setCurrentSet(1);
+    setCompletedReps(0);
+    setPhase(PHASE.UP);
+    setExerciseCompleted(false);
+    setIsCompleting(false);
+    setShowSetComplete(false);
+    setLivePrediction(null);
+    setLiveAccuracy(null);
+  }, [exercise, sets, reps]);
 
   const completeExercise = async () => {
     if (completionSentRef.current) return;
@@ -245,12 +134,10 @@ const Camerafeed = ({
     setIsCompleting(true);
     setCameraOn(false);
 
-    const calculatedAccuracy =
-      totalChecksRef.current > 0
-        ? Math.round(
-            (correctChecksRef.current / totalChecksRef.current) * 100
-          )
-        : 90;
+    const total = totalPredictionsRef.current;
+    const correct = correctPredictionsRef.current;
+    const sessionAccuracy =
+      total > 0 ? Math.round((correct / total) * 100) : null;
 
     try {
       await completeWorkout({
@@ -258,24 +145,25 @@ const Camerafeed = ({
         exercise,
         sets,
         reps,
-        accuracy: calculatedAccuracy,
+        totalPredictions: total,
+        correctPredictions: correct,
+        accuracy: sessionAccuracy,
       });
 
       setCompletedInfo({
         exercise,
-        accuracy: calculatedAccuracy,
+        accuracy: sessionAccuracy,
       });
 
-      // Auto-advance to next exercise or navigate to dashboard
+      // Auto-advance to the next exercise, or finish the workout.
       if (currentIndex < workoutPlan.length - 1) {
-        const nextExercise = workoutPlan[currentIndex + 1];
+        const next = workoutPlan[currentIndex + 1];
         navigate(
           `/Workout?exercise=${encodeURIComponent(
-            nextExercise.exercise.toLowerCase()
-          )}&workoutId=${nextExercise.id}&sets=${nextExercise.sets}&reps=${nextExercise.reps}`
+            next.exercise.toLowerCase()
+          )}&workoutId=${next.id}&sets=${next.sets}&reps=${next.reps}`
         );
       } else {
-        // Final exercise — workout session complete
         navigate("/Dashboard");
       }
     } catch (err) {
@@ -286,19 +174,188 @@ const Camerafeed = ({
     }
   };
 
+  // Keep the newest handler reachable from the rAF loop without re-binding it.
+  finishHandlerRef.current = completeExercise;
+
+  useEffect(() => {
+    if (!cameraOn) return;
+
+    const updateRepsFromFeatures = (features, nowMs) => {
+      const tracker = trackerRef.current;
+      if (!tracker) return;
+
+      const result = tracker.update(features, nowMs);
+
+      // Rep counting is local and frame-driven: no network, no ML dependency.
+      // Mirrors are compared against the tracker's last emitted values so an
+      // unchanged frame does not trigger a React render.
+      if (result.setReps !== lastSetRepsRef.current) {
+        lastSetRepsRef.current = result.setReps;
+        setCompletedReps(result.setReps);
+      }
+      if (result.sets !== lastSetsRef.current) {
+        lastSetsRef.current = result.sets;
+        setCurrentSet(result.sets);
+      }
+      if (result.phase !== phaseRef.current) {
+        phaseRef.current = result.phase;
+        setPhase(result.phase);
+      }
+
+      if (result.setJustCompleted && !result.exerciseJustCompleted) {
+        if (setFlashTimerRef.current) clearTimeout(setFlashTimerRef.current);
+        setShowSetComplete(true);
+        setFlashTimerRef.current = setTimeout(() => {
+          if (mountedRef.current) setShowSetComplete(false);
+        }, 2000);
+      }
+
+      if (result.exerciseJustCompleted && finishHandlerRef.current) {
+        finishHandlerRef.current();
+      }
+    };
+
+    const handlePrediction = async (features, reliable) => {
+      let label = null;
+      let fromModel = false;
+
+      try {
+        const response = await api.post("/api/workout/predict", features);
+        if (response.data?.prediction) {
+          label = response.data.prediction;
+          fromModel = true;
+        }
+      } catch {
+        // Model unavailable: fall through to rule-based coaching only.
+      }
+
+      predictionInFlightRef.current = false;
+
+      if (!mountedRef.current) return;
+
+      if (!label) {
+        label = evaluateFormRuleBased(features);
+      }
+
+      // Accuracy accounting: infrastructure fallbacks must not be scored as
+      // incorrect form, so they are excluded from the denominator.
+      let sessionAccuracy = liveAccuracyRef.current;
+      if (fromModel && label) {
+        totalPredictionsRef.current += 1;
+        if (label === CORRECT_LABEL_BY_EXERCISE[exercise]) {
+          correctPredictionsRef.current += 1;
+        }
+
+        const total = totalPredictionsRef.current;
+        sessionAccuracy = Math.round(
+          (correctPredictionsRef.current / total) * 100
+        );
+        liveAccuracyRef.current = sessionAccuracy;
+        setLiveAccuracy(sessionAccuracy);
+      }
+
+      const gate = gateRef.current;
+      if (gate) gate.consider(label);
+
+      const decision = arbitrateCoaching({
+        label: gate ? gate.dominant() || label : label,
+        phase: phaseRef.current,
+        reliable,
+        exercise,
+      });
+
+      const spokenLabel = decision.gated ? null : decision.label;
+
+      // Show the model's label in the HUD only when it belongs to this
+      // exercise, so the telemetry never contradicts the spoken cue.
+      if (fromModel && label) {
+        setLivePrediction(isLabelForExercise(label, exercise) ? label : null);
+      }
+
+      const message = getFeedbackForPrediction(
+        spokenLabel || "pose_unreliable"
+      );
+
+      if (onFormFeedback && message) {
+        onFormFeedback({
+          prediction: spokenLabel,
+          message,
+          isCorrect: spokenLabel === CORRECT_LABEL_BY_EXERCISE[exercise],
+          accuracy: sessionAccuracy,
+        });
+      }
+    };
+
+    const detect = () => {
+      const video = webcamRef.current?.video;
+      const canvas = canvasRef.current;
+
+      if (video && video.readyState === 4 && canvas) {
+        const ctx = canvas.getContext("2d");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const results = detectPose(video);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const landmarks = results?.landmarks?.[0];
+
+        if (landmarks) {
+          const drawingUtils = new DrawingUtils(ctx);
+          drawingUtils.drawLandmarks(landmarks, {
+            radius: 4,
+            color: "#8B5CF6",
+          });
+
+          const features = extractExerciseFeatures(landmarks, exercise);
+          const reliability = getPoseReliability(landmarks);
+          const reliable = reliability >= MIN_RELIABLE_VISIBILITY;
+
+          // 1) Rep / set counting: every frame, purely local.
+          if (features && !completionSentRef.current) {
+            updateRepsFromFeatures(features, Date.now());
+          }
+
+          // 2) Form classification: throttled, and deliberately NOT awaited so
+          //    a slow network call can never stall the camera loop.
+          const now = performance.now();
+          if (
+            features &&
+            now - lastPredictionTimeRef.current > PREDICT_INTERVAL_MS &&
+            !predictionInFlightRef.current &&
+            !completionSentRef.current
+          ) {
+            lastPredictionTimeRef.current = now;
+            predictionInFlightRef.current = true;
+            handlePrediction(features, reliable).catch(() => {
+              predictionInFlightRef.current = false;
+            });
+          }
+        }
+      }
+
+      requestRef.current = requestAnimationFrame(detect);
+    };
+
+    requestRef.current = requestAnimationFrame(detect);
+
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [cameraOn, exercise, onFormFeedback]);
+
   const handleEndWorkout = async () => {
-    // If exercise already completed via auto-completion, don't re-complete
-    if (exerciseCompleted || completionSentRef.current) return;
+    // Guard against a double submit while a completion request is in flight.
+    if (exerciseCompleted || completionSentRef.current || isCompleting) return;
 
     setCameraOn(false);
     setSaving(true);
+    setIsCompleting(true);
 
-    const calculatedAccuracy =
-      totalChecksRef.current > 0
-        ? Math.round(
-            (correctChecksRef.current / totalChecksRef.current) * 100
-          )
-        : 90;
+    const total = totalPredictionsRef.current;
+    const correct = correctPredictionsRef.current;
+    const sessionAccuracy =
+      total > 0 ? Math.round((correct / total) * 100) : null;
 
     try {
       await completeWorkout({
@@ -306,57 +363,51 @@ const Camerafeed = ({
         exercise,
         sets,
         reps,
-        accuracy: calculatedAccuracy,
+        totalPredictions: total,
+        correctPredictions: correct,
+        accuracy: sessionAccuracy,
       });
 
-      setCompletedInfo({
-        exercise,
-        accuracy: calculatedAccuracy,
-      });
+      setCompletedInfo({ exercise, accuracy: sessionAccuracy });
+      completionSentRef.current = true;
     } catch (err) {
       console.error("Failed to complete workout:", err);
+      // Backend rejected the save: do not present it as permanently completed.
+      completionSentRef.current = false;
+      setCameraOn(true);
     } finally {
       setSaving(false);
+      setIsCompleting(false);
     }
   };
 
   const handleRestart = () => {
-    totalChecksRef.current = 0;
-    correctChecksRef.current = 0;
+    totalPredictionsRef.current = 0;
+    correctPredictionsRef.current = 0;
+    liveAccuracyRef.current = null;
+    lastSetRepsRef.current = 0;
+    lastSetsRef.current = 1;
+    trackerRef.current?.reset();
+    gateRef.current?.reset();
+    completionSentRef.current = false;
+    phaseRef.current = PHASE.UP;
     setCompletedInfo(null);
     setLivePrediction(null);
-    setLiveAccuracy(100);
+    setLiveAccuracy(null);
     setCurrentSet(1);
     setCompletedReps(0);
-    setSetCompleted([]);
+    setPhase(PHASE.UP);
     setExerciseCompleted(false);
     setIsCompleting(false);
     setShowSetComplete(false);
-    exercisePhaseRef.current = "up";
-    plankHoldTimeRef.current = 0;
-    lastPlankTickRef.current = 0;
-    completionSentRef.current = false;
     setCameraOn(true);
   };
 
   const isFormCorrect =
-    livePrediction === "correct" ||
-    livePrediction === "pushup_correct" ||
-    livePrediction === "plank_correct";
+    livePrediction != null &&
+    livePrediction === CORRECT_LABEL_BY_EXERCISE[exercise];
 
-  // Reset rep/set tracking when exercise changes
-  useEffect(() => {
-    setCurrentSet(1);
-    setCompletedReps(0);
-    setSetCompleted([]);
-    setExerciseCompleted(false);
-    setIsCompleting(false);
-    setShowSetComplete(false);
-    exercisePhaseRef.current = "up";
-    plankHoldTimeRef.current = 0;
-    lastPlankTickRef.current = 0;
-    completionSentRef.current = false;
-  }, [exercise]);
+  const isHold = exercise === "plank";
 
   return (
     <div className="relative mx-auto aspect-video min-h-[15rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-lg sm:min-h-[24rem]">
@@ -401,13 +452,31 @@ const Camerafeed = ({
             </span>
 
             <span className="rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-1.5 font-mono text-xs font-medium text-slate-200 shadow-md backdrop-blur-md">
-              Score: <strong className="text-indigo-400">{liveAccuracy}%</strong>
+              Score:{" "}
+              <strong className="text-indigo-400">
+                {liveAccuracy === null ? "--" : `${liveAccuracy}%`}
+              </strong>
             </span>
 
             {/* Rep/Set Progress */}
             {!exerciseCompleted && (
               <span className="rounded-xl border border-indigo-500/40 bg-indigo-950/80 px-3 py-1.5 font-mono text-xs font-medium text-indigo-200 shadow-md backdrop-blur-md">
-                Set {currentSet}/{sets} • Rep {completedReps}/{reps}
+                {isHold
+                  ? `Hold ${completedReps}/${reps}s`
+                  : `Set ${currentSet}/${sets} • Rep ${completedReps}/${reps}`}
+              </span>
+            )}
+
+            {/* Movement phase */}
+            {!exerciseCompleted && !isHold && (
+              <span
+                className={`rounded-xl border px-3 py-1.5 font-mono text-xs font-semibold shadow-md backdrop-blur-md ${
+                  phase === PHASE.DOWN
+                    ? "border-amber-500/40 bg-amber-950/80 text-amber-300"
+                    : "border-slate-700/80 bg-slate-900/80 text-slate-300"
+                }`}
+              >
+                {phase === PHASE.DOWN ? "DESCENDING" : "RISING"}
               </span>
             )}
 
@@ -429,7 +498,9 @@ const Camerafeed = ({
 
               <div>
                 <h3 className="text-2xl font-extrabold text-slate-900">
-                  {exerciseCompleted ? "Exercise Complete!" : "Workout Session Logged!"}
+                  {exerciseCompleted
+                    ? "Exercise Complete!"
+                    : "Workout Session Logged!"}
                 </h3>
                 <p className="mt-1 text-sm text-slate-600">
                   Great effort on your{" "}
@@ -438,9 +509,12 @@ const Camerafeed = ({
                   </span>{" "}
                   routine.
                 </p>
-                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-sm font-semibold text-emerald-700">
-                  <span>Average Accuracy: {completedInfo.accuracy}%</span>
-                </div>
+                {completedInfo.accuracy !== null &&
+                  completedInfo.accuracy !== undefined && (
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1 text-sm font-semibold text-emerald-700">
+                      <span>Session Accuracy: {completedInfo.accuracy}%</span>
+                    </div>
+                  )}
                 {exerciseCompleted && currentIndex < workoutPlan.length - 1 && (
                   <p className="mt-2 text-xs font-medium text-indigo-600 animate-pulse">
                     Moving to next exercise...
@@ -480,7 +554,9 @@ const Camerafeed = ({
                 <i className="fa-solid fa-video-slash text-2xl"></i>
               </div>
               {saving ? (
-                <p className="mt-4 text-sm font-medium text-slate-600">Saving workout record...</p>
+                <p className="mt-4 text-sm font-medium text-slate-600">
+                  Saving workout record...
+                </p>
               ) : (
                 <button
                   onClick={handleRestart}
@@ -507,5 +583,3 @@ const Camerafeed = ({
 };
 
 export default Camerafeed;
-
-

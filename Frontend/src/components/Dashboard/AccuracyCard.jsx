@@ -1,14 +1,18 @@
 import React from "react";
 import { Gauge, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 
-const AccuracyCard = ({ accuracy = 0 }) => {
+const AccuracyCard = ({ accuracy = null, hasAccuracyData = false }) => {
   const getQualityText = (acc) => {
     if (acc >= 90) return { label: "Elite Biomechanical Precision", color: "text-emerald-600 bg-emerald-50 border-emerald-200" };
     if (acc >= 75) return { label: "Good Postural Control", color: "text-indigo-600 bg-indigo-50 border-indigo-200" };
     return { label: "Form Needs Calibration", color: "text-amber-600 bg-amber-50 border-amber-200" };
   };
 
-  const quality = getQualityText(accuracy);
+  // No genuine model classifications yet: show an honest empty state instead
+  // of a fabricated percentage.
+  const showEmptyState = !hasAccuracyData || accuracy === null;
+  const displayAccuracy = showEmptyState ? 0 : accuracy;
+  const quality = getQualityText(displayAccuracy);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
@@ -49,7 +53,7 @@ const AccuracyCard = ({ accuracy = 0 }) => {
               className="text-indigo-600 transition-all duration-1000 ease-out"
               strokeWidth="8"
               strokeDasharray={2 * Math.PI * 60}
-              strokeDashoffset={2 * Math.PI * 60 * (1 - accuracy / 100)}
+              strokeDashoffset={2 * Math.PI * 60 * (1 - displayAccuracy / 100)}
               strokeLinecap="round"
               stroke="currentColor"
               fill="transparent"
@@ -57,21 +61,39 @@ const AccuracyCard = ({ accuracy = 0 }) => {
           </svg>
 
           <div className="flex flex-col items-center text-center">
-            <span className="font-mono text-3xl font-extrabold text-slate-900">
-              {accuracy}%
-            </span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Precision
-            </span>
+            {showEmptyState ? (
+              <>
+                <span className="text-xl font-extrabold text-slate-400">--</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  No Data
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-mono text-3xl font-extrabold text-slate-900">
+                  {displayAccuracy}%
+                </span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Precision
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Quality Pill */}
-      <div className={`flex items-center justify-center gap-1.5 rounded-xl border p-2 text-center text-xs font-semibold ${quality.color}`}>
-        <Sparkles className="h-3.5 w-3.5 shrink-0" />
-        <span>{quality.label}</span>
-      </div>
+      {showEmptyState ? (
+        <div className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2 text-center text-xs font-semibold text-slate-500">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>No workout data yet</span>
+        </div>
+      ) : (
+        <div className={`flex items-center justify-center gap-1.5 rounded-xl border p-2 text-center text-xs font-semibold ${quality.color}`}>
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+          <span>{quality.label}</span>
+        </div>
+      )}
     </div>
   );
 };

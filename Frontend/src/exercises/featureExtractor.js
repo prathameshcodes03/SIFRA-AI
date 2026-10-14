@@ -109,8 +109,48 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
   };
 }
 
+/**
+ * Raw pose reliability derived directly from landmarks.
+ *
+ * Deliberately separate from `landmark_visibility`, which is clamped to a
+ * minimum of 0.7 before being sent to the model (see extractExerciseFeatures).
+ * That clamp keeps the model input stable, but it also hides a genuinely
+ * unusable pose, which is why coaching previously had to be suppressed for it.
+ * Used only to decide whether to coach at all; the /predict payload is
+ * unchanged.
+ */
+export function getPoseReliability(landmarks) {
+  if (!landmarks || landmarks.length === 0) return 0;
+
+  const critical = [
+    POSE_LANDMARKS.LEFT_SHOULDER,
+    POSE_LANDMARKS.RIGHT_SHOULDER,
+    POSE_LANDMARKS.LEFT_HIP,
+    POSE_LANDMARKS.RIGHT_HIP,
+    POSE_LANDMARKS.LEFT_KNEE,
+    POSE_LANDMARKS.RIGHT_KNEE,
+    POSE_LANDMARKS.LEFT_ANKLE,
+    POSE_LANDMARKS.RIGHT_ANKLE,
+  ];
+
+  let sum = 0;
+  let count = 0;
+
+  for (const index of critical) {
+    const point = landmarks[index];
+    if (!point) continue;
+    sum += typeof point.visibility === "number" ? point.visibility : 0.9;
+    count += 1;
+  }
+
+  if (count === 0) return 0;
+
+  return sum / count;
+}
+
 export function evaluateFormRuleBased(features) {
-  if (!features) return "correct";
+  // No usable features must NOT be reported as good form.
+  if (!features) return null;
   const { exercise, knee_angle, elbow_angle, hip_angle, body_angle, symmetry_score } = features;
 
   if (exercise === "squat") {
@@ -136,21 +176,28 @@ export function evaluateFormRuleBased(features) {
   return "correct";
 }
 
+/**
+ * Coaching copy. Wording is intentionally bounded so the coach never implies
+ * that a deeper squat is always better - depth should suit the user's own
+ * comfortable mobility.
+ */
 export const COACHING_MESSAGES = {
-  correct: "Great form. Keep going.",
-  shallow: "Go a little deeper.",
+  correct: "Good squat. Keep going.",
+  shallow: "Lower into a comfortable squat depth.",
   forward_lean: "Keep your chest more upright.",
   knees_caving: "Keep your knees aligned with your toes.",
   pushup_correct: "Good push-up form. Keep going.",
   pushup_elbow_flare: "Keep your elbows closer to your body.",
   pushup_body_sag: "Keep your body straight.",
-  pushup_hips_high: "Lower your hips and maintain a straight line.",
+  pushup_hips_high: "Bring your hips down into a straight line.",
   plank_correct: "Great plank. Keep holding.",
   plank_hips_high: "Lower your hips slightly.",
   plank_hips_low: "Raise your hips slightly.",
+  pose_unreliable: "I can't see you clearly. Step back and make sure your full body is in frame.",
 };
 
 export function getFeedbackForPrediction(prediction) {
-  return COACHING_MESSAGES[prediction] || "Keep up the great effort!";
+  if (!prediction) return null;
+  return COACHING_MESSAGES[prediction] || null;
 }
 

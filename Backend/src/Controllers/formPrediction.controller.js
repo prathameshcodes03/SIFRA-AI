@@ -60,6 +60,7 @@ const predictWorkoutForm = async (req, res) => {
   }
 
   try {
+    // Prediction label is returned exactly as produced by the trained model.
     const prediction = await requestFormPrediction(validation.features);
 
     return res.status(200).json({

@@ -7,7 +7,10 @@ const WorkoutContext = createContext();
 export const WorkoutProvider = ({ children }) => {
   const [workouts, setWorkouts] = useState([]);
   const [stats, setStats] = useState({
-    accuracy: 0,
+    accuracy: null,
+    hasAccuracyData: false,
+    totalPredictions: 0,
+    correctPredictions: 0,
     currentStreak: 0,
     bestStreak: 0,
     completedDays: 0,
@@ -59,15 +62,27 @@ export const WorkoutProvider = ({ children }) => {
     }
   };
 
-  const completeWorkout = async ({ workoutId, exercise, sets, reps, accuracy }) => {
+  const completeWorkout = async ({
+    workoutId,
+    exercise,
+    sets,
+    reps,
+    accuracy,
+    totalPredictions = 0,
+    correctPredictions = 0,
+  }) => {
     try {
-      const endpoint = workoutId ? `/api/workouts/${workoutId}/complete` : "/api/workouts/complete";
+      const endpoint = workoutId
+        ? `/api/workouts/${workoutId}/complete`
+        : "/api/workouts/complete";
       const res = await api.post(endpoint, {
         workoutId,
         exercise,
         sets,
         reps,
         accuracy,
+        totalPredictions,
+        correctPredictions,
       });
 
       await refreshAll();

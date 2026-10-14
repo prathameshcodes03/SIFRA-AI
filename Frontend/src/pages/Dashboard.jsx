@@ -13,7 +13,10 @@ const Dashboard = () => {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,.8fr)]">
         <WorkourBanner />
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
-          <AccuracyCard accuracy={stats.accuracy} />
+          <AccuracyCard
+            accuracy={stats.accuracy}
+            hasAccuracyData={stats.hasAccuracyData}
+          />
           <WorkoutStreak
             currentStreak={stats.currentStreak}
             bestStreak={stats.bestStreak}

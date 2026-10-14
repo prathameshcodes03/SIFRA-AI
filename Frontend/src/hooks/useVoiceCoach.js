@@ -1,8 +1,21 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import api from "../api/axios";
 
-// In-memory cache for audio blob URLs to prevent duplicate ElevenLabs calls
+// In-memory cache for audio blob URLs to prevent duplicate ElevenLabs calls.
+// Bounded so a long session cannot grow without limit.
 const globalAudioCache = new Map();
+const MAX_CACHE_ENTRIES = 60;
+
+const rememberAudio = (key, url) => {
+  if (globalAudioCache.has(key)) globalAudioCache.delete(key);
+  globalAudioCache.set(key, url);
+  while (globalAudioCache.size > MAX_CACHE_ENTRIES) {
+    const oldestKey = globalAudioCache.keys().next().value;
+    const oldestUrl = globalAudioCache.get(oldestKey);
+    globalAudioCache.delete(oldestKey);
+    if (oldestUrl && typeof oldestUrl !== "string") URL.revokeObjectURL(oldestUrl);
+  }
+};
 
 export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = {}) => {
   const [currentMessage, setCurrentMessage] = useState(initialMessage);
@@ -13,7 +26,15 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
   const currentAudioRef = useRef(null);
   const lastSpokenTimeRef = useRef(0);
   const lastSpokenTextRef = useRef("");
-  const COOLDOWN_MS = 5000; // 5-second minimum cooldown between voice triggers
+  const requestIdRef = useRef(0);
+  const isMutedRef = useRef(isMuted);
+
+  // Identical cue must not be re-requested in a tight loop.
+  const REPEAT_SUPPRESSION_MS = 12000;
+  // Minimum spacing between two DIFFERENT coaching cues.
+  const COOLDOWN_MS = 2500;
+
+  isMutedRef.current = isMuted;
 
   const stop = useCallback(() => {
     if (currentAudioRef.current) {
@@ -58,48 +79,61 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
       if (!text || typeof text !== "string") return;
 
       const trimmedText = text.trim();
+      if (!trimmedText) return;
+
       setCurrentMessage(trimmedText);
 
-      if (isMuted) return;
+      if (isMutedRef.current) return;
 
       const now = Date.now();
-      // If same text was spoken very recently, skip to prevent repetitive loops
-      if (!force && trimmedText === lastSpokenTextRef.current && now - lastSpokenTimeRef.current < 8000) {
-        return;
-      }
+      const isRepeat = trimmedText === lastSpokenTextRef.current;
 
-      if (!force && now - lastSpokenTimeRef.current < COOLDOWN_MS) {
-        return;
+      if (!force) {
+        // Same cue still recent: suppress entirely.
+        if (isRepeat && now - lastSpokenTimeRef.current < REPEAT_SUPPRESSION_MS) {
+          return;
+        }
+        // A DIFFERENT cue is new information and must not be swallowed.
+        if (!isRepeat && now - lastSpokenTimeRef.current < COOLDOWN_MS) {
+          return;
+        }
       }
 
       lastSpokenTimeRef.current = now;
       lastSpokenTextRef.current = trimmedText;
       stop();
 
-      // 1. Check in-memory cache first (0 ElevenLabs credits)
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
+      const isStale = () => requestIdRef.current !== requestId;
+
+      // 1. Replay cached audio without spending ElevenLabs credits.
       if (globalAudioCache.has(trimmedText)) {
+        const cachedUrl = globalAudioCache.get(trimmedText);
         try {
-          const cachedUrl = globalAudioCache.get(trimmedText);
           const audio = new Audio(cachedUrl);
           currentAudioRef.current = audio;
-
           audio.onended = () => setIsSpeaking(false);
           audio.onerror = () => {
             setIsSpeaking(false);
-            playWithWebSpeech(trimmedText);
+            if (!isStale()) playWithWebSpeech(trimmedText);
           };
-
           setIsSpeaking(true);
           await audio.play();
           return;
         } catch (err) {
-          console.warn("Cached audio play blocked or failed, using Web Speech fallback:", err);
-          playWithWebSpeech(trimmedText);
+          console.warn(
+            "Cached audio play blocked or failed, using Web Speech fallback:",
+            err
+          );
+          if (!isStale()) playWithWebSpeech(trimmedText);
           return;
         }
       }
 
-      // 2. Fetch audio from backend voice service
+      // 2. Fetch audio from backend voice service.
+      //    Runs off the rep-counting path; never blocks the camera loop.
       setIsLoading(true);
       try {
         const response = await api.post(
@@ -108,12 +142,13 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
           { responseType: "blob", timeout: 8000 }
         );
 
+        // A newer cue superseded this one: never let stale audio override it.
+        if (isStale()) return;
+
         if (response.data && response.data.size > 0) {
           const audioBlob = new Blob([response.data], { type: "audio/mpeg" });
           const audioUrl = URL.createObjectURL(audioBlob);
-
-          // Cache blob URL for all future repeats
-          globalAudioCache.set(trimmedText, audioUrl);
+          rememberAudio(trimmedText, audioUrl);
 
           const audio = new Audio(audioUrl);
           currentAudioRef.current = audio;
@@ -121,7 +156,7 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
           audio.onended = () => setIsSpeaking(false);
           audio.onerror = () => {
             setIsSpeaking(false);
-            playWithWebSpeech(trimmedText);
+            if (!isStale()) playWithWebSpeech(trimmedText);
           };
 
           setIsSpeaking(true);
@@ -130,13 +165,16 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
           throw new Error("Empty audio response");
         }
       } catch (err) {
-        console.warn("Backend voice coaching failed, falling back to Web Speech:", err);
-        playWithWebSpeech(trimmedText);
+        console.warn(
+          "Backend voice coaching failed, falling back to Web Speech:",
+          err
+        );
+        if (!isStale()) playWithWebSpeech(trimmedText);
       } finally {
-        setIsLoading(false);
+        if (!isStale()) setIsLoading(false);
       }
     },
-    [isMuted, stop, playWithWebSpeech]
+    [stop, playWithWebSpeech]
   );
 
   useEffect(() => {
@@ -158,4 +196,3 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
 };
 
 export default useVoiceCoach;
-
