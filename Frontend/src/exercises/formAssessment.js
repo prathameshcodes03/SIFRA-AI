@@ -102,6 +102,12 @@ export function assessSquatForm({
 } = {}) {
   if (!features) return assessment(null, "no_features");
 
+  // Never judge a pose whose joints were not actually measured.
+  const measured = features.measured;
+  if (measured && measured.knee === false) {
+    return assessment(null, "pose_not_measured");
+  }
+
   const depth = isNumber(deepestKneeAngle) ? deepestKneeAngle : features.knee_angle;
   if (!isNumber(depth)) return assessment(null, "no_knee_angle");
 
@@ -127,7 +133,9 @@ export function assessSquatForm({
   }
 
   // Depth was reached - now judge the shape of the pose itself.
-  const visibility = features.landmark_visibility;
+  const visibility = isNumber(features.pose_visibility)
+    ? features.pose_visibility
+    : features.landmark_visibility;
   const visibilityOk =
     !isNumber(visibility) || visibility >= CAVING_MIN_VISIBILITY;
   const asymmetry = features.knee_asymmetry;

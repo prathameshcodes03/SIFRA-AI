@@ -6,6 +6,7 @@ import Camerafeed from "../components/Workout/Camerafeed";
 import VoiceFeedback from "../components/Workout/VoiceFeedback";
 import { useWorkout } from "../Context/WorkoutContext";
 import useVoiceCoach from "../hooks/useVoiceCoach";
+import { announceWorkoutCompletion } from "../voice/completionVoice";
 import { Dumbbell, ArrowLeft, Layers, Sparkles } from "lucide-react";
 
 const EXERCISE_TIPS = {
@@ -76,6 +77,21 @@ const Workout = () => {
     }
   };
 
+  /**
+   * The ENTIRE workout finished (Camerafeed only calls this after the backend
+   * confirms completion of the final exercise).
+   *
+   * `isMuted` is the existing voice-coach preference - if the user turned voice
+   * off, nothing is spoken, but the message is still shown on screen and can
+   * still be replayed from the Voice Coach card's "Replay Cue" button.
+   */
+  const handleWorkoutComplete = ({ workoutKey }) =>
+    announceWorkoutCompletion({
+      workoutKey,
+      muted: isMuted,
+      onMessage: setCurrentMessage,
+    });
+
   return (
     <AppShell footer={<Footer />}>
       <div className="mx-auto w-full max-w-4xl space-y-4">
@@ -118,6 +134,7 @@ const Workout = () => {
           sets={sets}
           reps={reps}
           onFormFeedback={handleFormFeedback}
+          onWorkoutComplete={handleWorkoutComplete}
           workoutPlan={workouts}
           currentIndex={currentIndex}
         />

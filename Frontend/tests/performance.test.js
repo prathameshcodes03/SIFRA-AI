@@ -28,7 +28,7 @@ test("rep counting runs entirely locally with no network dependency", () => {
   assert.equal(typeof result.phase, "string");
 });
 
-test("a rep is counted in a single update call, without waiting for ML", () => {
+test("reps are counted locally, without waiting for ML", () => {
   const tracker = createRepTracker({ exercise: "squat", requiredSets: 3, requiredReps: 10 });
 
   // Simulate a slow ML round-trip: frames keep arriving regardless.
@@ -91,14 +91,13 @@ test("rep detection latency is bounded and measured", () => {
   const tracker = createRepTracker({ exercise: "squat", requiredSets: 3, requiredReps: 10 });
 
   let now = 1000;
-  // Descend well past both thresholds to reach the DOWN phase.
-  for (let i = 0; i < 10; i += 1) {
+  // Descend past both thresholds to confirm the DOWN phase.
+  for (let i = 0; i < 20; i += 1) {
     tracker.update(squatFrame(95), now);
     now += 33;
   }
 
-  // Rise again. The exponential moving average needs a small number of frames
-  // to cross the up-threshold, so measure that latency rather than assume 1.
+  // Rise again and measure how many frames it takes for the rep to register.
   let framesToRep = null;
   for (let i = 0; i < 20; i += 1) {
     const res = tracker.update(squatFrame(175), now);
@@ -110,8 +109,9 @@ test("rep detection latency is bounded and measured", () => {
   }
 
   assert.ok(framesToRep !== null, "rep must register on the way back up");
+  // EMA crossover plus the 2-frame stability confirmation.
   assert.ok(
     framesToRep <= 4,
-    `rep registered after ${framesToRep} frames (~${(framesToRep * 33)}ms at 30fps)`
+    `rep registered after ${framesToRep} frames (~${framesToRep * 33}ms at 30fps)`
   );
 });

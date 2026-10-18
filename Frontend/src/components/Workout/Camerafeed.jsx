@@ -33,6 +33,9 @@ import {
 import { assessSquatForm } from "../../exercises/formAssessment";
 import { createSquatRepSummary } from "../../exercises/squatRepSummary";
 import { createCoachDiagnostics } from "../../utils/diagnostics";
+import { createLatestOnlyGuard } from "../../utils/latestOnly";
+import { createFormCueGate } from "../../exercises/formCueGate";
+import { createWorkoutSessionKey } from "../../voice/completionVoice";
 
 /** ML classification cadence. Form is not a per-frame signal. */
 const PREDICT_INTERVAL_MS = 600;
@@ -43,6 +46,7 @@ const Camerafeed = ({
   sets = 3,
   reps = 10,
   onFormFeedback,
+  onWorkoutComplete,
   workoutPlan = [],
   currentIndex = 0,
 }) => {
@@ -68,6 +72,11 @@ const Camerafeed = ({
   const requestRef = useRef(null);
   const lastPredictionTimeRef = useRef(0);
   const predictionInFlightRef = useRef(false);
+  // Drops superseded async prediction responses (stale pose data).
+  const predictionGuardRef = useRef(null);
+  // State-aware coaching for push-up and plank: speaks on label CHANGES, not
+  // on the 600ms prediction cadence.
+  const formCueRef = useRef(null);
   const completionSentRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -84,6 +93,15 @@ const Camerafeed = ({
   const phaseRef = useRef(PHASE.UP);
   const gateRef = useRef(null);
   const finishHandlerRef = useRef(null);
+  // Reports "the ENTIRE workout is done" - never per set, never between
+  // exercises. Ref-held so re-renders cannot replay the announcement.
+  const completionHandlerRef = useRef(null);
+  // Stable id for this workout attempt: identical across re-renders, unique
+  // for a genuinely new session.
+  const workoutSessionKeyRef = useRef(null);
+  if (workoutSessionKeyRef.current === null) {
+    workoutSessionKeyRef.current = createWorkoutSessionKey(workoutId, exercise);
+  }
   const feedbackHandlerRef = useRef(null);
   const setFlashTimerRef = useRef(null);
 
@@ -109,6 +127,8 @@ const Camerafeed = ({
     gateRef.current = createCoachingGate();
     visibilityWarningRef.current = createVisibilityWarningController();
     squatRepRef.current = createSquatRepSummary();
+    predictionGuardRef.current = createLatestOnlyGuard();
+    formCueRef.current = createFormCueGate();
     diagnosticsRef.current = createCoachDiagnostics();
   }
 
@@ -148,6 +168,11 @@ const Camerafeed = ({
     visibilityWarningRef.current?.reset();
     smoothedKneeAngleRef.current = null;
     squatRepRef.current?.reset();
+    formCueRef.current?.reset();
+    predictionGuardRef.current?.invalidate();
+    // A different exercise is a different attempt: it must be eligible to
+    // announce its own completion later.
+    workoutSessionKeyRef.current = createWorkoutSessionKey(workoutId, exercise);
     pendingRepRef.current = null;
     setCurrentSet(1);
     setCompletedReps(0);
@@ -157,6 +182,9 @@ const Camerafeed = ({
     setShowSetComplete(false);
     setLivePrediction(null);
     setLiveAccuracy(null);
+    // `workoutId` is read only to build a fresh session key; the reset is
+    // intentionally keyed to the exercise and its targets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise, sets, reps]);
 
   const completeExercise = async () => {
@@ -188,17 +216,36 @@ const Camerafeed = ({
         accuracy: sessionAccuracy,
       });
 
-      // Auto-advance to the next exercise, or finish the workout.
-      if (currentIndex < workoutPlan.length - 1) {
-        const next = workoutPlan[currentIndex + 1];
-        navigate(
-          `/Workout?exercise=${encodeURIComponent(
-            next.exercise.toLowerCase()
-          )}&workoutId=${next.id}&sets=${next.sets}&reps=${next.reps}`
-        );
-      } else {
+      // The workout is over only when there is no exercise left in the plan.
+      const hasNextExercise = currentIndex < workoutPlan.length - 1;
+
+      if (!hasNextExercise && typeof completionHandlerRef.current === "function") {
+        // The backend has confirmed completion, so the announcement is safe to
+        // make. The handler is idempotent on the session key, so extra renders
+        // or duplicate events cannot replay it.
+        const announce = completionHandlerRef.current({
+          workoutKey: workoutSessionKeyRef.current,
+          exercise,
+          accuracy: sessionAccuracy,
+        });
+
+        // Hold the completion screen until the announcement settles so it is
+        // heard in full and the message stays readable. Bounded by the
+        // announcer's own timeout, and the existing buttons stay available.
+        if (announce && typeof announce.then === "function") {
+          await announce;
+        }
         navigate("/Dashboard");
+        return;
       }
+
+      // Auto-advance to the next exercise.
+      const next = workoutPlan[currentIndex + 1];
+      navigate(
+        `/Workout?exercise=${encodeURIComponent(
+          next.exercise.toLowerCase()
+        )}&workoutId=${next.id}&sets=${next.sets}&reps=${next.reps}`
+      );
     } catch (err) {
       console.error("Failed to complete exercise:", err);
       completionSentRef.current = false;
@@ -210,6 +257,9 @@ const Camerafeed = ({
   // Keep the newest handler reachable from the rAF loop without re-binding it.
   finishHandlerRef.current = completeExercise;
   feedbackHandlerRef.current = onFormFeedback;
+  // Kept in a ref for the same reason: a parent re-render must not re-bind the
+  // camera loop, and must not restart a completion announcement.
+  completionHandlerRef.current = onWorkoutComplete;
 
   useEffect(() => {
     if (!cameraOn) {
@@ -217,11 +267,14 @@ const Camerafeed = ({
       return undefined;
     }
 
-    const updateRepsFromFeatures = (features, nowMs) => {
+    const updateRepsFromFeatures = (features, nowMs, reliable) => {
       const tracker = trackerRef.current;
       if (!tracker) return;
 
-      const result = tracker.update(features, nowMs);
+      // `reliable` is forwarded so the tracker can refuse to act on a frame
+      // whose pose the camera loop already knows is poor. A frame that is not
+      // measured can never complete a repetition.
+      const result = tracker.update(features, nowMs, { reliable });
       smoothedKneeAngleRef.current = result.smoothedAngle;
 
       // Frame-driven rep summary: remembers the deepest frame of the rep so a
@@ -262,6 +315,10 @@ const Camerafeed = ({
 
     const handlePrediction = async (features, reliable, reliability) => {
       const requestedAt = performance.now();
+      // Claim a slot: a slow response that lands after a newer one is dropped,
+      // so stale network output can never overwrite newer valid feedback.
+      const seq = predictionGuardRef.current.issue();
+
       let label = null;
       let fromModel = false;
       let modelReport = { ok: false, label: null, status: "not_requested" };
@@ -295,11 +352,17 @@ const Camerafeed = ({
       predictionInFlightRef.current = false;
 
       if (!mountedRef.current) return;
+      if (!predictionGuardRef.current.isCurrent(seq)) return;
 
       // Accuracy accounting: infrastructure fallbacks must not be scored as
       // incorrect form, so they are excluded from the denominator.
+      //
+      // A label belonging to a DIFFERENT exercise is also excluded: it is not a
+      // classification of this exercise at all, so counting it as an error
+      // would understate the model's accuracy on its own labels. What remains
+      // is exactly "the model's classification accuracy for this exercise".
       let sessionAccuracy = liveAccuracyRef.current;
-      if (fromModel && label) {
+      if (fromModel && label && isLabelForExercise(label, exercise)) {
         totalPredictionsRef.current += 1;
         if (label === CORRECT_LABEL_BY_EXERCISE[exercise]) {
           correctPredictionsRef.current += 1;
@@ -351,26 +414,42 @@ const Camerafeed = ({
       }
 
       let message = null;
+      let spokenLabel = null;
+
       if (resolution.message && exercise === "squat") {
+        // Squats are already event-driven: one verdict per completed rep.
         message = resolution.message;
+        spokenLabel = resolution.label;
       } else if (exercise !== "squat") {
-        // Push-up and plank keep their existing arbitration path untouched.
+        // Push-up / plank keep their existing arbitration path: the model label
+        // when one arrives, otherwise the rule-based fallback.
         const decision = arbitrateCoaching({
           label: label || evaluateFormRuleBased(features),
           phase: phaseRef.current,
           reliable,
           exercise,
         });
-        message = resolveCoachingCue({ decision, exercise })?.message ?? null;
+        const cue = resolveCoachingCue({ decision, exercise });
+
+        // Speak only when the confirmed form label CHANGES, not every 600ms.
+        // A pose that could not be assessed is not observable: it must not be
+        // mistaken for the posture having changed.
+        const verdict = formCueRef.current.consider(cue?.label ?? null, exercise, {
+          observable: Boolean(cue),
+        });
+        if (verdict.announce && cue) {
+          message = cue.message;
+          spokenLabel = cue.label;
+        }
       }
 
       const isSpoken = Boolean(message) && reliable;
       if (isSpoken && feedbackHandlerRef.current) {
         feedbackHandlerRef.current({
           kind: "coaching",
-          prediction: resolution.label,
+          prediction: spokenLabel,
           message,
-          isCorrect: resolution.label === CORRECT_LABEL_BY_EXERCISE[exercise],
+          isCorrect: spokenLabel === CORRECT_LABEL_BY_EXERCISE[exercise],
           accuracy: sessionAccuracy,
         });
       }
@@ -453,7 +532,7 @@ const Camerafeed = ({
           // 1) Rep / set counting: every frame, purely local. Untouched by the
           //    warning cooldown so counters stay responsive.
           if (features && !completionSentRef.current) {
-            updateRepsFromFeatures(features, Date.now());
+            updateRepsFromFeatures(features, Date.now(), reliable);
           }
 
           // 2) Form classification: throttled, and deliberately NOT awaited so
@@ -537,6 +616,8 @@ const Camerafeed = ({
     visibilityWarningRef.current?.reset();
     smoothedKneeAngleRef.current = null;
     squatRepRef.current?.reset();
+    formCueRef.current?.reset();
+    predictionGuardRef.current?.invalidate();
     pendingRepRef.current = null;
     completionSentRef.current = false;
     phaseRef.current = PHASE.UP;

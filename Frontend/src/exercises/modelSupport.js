@@ -101,6 +101,22 @@ const ZERO_VARIANCE_FEATURES = new Set([
 const round = (value) => Math.round(value * 100) / 100;
 
 /**
+ * Highest elbow angle the model was ever trained on for push-ups, and the top
+ * of its `pushup_elbow_flare` class.
+ *
+ * Training elbow ranges per push-up label:
+ *   pushup_correct      [ 67.25,  98.71]
+ *   pushup_body_sag     [ 59.49, 104.83]
+ *   pushup_hips_high    [ 64.08, 107.08]
+ *   pushup_elbow_flare  [ 81.52, 133.21]
+ *
+ * A locked-out arm (~170-180deg) is therefore OUTSIDE every trained class, so
+ * an elbow angle above this value says nothing about flare. The previous
+ * unbounded `elbow_angle > 105` rule classified every straight arm as flared.
+ */
+export const PUSHUP_MAX_TRAINED_ELBOW = 133.21;
+
+/**
  * Is this frame inside the region the model was actually trained on?
  *
  * @param {object|null} features

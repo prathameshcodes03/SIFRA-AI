@@ -45,13 +45,24 @@ const frameFactory = (exercise) =>
   exercise === "pushup" ? pushupFrame : exercise === "plank" ? plankFrame : squatFrame;
 
 /**
- * Feed one full up -> down -> up cycle, one frame every 100ms.
+ * Frames in each third of one rep.
+ *
+ * 30 frames per phase at 33ms = a ~3.0s repetition, which is a realistic
+ * bodyweight tempo. The tracker measures the CONFIRMED descent-to-return
+ * window, which runs ~264ms shorter than the true movement (EMA lag plus
+ * stability confirmation), so fixtures must use realistic tempo or they test a
+ * twitch rather than a repetition.
+ */
+const FRAMES_PER_PHASE = 30;
+
+/**
+ * Feed one full up -> down -> up cycle, one frame every 33ms.
  * @param {object} tracker
  * @param {string} exercise
  * @param {number} upAngle    standing / locked-out joint angle
  * @param {number} downAngle  bottom-of-rep joint angle
  */
-function runCycle(tracker, exercise, upAngle, downAngle, startMs, frames = 21) {
+function runCycle(tracker, exercise, upAngle, downAngle, startMs, frames = FRAMES_PER_PHASE * 3) {
   const makeFrame = frameFactory(exercise);
   const stepMs = 33; // ~30fps sampling, typical MediaPipe cadence
   let t = startMs;
@@ -79,9 +90,9 @@ test("squat: a partial squat that never returns to standing counts zero reps", (
   let t = 1000;
   let last;
   // Descend only, never rise past the `up` threshold.
-  for (let i = 0; i < 10; i += 1) {
-    last = tracker.update(squatFrame(i < 3 ? 175 : 95), t);
-    t += 100;
+  for (let i = 0; i < 40; i += 1) {
+    last = tracker.update(squatFrame(i < 5 ? 175 : 95), t);
+    t += 33;
   }
 
   assert.equal(last.reps, 0, "partial squat must not count");
@@ -95,9 +106,9 @@ test("squat: noise inside the hysteresis band cannot double count", () => {
   let reps = 0;
   // Valid cycle, then jitter that oscillates within the dead zone.
   runCycle(tracker, "squat", 175, 95, t);
-  reps = tracker.update(squatFrame(175), 3000).reps;
+  reps = tracker.update(squatFrame(175), 6000).reps;
 
-  for (let i = 0; i < 40; i += 1) {
+  for (let i = 0; i < 60; i += 1) {
     reps = tracker.update(squatFrame(i % 2 === 0 ? 120 : 135), t).reps;
     t += 40;
   }
@@ -114,7 +125,7 @@ test("squat: noise inside the hysteresis band cannot double count", () => {
 function runCyclesTallying(tracker, exercise, upAngle, downAngle, startMs, cycleCount) {
   const makeFrame = frameFactory(exercise);
   const stepMs = 33;
-  const framesPerPhase = 7;
+  const framesPerPhase = FRAMES_PER_PHASE;
   let t = startMs;
   let setEvents = 0;
   let exerciseEvents = 0;
@@ -171,8 +182,9 @@ test("squat: further frames after completion produce no extra completion event",
 
   let t = 1000;
   let events = 0;
-  for (let i = 0; i < 120; i += 1) {
-    const angle = i < 7 ? 175 : i < 14 ? 95 : 175;
+  for (let i = 0; i < 200; i += 1) {
+    const angle =
+      i < FRAMES_PER_PHASE ? 175 : i < FRAMES_PER_PHASE * 2 ? 95 : 175;
     const res = tracker.update(squatFrame(angle), t);
     t += 33;
     if (res.exerciseJustCompleted) events += 1;
@@ -205,7 +217,9 @@ test("plank: accumulates whole seconds while the hold is valid", () => {
   }
 
   assert.equal(last.holdFormOk, true);
-  assert.ok(last.reps >= 3, `expected >=3 hold seconds, got ${last.reps}`);
+  // A plank is a timed hold: the hold counter advances, the REP counter does not.
+  assert.ok(last.setReps >= 3, `expected >=3 hold seconds, got ${last.setReps}`);
+  assert.equal(last.reps, 0, "a hold must never be counted as repetitions");
   assert.equal(completionEvents, 1, "hold target fires completion once");
 });
 
@@ -244,6 +258,7 @@ test("plank: low visibility does not advance the hold timer", () => {
   }
 
   assert.equal(last.holdFormOk, false);
+  assert.equal(last.setReps, 0);
   assert.equal(last.reps, 0);
 });
 

@@ -1,32 +1,32 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import api from "../api/axios";
 import { createVoiceCueGate } from "./voiceCueGate";
+import {
+  playSpeech,
+  stopPlayers,
+  cancelWebSpeech,
+  isSpeechCached,
+} from "./speechPlayer";
 
-// In-memory cache for audio blob URLs to prevent duplicate ElevenLabs calls.
-// Bounded so a long session cannot grow without limit.
-const globalAudioCache = new Map();
-const MAX_CACHE_ENTRIES = 60;
+/** Owner key so this player can be stopped without touching other voices. */
+export const COACH_VOICE_OWNER = "coach";
 
-const rememberAudio = (key, url) => {
-  if (globalAudioCache.has(key)) globalAudioCache.delete(key);
-  globalAudioCache.set(key, url);
-  while (globalAudioCache.size > MAX_CACHE_ENTRIES) {
-    const oldestKey = globalAudioCache.keys().next().value;
-    const oldestUrl = globalAudioCache.get(oldestKey);
-    globalAudioCache.delete(oldestKey);
-    if (oldestUrl && typeof oldestUrl !== "string") URL.revokeObjectURL(oldestUrl);
-  }
-};
+/**
+ * Live coaching voice.
+ *
+ * All TTS and audio work is delegated to the shared `speechPlayer`, which is
+ * also used by the workout-completion announcement. There is exactly one
+ * ElevenLabs transport and one audio cache in the app.
+ */
 
 export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = {}) => {
   const [currentMessage, setCurrentMessage] = useState(initialMessage);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
-  const currentAudioRef = useRef(null);
   const requestIdRef = useRef(0);
   const isMutedRef = useRef(isMuted);
+  const activeTextRef = useRef(null);
 
   // Per-cue dedup. A repeat is recognised even when other cues were spoken in
   // between, which is what stops the same warning being requested from
@@ -39,41 +39,14 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
   isMutedRef.current = isMuted;
 
   const stop = useCallback(() => {
-    if (currentAudioRef.current) {
-      try {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-      } catch {
-        // Ignore pause errors
-      }
-      currentAudioRef.current = null;
-    }
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        // Ignore cancel errors
-      }
-    }
+    requestIdRef.current += 1;
+    activeTextRef.current = null;
+    // Scoped to this owner only: unmounting the coaching page must not cut off
+    // a completion announcement that is still playing after navigation.
+    stopPlayers(COACH_VOICE_OWNER);
+    cancelWebSpeech();
     setIsSpeaking(false);
-  }, []);
-
-  const playWithWebSpeech = useCallback((text) => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
-        window.speechSynthesis.speak(utterance);
-      } catch (speechErr) {
-        console.error("Speech synthesis error:", speechErr);
-        setIsSpeaking(false);
-      }
-    }
+    setIsLoading(false);
   }, []);
 
   const speak = useCallback(
@@ -92,80 +65,33 @@ export const useVoiceCoach = ({ initialMessage = "AI Voice Coach is ready." } = 
       const verdict = cueGateRef.current.consider(trimmedText, { force });
       if (!verdict.accepted) return;
 
-      stop();
-
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
-
+      // Supersede whatever was in flight; its result will be ignored.
+      requestIdRef.current += 1;
+      const requestId = requestIdRef.current;
       const isStale = () => requestIdRef.current !== requestId;
+      activeTextRef.current = trimmedText;
 
-      // 1. Replay cached audio without spending ElevenLabs credits.
-      if (globalAudioCache.has(trimmedText)) {
-        const cachedUrl = globalAudioCache.get(trimmedText);
-        try {
-          const audio = new Audio(cachedUrl);
-          currentAudioRef.current = audio;
-          audio.onended = () => setIsSpeaking(false);
-          audio.onerror = () => {
-            setIsSpeaking(false);
-            if (!isStale()) playWithWebSpeech(trimmedText);
-          };
-          setIsSpeaking(true);
-          await audio.play();
-          return;
-        } catch (err) {
-          console.warn(
-            "Cached audio play blocked or failed, using Web Speech fallback:",
-            err
-          );
-          if (!isStale()) playWithWebSpeech(trimmedText);
-          return;
-        }
-      }
+      const cached = isSpeechCached(trimmedText);
+      if (!cached) setIsLoading(true);
 
-      // 2. Fetch audio from backend voice service.
-      //    Runs off the rep-counting path; never blocks the camera loop.
-      setIsLoading(true);
-      try {
-        const response = await api.post(
-          "/api/voice/coaching",
-          { text: trimmedText },
-          { responseType: "blob", timeout: 8000 }
-        );
+      await playSpeech(trimmedText, {
+        owner: COACH_VOICE_OWNER,
+        onStart: () => {
+          if (!isStale()) setIsSpeaking(true);
+        },
+        onEnd: () => {
+          if (!isStale()) return;
+          setIsSpeaking(false);
+          setIsLoading(false);
+          if (activeTextRef.current === trimmedText) activeTextRef.current = null;
+        },
+      });
 
-        // A newer cue superseded this one: never let stale audio override it.
-        if (isStale()) return;
+      if (isStale()) return;
 
-        if (response.data && response.data.size > 0) {
-          const audioBlob = new Blob([response.data], { type: "audio/mpeg" });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          rememberAudio(trimmedText, audioUrl);
-
-          const audio = new Audio(audioUrl);
-          currentAudioRef.current = audio;
-
-          audio.onended = () => setIsSpeaking(false);
-          audio.onerror = () => {
-            setIsSpeaking(false);
-            if (!isStale()) playWithWebSpeech(trimmedText);
-          };
-
-          setIsSpeaking(true);
-          await audio.play();
-        } else {
-          throw new Error("Empty audio response");
-        }
-      } catch (err) {
-        console.warn(
-          "Backend voice coaching failed, falling back to Web Speech:",
-          err
-        );
-        if (!isStale()) playWithWebSpeech(trimmedText);
-      } finally {
-        if (!isStale()) setIsLoading(false);
-      }
+      setIsLoading(false);
     },
-    [stop, playWithWebSpeech]
+    []
   );
 
   useEffect(() => {

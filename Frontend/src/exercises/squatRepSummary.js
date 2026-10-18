@@ -49,6 +49,12 @@ export function createSquatRepSummary({ onRepComplete = null } = {}) {
   function observe(features, tracker) {
     if (!features || !tracker) return null;
 
+    // A frame whose knee angle was never measured must not arm a "rep":
+    // otherwise tracking noise manufactures coaching verdicts.
+    const measured = features.measured;
+    if (measured && measured.knee === false) return null;
+    if (tracker.trackingOk === false) return null;
+
     const angle = tracker.smoothedAngle;
     if (!isNumber(angle)) return null;
 

@@ -1,6 +1,48 @@
 import { calculateAngle } from "../mathematics/angles";
 import { POSE_LANDMARKS } from "../mediapipe/poseLandmarks";
 import { getLandmark } from "../mediapipe/poseUtils";
+import { PUSHUP_MAX_TRAINED_ELBOW } from "./modelSupport";
+
+/**
+ * Angle extraction for coaching and rep tracking.
+ *
+ * CRITICAL RULE: an angle that was not actually measured is NEVER allowed to
+ * look like a real one.
+ *
+ * The previous version substituted hard-coded fallbacks (knee 90, elbow 90,
+ * hip 90, body 165) whenever a landmark was missing, and scored each side's
+ * visibility with `landmark?.visibility || 0.9`, so a MISSING landmark scored
+ * 0.9 instead of 0. Two things followed, both reproduced in tests:
+ *
+ *  1. A side whose knee/ankle were missing out-scored a complete side and won
+ *     the left/right vote, so the missing side's fabricated 90 deg was used.
+ *  2. That 90 deg sits BELOW the squat `down` threshold (110), which drove the
+ *     rep tracker into the descending phase. When the pose recovered, the
+ *     tracker saw a return to standing and counted a repetition - while the
+ *     user had not moved at all.
+ *
+ * `measured` now records which angles are real. Rep tracking and form
+ * assessment refuse to act on anything else.
+ */
+
+/** A joint angle below this is degenerate, not a measurement. */
+const MIN_PLAUSIBLE_ANGLE = 1;
+
+const angleOf = (a, b, c) => {
+  if (!a || !b || !c) return null;
+  const angle = calculateAngle(a, b, c);
+  if (!Number.isFinite(angle) || angle <= MIN_PLAUSIBLE_ANGLE) return null;
+  return angle;
+};
+
+/**
+ * Real visibility. A missing landmark scores 0 and an explicit 0 stays 0 -
+ * `|| 0.9` used to hide both.
+ */
+const visibilityOf = (point) => {
+  if (!point) return 0;
+  return typeof point.visibility === "number" ? point.visibility : 0;
+};
 
 export function extractExerciseFeatures(landmarks, exercise = "squat") {
   if (!landmarks || landmarks.length === 0) return null;
@@ -18,104 +60,108 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
   const leftAnkle = getLandmark(landmarks, POSE_LANDMARKS.LEFT_ANKLE);
   const rightAnkle = getLandmark(landmarks, POSE_LANDMARKS.RIGHT_ANKLE);
 
-  // Check if at least one side is visible
-  const hasLeft = leftShoulder && leftHip;
-  const hasRight = rightShoulder && rightHip;
-  if (!hasLeft && !hasRight) {
+  // A side is only usable if it has the shoulder/hip pair the tracker needs.
+  const hasLeft = Boolean(leftShoulder && leftHip);
+  const hasRight = Boolean(rightShoulder && rightHip);
+  if (!hasLeft && !hasRight) return null;
+
+  const side = (shoulder, hip, knee, ankle, elbow, wrist) => ({
+    visibility: (visibilityOf(shoulder) + visibilityOf(hip) + visibilityOf(knee)) / 3,
+    knee: angleOf(hip, knee, ankle),
+    elbow: angleOf(shoulder, elbow, wrist),
+    hip: angleOf(shoulder, hip, knee),
+    body: angleOf(shoulder, hip, ankle),
+  });
+
+  const left = side(
+    leftShoulder, leftHip, leftKnee, leftAnkle, leftElbow, leftWrist
+  );
+  const right = side(
+    rightShoulder, rightHip, rightKnee, rightAnkle, rightElbow, rightWrist
+  );
+
+  /**
+   * Pick each angle independently, from a side where it was really measured.
+   * Ties go to the more visible side.
+   */
+  const pick = (name) => {
+    const l = left[name];
+    const r = right[name];
+    if (l !== null && r !== null) {
+      return left.visibility >= right.visibility ? { value: l, measured: true } : { value: r, measured: true };
+    }
+    if (l !== null) return { value: l, measured: true };
+    if (r !== null) return { value: r, measured: true };
+    return { value: null, measured: false };
+  };
+
+  const knee = pick("knee");
+  const elbow = pick("elbow");
+  const hip = pick("hip");
+  const body = pick("body");
+
+  const measured = {
+    knee: knee.measured,
+    elbow: elbow.measured,
+    hip: hip.measured,
+    body: body.measured,
+  };
+
+  // Nothing at all could be measured: there is no pose to report.
+  if (!knee.measured && !elbow.measured && !hip.measured && !body.measured) {
     return null;
   }
 
-  // Calculate left side angles
-  const leftKneeAngle =
-    leftHip && leftKnee && leftAnkle
-      ? calculateAngle(leftHip, leftKnee, leftAnkle)
-      : 90;
+  // Symmetry is only claimed when BOTH sides were measurable. With one side
+  // missing there is no evidence of asymmetry, so it must not manufacture any.
+  const bothSides = left.knee !== null && right.knee !== null;
+  const symmetryScore = bothSides
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          1 -
+            (Math.abs(left.knee - right.knee) +
+              Math.abs(left.hip - right.hip)) /
+              360
+        )
+      )
+    : 1;
 
-  const leftElbowAngle =
-    leftShoulder && leftElbow && leftWrist
-      ? calculateAngle(leftShoulder, leftElbow, leftWrist)
-      : 90;
+  const kneeAsymmetry =
+    left.knee !== null && right.knee !== null
+      ? Math.abs(left.knee - right.knee)
+      : 0;
+  const hipAsymmetry =
+    left.hip !== null && right.hip !== null
+      ? Math.abs(left.hip - right.hip)
+      : 0;
 
-  const leftHipAngle =
-    leftShoulder && leftHip && leftKnee
-      ? calculateAngle(leftShoulder, leftHip, leftKnee)
-      : 90;
-
-  const leftBodyAngle =
-    leftShoulder && leftHip && leftAnkle
-      ? calculateAngle(leftShoulder, leftHip, leftAnkle)
-      : 165;
-
-  // Calculate right side angles
-  const rightKneeAngle =
-    rightHip && rightKnee && rightAnkle
-      ? calculateAngle(rightHip, rightKnee, rightAnkle)
-      : leftKneeAngle;
-
-  const rightElbowAngle =
-    rightShoulder && rightElbow && rightWrist
-      ? calculateAngle(rightShoulder, rightElbow, rightWrist)
-      : leftElbowAngle;
-
-  const rightHipAngle =
-    rightShoulder && rightHip && rightKnee
-      ? calculateAngle(rightShoulder, rightHip, rightKnee)
-      : leftHipAngle;
-
-  const rightBodyAngle =
-    rightShoulder && rightHip && rightAnkle
-      ? calculateAngle(rightShoulder, rightHip, rightAnkle)
-      : leftBodyAngle;
-
-  const leftVis = hasLeft
-    ? ((leftShoulder?.visibility || 0.9) +
-        (leftHip?.visibility || 0.9) +
-        (leftKnee?.visibility || 0.9)) /
-      3
-    : 0;
-
-  const rightVis = hasRight
-    ? ((rightShoulder?.visibility || 0.9) +
-        (rightHip?.visibility || 0.9) +
-        (rightKnee?.visibility || 0.9)) /
-      3
-    : 0;
-
-  const useLeft = leftVis >= rightVis;
-
-  const kneeAngle = useLeft ? leftKneeAngle : rightKneeAngle;
-  const elbowAngle = useLeft ? leftElbowAngle : rightElbowAngle;
-  const hipAngle = useLeft ? leftHipAngle : rightHipAngle;
-  const bodyAngle = useLeft ? leftBodyAngle : rightBodyAngle;
-
-  // Calculate symmetry score (0.0 to 1.0)
-  const kneeDiff = Math.abs(leftKneeAngle - rightKneeAngle) / 180;
-  const hipDiff = Math.abs(leftHipAngle - rightHipAngle) / 180;
-  const symmetryScore = Math.max(0, Math.min(1, 1 - (kneeDiff + hipDiff) / 2));
-
-  // Measured left/right difference in DEGREES, before it is squashed into the
-  // 0-1 symmetry score. `symmetry_score` alone cannot distinguish a genuinely
-  // collapsed knee from ordinary side-to-side variation - both lower it - so
-  // the caving check needs the raw magnitude.
-  const kneeAsymmetry = Math.abs(leftKneeAngle - rightKneeAngle);
-  const hipAsymmetry = Math.abs(leftHipAngle - rightHipAngle);
-
-  // Overall landmark visibility
-  const avgVisibility = Math.max(0.7, Math.min(1.0, Math.max(leftVis, rightVis)));
+  // Honest, unclamped visibility for tracking decisions. The clamped value
+  // below is kept only because it is the model's documented input.
+  const poseVisibility = Math.max(
+    hasLeft ? left.visibility : 0,
+    hasRight ? right.visibility : 0
+  );
+  const avgVisibility = Math.max(0.7, Math.min(1.0, poseVisibility));
 
   const normalizedExercise = exercise.trim().toLowerCase();
 
   return {
     exercise: normalizedExercise,
-    knee_angle: Number(kneeAngle.toFixed(2)),
-    elbow_angle: Number(elbowAngle.toFixed(2)),
-    hip_angle: Number(hipAngle.toFixed(2)),
-    body_angle: Number(bodyAngle.toFixed(2)),
+    // Unmeasured angles keep their historical placeholders so the /predict
+    // payload shape is unchanged - but `measured` stops anything from
+    // believing them.
+    knee_angle: Number((knee.value ?? 90).toFixed(2)),
+    elbow_angle: Number((elbow.value ?? 90).toFixed(2)),
+    hip_angle: Number((hip.value ?? 90).toFixed(2)),
+    body_angle: Number((body.value ?? 165).toFixed(2)),
     symmetry_score: Number(symmetryScore.toFixed(3)),
     landmark_visibility: Number(avgVisibility.toFixed(3)),
-    // Diagnostic only: ignored by /predict, used to judge knees caving.
     knee_asymmetry: Number(kneeAsymmetry.toFixed(2)),
     hip_asymmetry: Number(hipAsymmetry.toFixed(2)),
+    pose_visibility: Number(poseVisibility.toFixed(3)),
+    measured,
   };
 }
 
@@ -126,7 +172,7 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
  * minimum of 0.7 before being sent to the model (see extractExerciseFeatures).
  * That clamp keeps the model input stable, but it also hides a genuinely
  * unusable pose, which is why coaching previously had to be suppressed for it.
- * Used only to decide whether to coach at all; the /predict payload is
+ * Used only to decide whether to coach or count at all; the /predict payload is
  * unchanged.
  */
 export function getPoseReliability(landmarks) {
@@ -147,9 +193,9 @@ export function getPoseReliability(landmarks) {
   let count = 0;
 
   for (const index of critical) {
-    const point = landmarks[index];
-    if (!point) continue;
-    sum += typeof point.visibility === "number" ? point.visibility : 0.9;
+    // A missing landmark is 0, not 0.9: `|| 0.9` used to report a completely
+    // untracked frame as highly reliable.
+    sum += visibilityOf(landmarks[index]);
     count += 1;
   }
 
@@ -158,10 +204,25 @@ export function getPoseReliability(landmarks) {
   return sum / count;
 }
 
+/**
+ * Rule-based fallback, used only when the model returns nothing at all.
+ *
+ * This is the LIVE push-up/plank coach whenever the ML service is unavailable,
+ * so its push-up elbow rule is bounded by the model's own training envelope:
+ * `pushup_elbow_flare` tops out at 133.21deg and a locked-out arm (~175deg) is
+ * outside every trained class. The previous unbounded `> 105` therefore
+ * reported a flare for every straight arm.
+ */
 export function evaluateFormRuleBased(features) {
   // No usable features must NOT be reported as good form.
   if (!features) return null;
   const { exercise, knee_angle, elbow_angle, hip_angle, body_angle, symmetry_score } = features;
+
+  // Never form a claim from an angle that was never measured.
+  const measured = features.measured;
+  if (measured && measured[exercise === "pushup" ? "elbow" : "knee"] === false) {
+    return null;
+  }
 
   if (exercise === "squat") {
     if (symmetry_score < 0.75) return "knees_caving";
@@ -171,7 +232,9 @@ export function evaluateFormRuleBased(features) {
   }
 
   if (exercise === "pushup") {
-    if (elbow_angle > 105) return "pushup_elbow_flare";
+    if (elbow_angle > 105 && elbow_angle <= PUSHUP_MAX_TRAINED_ELBOW) {
+      return "pushup_elbow_flare";
+    }
     if (body_angle < 158 && hip_angle < 158) return "pushup_body_sag";
     if (hip_angle < 162 && body_angle >= 160) return "pushup_hips_high";
     return "pushup_correct";
@@ -210,4 +273,3 @@ export function getFeedbackForPrediction(prediction) {
   if (!prediction) return null;
   return COACHING_MESSAGES[prediction] || null;
 }
-
