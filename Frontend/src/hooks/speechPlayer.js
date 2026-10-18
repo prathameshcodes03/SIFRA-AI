@@ -79,11 +79,12 @@ export function resetAudioFactory() {
  * still playing after navigation.
  */
 const activePlayers = new Map();
+let entrySeq = 0;
 
 export function stopAllPlayers() {
-  for (const stop of [...activePlayers.values()]) {
+  for (const entry of [...activePlayers.values()]) {
     try {
-      stop();
+      entry.stop();
     } catch {
       // A player that is already finished must never block a new one.
     }
@@ -93,14 +94,14 @@ export function stopAllPlayers() {
 
 /** Stop only the players belonging to `owner`. */
 export function stopPlayers(owner) {
-  for (const [key, stop] of [...activePlayers.entries()]) {
-    if (key.owner !== owner) continue;
+  for (const [id, entry] of [...activePlayers.entries()]) {
+    if (entry.owner !== owner) continue;
     try {
-      stop();
+      entry.stop();
     } catch {
       // Ignore
     }
-    activePlayers.delete(key);
+    activePlayers.delete(id);
   }
 }
 
@@ -178,20 +179,40 @@ export function playSpeech(text, { owner = "default", onStart, onEnd } = {}) {
 
   return new Promise((resolve) => {
     let settled = false;
+    /** Set when this player is stopped while its audio is still being fetched. */
+    let cancelled = false;
+    /** The live element, once one exists. */
+    let element = null;
+
+    const pauseElement = () => {
+      if (!element) return;
+      try {
+        element.pause();
+        element.currentTime = 0;
+      } catch {
+        // Ignore pause errors on an already-released element.
+      }
+    };
 
     const finish = (status) => {
       if (settled) return;
       settled = true;
-      activePlayers.delete(entry);
+      activePlayers.delete(entry.id);
       if (typeof onEnd === "function") onEnd(status);
       resolve({ status, autoplayBlocked: status === "blocked" });
     };
 
-    const audio = { pause: () => {} };
-    const entry = { owner, stop: () => audio.pause() };
-    const detach = () => {
-      activePlayers.delete(entry);
+    const entry = {
+      id: ++entrySeq,
+      owner,
+      stop: () => {
+        // Cancellation must survive the window before the element exists,
+        // otherwise a superseded cue would start playing on top of the next.
+        cancelled = true;
+        pauseElement();
+      },
     };
+    activePlayers.set(entry.id, entry);
 
     (async () => {
       let url;
@@ -199,37 +220,41 @@ export function playSpeech(text, { owner = "default", onStart, onEnd } = {}) {
         url = await synthesizeSpeech(text);
       } catch (error) {
         console.warn("Speech synthesis request failed:", error);
-        detach();
+        if (cancelled) {
+          finish("cancelled");
+          return;
+        }
         // A failed request still gets the Web Speech fallback.
         const fellBack = speakWithWebSpeech(text);
         finish(fellBack ? "played" : "error");
         return;
       }
 
-      if (settled) {
-        detach();
+      // Superseded while the request was in flight: never play.
+      if (cancelled || settled) {
+        finish("cancelled");
         return;
       }
 
-      let element;
       try {
         element = audioFactory(url);
       } catch (error) {
         console.warn("Audio construction failed:", error);
-        detach();
+        if (cancelled) {
+          finish("cancelled");
+          return;
+        }
         const fellBack = speakWithWebSpeech(text);
         finish(fellBack ? "played" : "error");
         return;
       }
 
-      audio.pause = () => {
-        try {
-          element.pause();
-          element.currentTime = 0;
-        } catch {
-          // Ignore pause errors on an already-released element.
-        }
-      };
+      // Raced with a cancellation that landed during construction.
+      if (cancelled) {
+        pauseElement();
+        finish("cancelled");
+        return;
+      }
 
       element.onended = () => finish("played");
       element.onerror = () => {

@@ -115,13 +115,26 @@ export async function announceWorkoutCompletion({
   try {
     stopPlayers(COMPLETION_VOICE_OWNER);
 
+    // Bounded so a stuck or never-ending player can never hold the completion
+    // screen open indefinitely. The timer is always cleared, so it never keeps
+    // a host event loop alive after playback settles.
+    let timeoutId = null;
     const timeout = new Promise((resolve) => {
-      setTimeout(() => resolve({ status: "timeout" }), COMPLETION_PLAYBACK_TIMEOUT_MS);
+      timeoutId = setTimeout(
+        () => resolve({ status: "timeout" }),
+        COMPLETION_PLAYBACK_TIMEOUT_MS
+      );
     });
 
-    const result = await Promise.race([playSpeech(WORKOUT_COMPLETE_MESSAGE, {
-      owner: COMPLETION_VOICE_OWNER,
-    }), timeout]);
+    let result;
+    try {
+      result = await Promise.race([
+        playSpeech(WORKOUT_COMPLETE_MESSAGE, { owner: COMPLETION_VOICE_OWNER }),
+        timeout,
+      ]);
+    } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    }
 
     if (typeof onSettled === "function") onSettled(result);
     return { announced: true, ...result };

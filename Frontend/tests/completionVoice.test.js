@@ -9,6 +9,8 @@ import {
   WORKOUT_COMPLETE_MESSAGE,
 } from "../src/voice/completionVoice.js";
 import {
+  playSpeech,
+  stopPlayers,
   setSpeechTransport,
   resetSpeechTransport,
   setAudioFactory,
@@ -27,8 +29,12 @@ import {
  * and creates ZERO real audio elements. No API key is read or printed.
  */
 
-/** Records every synthesis request; never touches the network. */
-const harness = () => {
+/**
+ * Records every synthesis request; never touches the network.
+ * `autoFinish: false` models a clip that is still playing, so "the previous
+ * cue must be stopped" can be observed.
+ */
+const harness = ({ autoFinish = true } = {}) => {
   const requests = [];
   const players = [];
 
@@ -48,6 +54,9 @@ const harness = () => {
       playCalls: 0,
       play() {
         this.playCalls += 1;
+        // Model a short clip that finishes: without this the player would never
+        // resolve and every announcement would wait for the full timeout.
+        if (autoFinish) setTimeout(() => this.onended?.(), 0);
         return Promise.resolve();
       },
       pause() {
@@ -93,6 +102,7 @@ test("1. completing the final set triggers the workout completion voice", async 
   });
 
   assert.equal(result.announced, true);
+  assert.equal(result.status, "played");
   assert.equal(requests.length, 1, "exactly one synthesis request");
   assert.deepEqual(requests, [WORKOUT_COMPLETE_MESSAGE]);
   assert.deepEqual(messages, [WORKOUT_COMPLETE_MESSAGE]);
@@ -156,7 +166,8 @@ test("5. a genuinely new workout can announce again", async () => {
 
   assert.equal(a.announced, true);
   assert.equal(b.announced, true, "a new attempt is eligible again");
-  assert.equal(requests.length, 2);
+  // Same sentence, so the shared cache serves it: no second ElevenLabs charge.
+  assert.equal(requests.length, 1);
   teardown();
 });
 
@@ -215,7 +226,7 @@ test("9. a TTS failure does not break workout completion", async () => {
   });
   setAudioFactory(() => ({ play: () => Promise.resolve(), pause() {}, currentTime: 0 }));
 
-  const result = await announceWorkoutCompletion({
+  await announceWorkoutCompletion({
     workoutKey: key(),
     onMessage: (m) => messages.push(m),
     onSettled: (s) => {
@@ -262,32 +273,43 @@ test("10. a browser autoplay block is handled without retrying", async () => {
 
 test("11. the completion voice never overlaps coaching audio", async () => {
   teardown();
-  const { players } = harness();
+  // autoFinish:false -> the coaching cue is still playing when we announce.
+  const { players } = harness({ autoFinish: false });
 
-  // A coaching cue is playing.
-  const coaching = playAsCoaching();
-  assert.equal(coaching.paused_count, 0, "cue is playing");
+  playSpeech("Keep your chest more upright.", { owner: "coach" });
+  await tick();
+  const coaching = players[0];
+  assert.ok(coaching, "coaching element exists");
+  assert.equal(coaching.paused, false, "cue is playing");
 
-  await announceWorkoutCompletion({ workoutKey: key() });
+  const announce = announceWorkoutCompletion({ workoutKey: key() });
+  await tick();
 
-  assert.equal(coaching.paused_count, 1, "the cue is stopped cleanly first");
+  assert.equal(coaching.paused, true, "the cue is stopped cleanly first");
+  assert.equal(coaching.paused_count, 1, "and stopped exactly once");
+
+  // Let the announcement finish so nothing is left playing.
+  players[1].finish();
+  await announce;
   teardown();
 });
 
 test("12. unmounting the coaching page does not cut off the announcement", async () => {
   teardown();
-  const { players } = harness();
+  const { players } = harness({ autoFinish: false });
 
   const announce = announceWorkoutCompletion({ workoutKey: key() });
-  // The completion player is the newest element.
-  const completionPlayer = players[players.length - 1];
+  await tick();
+  const completionPlayer = players[0];
+  assert.ok(completionPlayer, "completion element exists");
 
-  // Coach unmount: scoped stop must leave the completion player alone.
-  const { stopPlayers } = await import("../src/hooks/speechPlayer.js");
+  // Coach unmount: a scoped stop must leave the completion player alone.
   stopPlayers("coach");
 
   assert.equal(completionPlayer.paused, false, "announcement survives navigation");
+  assert.equal(activePlayerCount(), 1, "the completion player is still active");
 
+  completionPlayer.finish();
   await announce;
   teardown();
 });
@@ -340,7 +362,6 @@ test("15. a replay reuses the cached audio and spends no further credits", async
 
   // Replaying the same text (the Voice Coach "Replay Cue" path) must not
   // re-synthesise: this is the same cache the coach already used.
-  const { playSpeech } = await import("../src/hooks/speechPlayer.js");
   await playSpeech(WORKOUT_COMPLETE_MESSAGE, { owner: "coach" });
 
   assert.equal(requests.length, 1, "replay is free");
@@ -361,7 +382,8 @@ test("16. no real ElevenLabs request is made once the test file is torn down", (
  * is allowed to fire at all. Exercised directly so the rules are pinned.
  */
 const exerciseGate = ({ currentIndex, planLength, event }) => {
-  const hasNextExercise = currentIndex < planLength;
+  // Mirrors Camerafeed: the next exercise exists while currentIndex < length - 1.
+  const hasNextExercise = currentIndex < planLength - 1;
   const announced = [];
   if (event === "exerciseCompleted" && !hasNextExercise) announced.push("workout");
   if (event === "setCompleted") return announced; // per-set never announces
@@ -407,27 +429,5 @@ test("21. pausing, cancelling and false reps never announce", () => {
   }
 });
 
-/** Start a coaching cue through the shared player (owner 'coach'). */
-async function playAsCoaching() {
-  const { playSpeech } = await import("../src/hooks/speechPlayer.js");
-  let captured = null;
-  setAudioFactory((url) => {
-    captured = {
-      url,
-      currentTime: 0,
-      paused: false,
-      paused_count: 0,
-      onended: null,
-      onerror: null,
-      play: () => Promise.resolve(),
-      pause() {
-        this.paused = true;
-        this.paused_count += 1;
-      },
-    };
-    return captured;
-  });
-  const p = playSpeech("Keep your chest more upright.", { owner: "coach" });
-  await Promise.resolve();
-  return captured || (await p) || captured;
-}
+/** Let queued microtasks and 0ms timers run. */
+const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
