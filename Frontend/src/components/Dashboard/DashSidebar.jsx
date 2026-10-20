@@ -47,12 +47,12 @@ const DashSidebar = ({ isOpen, onClose }) => {
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white shadow-sm transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-dvh z-50 flex w-64 flex-col border-r border-slate-200 bg-white shadow-sm transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Brand Header */}
-        <div className="flex h-16 items-center gap-2.5 border-b border-slate-200 px-6">
+        {/* Brand Header - Fixed at top */}
+        <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-200 px-6">
           <Link
             to="/Landing_Page"
             className="flex items-center gap-2.5 focus:outline-none"
@@ -71,8 +71,8 @@ const DashSidebar = ({ isOpen, onClose }) => {
           </Link>
         </div>
 
-        {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto px-3 py-4">
+        {/* Navigation Links - Scrollable middle section */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4">
           <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Navigation
           </p>
@@ -117,8 +117,8 @@ const DashSidebar = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* User Footer Profile */}
-        <div className="border-t border-slate-200 p-3">
+        {/* User Footer Profile - Fixed at bottom */}
+        <div className="shrink-0 border-t border-slate-200 p-3">
           <div className="flex items-center justify-between rounded-xl bg-slate-50 p-2.5">
             <Link
               to="/Profile"
