@@ -16,6 +16,7 @@ const Dashboard = () => {
           <AccuracyCard
             accuracy={stats.accuracy}
             hasAccuracyData={stats.hasAccuracyData}
+            totalPredictions={stats.totalPredictions}
           />
           <WorkoutStreak
             currentStreak={stats.currentStreak}

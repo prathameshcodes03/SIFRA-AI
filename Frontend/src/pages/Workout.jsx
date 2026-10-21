@@ -5,6 +5,7 @@ import AppShell from "../components/Dashboard/AppShell";
 import Camerafeed from "../components/Workout/Camerafeed";
 import VoiceFeedback from "../components/Workout/VoiceFeedback";
 import { useWorkout } from "../Context/WorkoutContext";
+import { findNextOutstandingWorkout } from "../exercises/workoutPlan";
 import useVoiceCoach from "../hooks/useVoiceCoach";
 import { announceWorkoutCompletion } from "../voice/completionVoice";
 import { Dumbbell, ArrowLeft, Layers, Sparkles } from "lucide-react";
@@ -26,17 +27,17 @@ const Workout = () => {
   const sets = Number(searchParams.get("sets") || activeWorkout?.sets || 3);
   const reps = Number(searchParams.get("reps") || activeWorkout?.reps || 10);
 
-  // Find the current exercise index in the workout plan for auto-advance
-  const currentIndex = useMemo(() => {
-    if (workoutId) {
-      const idx = workouts.findIndex((w) => w.id === workoutId);
-      if (idx !== -1) return idx;
-    }
-    const idx = workouts.findIndex(
-      (w) => w.exercise.toLowerCase() === exercise
-    );
-    return idx !== -1 ? idx : 0;
-  }, [workouts, workoutId, exercise]);
+  /**
+   * The next OUTSTANDING exercise, or null when the plan is done.
+   *
+   * Only workouts that have not been completed yet can be next. Auto-advancing
+   * into an already-completed workout re-ran an old session and re-dated it,
+   * which moved that workout's completion day and made the streak stall.
+   */
+  const nextWorkout = useMemo(
+    () => findNextOutstandingWorkout(workouts, workoutId),
+    [workouts, workoutId]
+  );
 
   const initialTip = useMemo(() => {
     return (
@@ -135,8 +136,7 @@ const Workout = () => {
           reps={reps}
           onFormFeedback={handleFormFeedback}
           onWorkoutComplete={handleWorkoutComplete}
-          workoutPlan={workouts}
-          currentIndex={currentIndex}
+          nextWorkout={nextWorkout}
         />
 
         {/* Real-Time Voice Coach HUD Card */}

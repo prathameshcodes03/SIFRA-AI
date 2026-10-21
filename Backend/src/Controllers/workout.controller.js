@@ -1,14 +1,50 @@
 const { prisma } = require("../data/db");
+const {
+  dayIndexOf,
+  resolveTimeZone,
+  startOfWeekIndex,
+} = require("../utils/dayKey");
 
-const formatDateKey = (date) => {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+/**
+ * The time zone the CLIENT is in.
+ *
+ * A streak is a calendar-day count, so it has to be evaluated in the user's
+ * own day, not the server's (the server runs in UTC). The browser reports its
+ * IANA zone on every request; an unknown value falls back to the server zone.
+ */
+const readClientTimeZone = (req) =>
+  resolveTimeZone(
+    req?.headers?.["x-client-timezone"] ||
+      req?.query?.tz ||
+      req?.body?.timezone
+  );
 
-const calculateStreakStats = (completedWorkouts, now = new Date()) => {
+/**
+ * The day a workout was finished on.
+ *
+ * `completedAt` is authoritative. The fallbacks only matter for rows written
+ * before the column existed: `updatedAt` is a far better estimate of the
+ * completion time than `createdAt` (which is when the exercise was added to
+ * the plan, possibly days earlier).
+ */
+const completionDateOf = (workout) =>
+  workout?.completedAt || workout?.updatedAt || workout?.createdAt || null;
+
+/**
+ * Streak / weekly-goal statistics for a set of completed workouts.
+ *
+ * Days are compared as integer day numbers in the user's time zone, so a
+ * daylight-saving change can never break or inflate a streak.
+ *
+ * @param {Array<object>} completedWorkouts
+ * @param {Date} [now]
+ * @param {string|null} [timeZone] IANA zone; null = the server's own zone
+ */
+const calculateStreakStats = (
+  completedWorkouts,
+  now = new Date(),
+  timeZone = null
+) => {
   if (!completedWorkouts || completedWorkouts.length === 0) {
     return {
       currentStreak: 0,
@@ -19,80 +55,65 @@ const calculateStreakStats = (completedWorkouts, now = new Date()) => {
     };
   }
 
-  const dateSet = new Set(
-    completedWorkouts.map((w) => formatDateKey(w.completedAt || w.createdAt))
-  );
+  const zone = resolveTimeZone(timeZone);
 
-  const sortedDates = Array.from(dateSet).sort();
+  // One entry per calendar day the user trained on.
+  const daySet = new Set();
+  for (const workout of completedWorkouts) {
+    const completedOn = completionDateOf(workout);
+    if (!completedOn) continue;
+    daySet.add(dayIndexOf(completedOn, zone));
+  }
+
+  if (daySet.size === 0) {
+    return {
+      currentStreak: 0,
+      bestStreak: 0,
+      completedDays: 0,
+      weeklyGoal: 7,
+      totalCompleted: completedWorkouts.length,
+    };
+  }
+
+  const sortedDays = Array.from(daySet).sort((a, b) => a - b);
 
   let bestStreak = 0;
   let runningStreak = 0;
-  let prevDateObj = null;
+  let previousDay = null;
 
-  for (const dateStr of sortedDates) {
-    const [y, m, d] = dateStr.split("-").map(Number);
-    const currentDateObj = new Date(y, m - 1, d);
-
-    if (prevDateObj) {
-      const diffMs = currentDateObj.getTime() - prevDateObj.getTime();
-      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays === 1) {
-        runningStreak += 1;
-      } else {
-        runningStreak = 1;
-      }
-    } else {
-      runningStreak = 1;
-    }
-
+  for (const day of sortedDays) {
+    runningStreak = previousDay !== null && day - previousDay === 1 ? runningStreak + 1 : 1;
     if (runningStreak > bestStreak) {
       bestStreak = runningStreak;
     }
-
-    prevDateObj = currentDateObj;
+    previousDay = day;
   }
 
-  const todayKey = formatDateKey(now);
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = formatDateKey(yesterday);
+  const today = dayIndexOf(now, zone);
 
+  // The streak is alive if the user trained today OR yesterday.
   let currentStreak = 0;
-  let checkDate = null;
-
-  if (dateSet.has(todayKey)) {
-    checkDate = new Date(now);
-  } else if (dateSet.has(yesterdayKey)) {
-    checkDate = yesterday;
+  let cursor = null;
+  if (daySet.has(today)) {
+    cursor = today;
+  } else if (daySet.has(today - 1)) {
+    cursor = today - 1;
   }
 
-  if (checkDate) {
-    while (true) {
-      const key = formatDateKey(checkDate);
-      if (dateSet.has(key)) {
-        currentStreak += 1;
-        checkDate.setDate(checkDate.getDate() - 1);
-      } else {
-        break;
-      }
-    }
+  while (cursor !== null && daySet.has(cursor)) {
+    currentStreak += 1;
+    cursor -= 1;
   }
 
   if (currentStreak > bestStreak) {
     bestStreak = currentStreak;
   }
 
-  const currentDayOfWeek = (now.getDay() + 6) % 7; // Monday = 0, Sunday = 6
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - currentDayOfWeek);
-  startOfWeek.setHours(0, 0, 0, 0);
-
+  // Weekly goal: the days trained on inside the current Monday-based week.
+  const weekStart = startOfWeekIndex(today);
   let weeklyCompletedDays = 0;
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + i);
-    if (d > now && formatDateKey(d) !== todayKey) break;
-    if (dateSet.has(formatDateKey(d))) {
+  for (let day = weekStart; day <= today; day += 1) {
+    if (daySet.has(day)) {
       weeklyCompletedDays += 1;
     }
   }
@@ -119,13 +140,14 @@ const normaliseCounts = (total, correct) => {
 };
 
 /**
- * Aggregate Dashboard accuracy from persisted prediction counts.
+ * Aggregate Dashboard accuracy from persisted form scores.
  *
  * Accuracy (%) = correctPredictions / totalPredictions * 100
  *
- * Only genuine model classifications contribute. Rows with zero predictions
- * (network failure, invalid payload, unavailable model) are excluded from the
- * denominator rather than counted as incorrect form.
+ * A "prediction" here is one SCORED FORM SAMPLE - a completed repetition whose
+ * form could be judged. Repetitions that could not be judged (pose not
+ * measurable, model unavailable, no network) contribute nothing and are
+ * excluded from the denominator rather than counted as incorrect form.
  *
  * @param {Array<{totalPredictions?:number, correctPredictions?:number}>} workouts
  * @returns {{accuracy:number|null, hasAccuracyData:boolean, totalPredictions:number, correctPredictions:number}}
@@ -212,6 +234,18 @@ const completeWorkout = async (req, res) => {
       req.body.correctPredictions
     );
 
+    const completedAt = new Date();
+
+    // Server-side accuracy wins: it is computed from the counters, not from a
+    // client-supplied scalar. A client-supplied percentage is only used when
+    // the session produced no scorable repetitions at all.
+    const resolvedAccuracy =
+      counts.totalPredictions > 0
+        ? Math.round((counts.correctPredictions / counts.totalPredictions) * 100)
+        : accuracy !== undefined && accuracy !== null
+        ? Math.min(100, Math.max(0, Math.round(Number(accuracy))))
+        : null;
+
     let workout = null;
 
     if (workoutId) {
@@ -220,24 +254,37 @@ const completeWorkout = async (req, res) => {
       });
 
       if (existing && existing.userId === req.user.id) {
-        workout = await prisma.workout.update({
-          where: { id: workoutId },
-          data: {
-            completed: true,
-            completedAt: new Date(),
-            totalPredictions: counts.totalPredictions,
-            correctPredictions: counts.correctPredictions,
-            accuracy:
-              counts.totalPredictions > 0
-                ? Math.round(
-                    (counts.correctPredictions / counts.totalPredictions) * 100
-                  )
-                : accuracy !== undefined && accuracy !== null
-                ? Math.min(100, Math.max(0, Math.round(Number(accuracy))))
-                : existing.accuracy || null,
-            updatedAt: new Date(),
-          },
-        });
+        if (existing.completed) {
+          // This workout was already finished on an EARLIER day. Re-dating it
+          // would delete that day from the streak and replace it with today,
+          // which is what made the streak appear to stall. The repeat session
+          // is therefore stored as its own entry: the original day stays in
+          // the history AND today is added.
+          workout = await prisma.workout.create({
+            data: {
+              exercise: existing.exercise,
+              sets: existing.sets,
+              reps: existing.reps,
+              completed: true,
+              completedAt,
+              totalPredictions: counts.totalPredictions,
+              correctPredictions: counts.correctPredictions,
+              accuracy: resolvedAccuracy ?? existing.accuracy ?? null,
+              userId: req.user.id,
+            },
+          });
+        } else {
+          workout = await prisma.workout.update({
+            where: { id: workoutId },
+            data: {
+              completed: true,
+              completedAt,
+              totalPredictions: counts.totalPredictions,
+              correctPredictions: counts.correctPredictions,
+              accuracy: resolvedAccuracy ?? existing.accuracy ?? null,
+            },
+          });
+        }
       }
     }
 
@@ -248,17 +295,10 @@ const completeWorkout = async (req, res) => {
           sets: Number(sets || 1),
           reps: Number(reps || 10),
           completed: true,
-          completedAt: new Date(),
+          completedAt,
           totalPredictions: counts.totalPredictions,
           correctPredictions: counts.correctPredictions,
-          accuracy:
-            counts.totalPredictions > 0
-              ? Math.round(
-                  (counts.correctPredictions / counts.totalPredictions) * 100
-                )
-              : accuracy !== undefined && accuracy !== null
-              ? Math.min(100, Math.max(0, Math.round(Number(accuracy))))
-              : null,
+          accuracy: resolvedAccuracy,
           userId: req.user.id,
         },
       });
@@ -292,7 +332,12 @@ const getWorkoutStats = async (req, res) => {
       },
     });
 
-    const streakStats = calculateStreakStats(completedWorkouts);
+    // The streak is counted in the USER's calendar, not the server's.
+    const streakStats = calculateStreakStats(
+      completedWorkouts,
+      new Date(),
+      readClientTimeZone(req)
+    );
 
     const {
       accuracy: overallAccuracy,
@@ -467,5 +512,7 @@ module.exports = {
   summariseAccuracy,
   normaliseCounts,
   calculateStreakStats,
+  completionDateOf,
+  readClientTimeZone,
 };
 

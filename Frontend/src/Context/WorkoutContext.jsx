@@ -106,6 +106,31 @@ export const WorkoutProvider = ({ children }) => {
     refreshAll();
   }, [refreshAll]);
 
+  /**
+   * Keep the Dashboard numbers honest when the user comes back to the tab.
+   *
+   * A workout can be completed in another tab, or the device can sleep through
+   * the completion, so the stats are re-read whenever the page becomes
+   * visible again instead of being frozen at mount time.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") {
+        fetchStats();
+      }
+    };
+
+    window.addEventListener("focus", handleVisible);
+    document.addEventListener("visibilitychange", handleVisible);
+
+    return () => {
+      window.removeEventListener("focus", handleVisible);
+      document.removeEventListener("visibilitychange", handleVisible);
+    };
+  }, [fetchStats]);
+
   return (
     <WorkoutContext.Provider
       value={{

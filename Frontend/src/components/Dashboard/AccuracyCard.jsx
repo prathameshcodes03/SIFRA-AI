@@ -1,18 +1,25 @@
 import React from "react";
 import { Gauge, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 
-const AccuracyCard = ({ accuracy = null, hasAccuracyData = false }) => {
+const AccuracyCard = ({
+  accuracy = null,
+  hasAccuracyData = false,
+  totalPredictions = 0,
+}) => {
   const getQualityText = (acc) => {
     if (acc >= 90) return { label: "Elite Biomechanical Precision", color: "text-emerald-600 bg-emerald-50 border-emerald-200" };
     if (acc >= 75) return { label: "Good Postural Control", color: "text-indigo-600 bg-indigo-50 border-indigo-200" };
     return { label: "Form Needs Calibration", color: "text-amber-600 bg-amber-50 border-amber-200" };
   };
 
-  // No genuine model classifications yet: show an honest empty state instead
-  // of a fabricated percentage.
+  // No judged repetition yet: show an honest empty state instead of a
+  // fabricated percentage.
   const showEmptyState = !hasAccuracyData || accuracy === null;
   const displayAccuracy = showEmptyState ? 0 : accuracy;
   const quality = getQualityText(displayAccuracy);
+  const judgedReps = Number.isFinite(Number(totalPredictions))
+    ? Number(totalPredictions)
+    : 0;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
@@ -29,7 +36,11 @@ const AccuracyCard = ({ accuracy = null, hasAccuracyData = false }) => {
           </span>
         </div>
         <p className="mt-1.5 text-xs text-slate-500">
-          Evaluated via 33 skeletal joint coordinate landmarks
+          {showEmptyState
+            ? "Evaluated via 33 skeletal joint coordinate landmarks"
+            : `Good form across ${judgedReps} judged ${
+                judgedReps === 1 ? "repetition" : "repetitions"
+              }`}
         </p>
       </div>
 

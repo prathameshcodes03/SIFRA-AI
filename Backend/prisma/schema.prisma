@@ -45,12 +45,13 @@ model Workout {
 
   accuracy Float?
 
-  /// Count of genuine form classifications received from the model for THIS
-  /// exercise. Excludes network failures, invalid payloads, unavailable-model
-  /// fallbacks, and labels belonging to a different exercise.
+  /// Count of SCORED FORM SAMPLES for this session: the repetitions whose form
+  /// could actually be judged. Excludes repetitions that could not be measured
+  /// (pose not visible, model unavailable, no network) - those are never
+  /// counted as incorrect form.
   totalPredictions Int @default(0)
 
-  /// Subset of totalPredictions that were correct form for the exercise.
+  /// Subset of totalPredictions whose form was judged correct.
   correctPredictions Int @default(0)
 
   userId String

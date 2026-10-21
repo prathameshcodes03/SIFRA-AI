@@ -26,6 +26,8 @@ import {
   MIN_RELIABLE_VISIBILITY,
   POSE_UNRELIABLE,
 } from "../../exercises/coaching";
+import { isWithinModelSupport } from "../../exercises/modelSupport";
+import { createAccuracyTracker } from "../../exercises/accuracyTracker";
 import {
   createVisibilityWarningController,
   VISIBILITY_FAILURE_REASONS,
@@ -47,8 +49,7 @@ const Camerafeed = ({
   reps = 10,
   onFormFeedback,
   onWorkoutComplete,
-  workoutPlan = [],
-  currentIndex = 0,
+  nextWorkout = null,
 }) => {
   const [cameraOn, setCameraOn] = useState(true);
   const [completedInfo, setCompletedInfo] = useState(null);
@@ -80,11 +81,18 @@ const Camerafeed = ({
   const completionSentRef = useRef(false);
   const mountedRef = useRef(true);
 
-  // Accuracy denominators. Only genuine model classifications are counted;
-  // network failures and rule-based fallbacks are excluded.
-  const totalPredictionsRef = useRef(0);
-  const correctPredictionsRef = useRef(0);
+  // Accuracy is scored PER COMPLETED REPETITION, from the same verdict the
+  // coach speaks - never per sampled frame. Counting frames measured the
+  // user's timeline instead of their form (the model has no standing pose in
+  // its training data, so every frame between reps was scored as "shallow"),
+  // which is why a good set used to report 0%.
+  const accuracyTrackerRef = useRef(null);
   const liveAccuracyRef = useRef(null);
+  // Most recent model verdict that is genuinely judgeable for this exercise:
+  // its own label AND a frame inside the model's training envelope. Used to
+  // score repetitions for the exercises that have no geometry assessment
+  // (push-up, plank).
+  const lastModelVerdictRef = useRef(null);
 
   // Live mirrors of the tracker to avoid re-renders when nothing changed.
   const lastSetRepsRef = useRef(0);
@@ -130,6 +138,7 @@ const Camerafeed = ({
     predictionGuardRef.current = createLatestOnlyGuard();
     formCueRef.current = createFormCueGate();
     diagnosticsRef.current = createCoachDiagnostics();
+    accuracyTrackerRef.current = createAccuracyTracker({ exercise });
   }
 
   const videoConstraints = {
@@ -158,9 +167,9 @@ const Camerafeed = ({
     gateRef.current = createCoachingGate();
     phaseRef.current = PHASE.UP;
     completionSentRef.current = false;
-    totalPredictionsRef.current = 0;
-    correctPredictionsRef.current = 0;
+    accuracyTrackerRef.current = createAccuracyTracker({ exercise });
     liveAccuracyRef.current = null;
+    lastModelVerdictRef.current = null;
     lastSetRepsRef.current = 0;
     lastSetsRef.current = 1;
     // A new exercise must not inherit the previous one's warning cooldown or
@@ -187,6 +196,24 @@ const Camerafeed = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise, sets, reps]);
 
+  /**
+   * Record the form verdict for one completed repetition.
+   *
+   * A verdict that could not be judged (null) is skipped entirely: an
+   * unmeasurable repetition is excluded from the denominator, never scored as
+   * incorrect form.
+   */
+  const recordFormVerdict = (label) => {
+    const tracker = accuracyTrackerRef.current;
+    if (!tracker) return;
+
+    const snapshot = tracker.record(label);
+    if (!snapshot) return;
+
+    liveAccuracyRef.current = snapshot.accuracy;
+    setLiveAccuracy(snapshot.accuracy);
+  };
+
   const completeExercise = async () => {
     if (completionSentRef.current) return;
     completionSentRef.current = true;
@@ -195,10 +222,15 @@ const Camerafeed = ({
     setIsCompleting(true);
     setCameraOn(false);
 
-    const total = totalPredictionsRef.current;
-    const correct = correctPredictionsRef.current;
-    const sessionAccuracy =
-      total > 0 ? Math.round((correct / total) * 100) : null;
+    const {
+      totalPredictions: total,
+      correctPredictions: correct,
+      accuracy: sessionAccuracy,
+    } = accuracyTrackerRef.current?.snapshot() ?? {
+      totalPredictions: 0,
+      correctPredictions: 0,
+      accuracy: null,
+    };
 
     try {
       await completeWorkout({
@@ -216,8 +248,11 @@ const Camerafeed = ({
         accuracy: sessionAccuracy,
       });
 
-      // The workout is over only when there is no exercise left in the plan.
-      const hasNextExercise = currentIndex < workoutPlan.length - 1;
+      // The workout is over only when no outstanding exercise is left. The
+      // next exercise is always a workout that has NOT been completed yet:
+      // auto-advancing into an already-completed one re-ran an old session
+      // and re-dated it, which is what made the streak stall.
+      const hasNextExercise = Boolean(nextWorkout);
 
       if (!hasNextExercise && typeof completionHandlerRef.current === "function") {
         // The backend has confirmed completion, so the announcement is safe to
@@ -239,8 +274,8 @@ const Camerafeed = ({
         return;
       }
 
-      // Auto-advance to the next exercise.
-      const next = workoutPlan[currentIndex + 1];
+      // Auto-advance to the next outstanding exercise.
+      const next = nextWorkout;
       navigate(
         `/Workout?exercise=${encodeURIComponent(
           next.exercise.toLowerCase()
@@ -282,20 +317,51 @@ const Camerafeed = ({
       const completedRep = exercise === "squat"
         ? squatRepRef.current?.observe(features, result)
         : null;
-      if (completedRep) pendingRepRef.current = completedRep;
+
+      if (completedRep) {
+        // The repetition is judged HERE, from its own deepest frame, the
+        // moment it finishes - not from whatever frame the next 600ms
+        // prediction happens to land on. This is what makes the form score
+        // mean "how many of my reps were good" instead of "how many sampled
+        // frames did the model call correct".
+        const verdict = assessSquatForm({
+          features: completedRep.features,
+          deepestKneeAngle: completedRep.deepestAngle,
+          phase: result.phase,
+        });
+
+        pendingRepRef.current = { ...completedRep, verdict };
+        recordFormVerdict(verdict.label);
+      }
 
       // Rep counting is local and frame-driven: no network, no ML dependency.
       // Mirrors are compared against the tracker's last emitted values so an
       // unchanged frame does not trigger a React render.
       if (result.setReps !== lastSetRepsRef.current) {
+        const completedReps = result.setReps - lastSetRepsRef.current;
         lastSetRepsRef.current = result.setReps;
         setCompletedReps(result.setReps);
+
+        // Push-up and plank have no geometry assessment, so their repetitions
+        // are scored from the last judgeable model verdict of that repetition.
+        // A repetition with no judgeable verdict is excluded from the
+        // denominator instead of being counted as wrong form.
+        if (exercise !== "squat") {
+          for (let i = 0; i < completedReps; i += 1) {
+            recordFormVerdict(lastModelVerdictRef.current);
+          }
+        }
       }
       if (result.sets !== lastSetsRef.current) {
         lastSetsRef.current = result.sets;
         setCurrentSet(result.sets);
       }
       if (result.phase !== phaseRef.current) {
+        // A new descent starts a new repetition: the previous repetition's
+        // verdict must not be inherited by this one.
+        if (result.phase === PHASE.DOWN) {
+          lastModelVerdictRef.current = null;
+        }
         phaseRef.current = result.phase;
         setPhase(result.phase);
       }
@@ -354,47 +420,31 @@ const Camerafeed = ({
       if (!mountedRef.current) return;
       if (!predictionGuardRef.current.isCurrent(seq)) return;
 
-      // Accuracy accounting: infrastructure fallbacks must not be scored as
-      // incorrect form, so they are excluded from the denominator.
-      //
-      // A label belonging to a DIFFERENT exercise is also excluded: it is not a
-      // classification of this exercise at all, so counting it as an error
-      // would understate the model's accuracy on its own labels. What remains
-      // is exactly "the model's classification accuracy for this exercise".
-      let sessionAccuracy = liveAccuracyRef.current;
-      if (fromModel && label && isLabelForExercise(label, exercise)) {
-        totalPredictionsRef.current += 1;
-        if (label === CORRECT_LABEL_BY_EXERCISE[exercise]) {
-          correctPredictionsRef.current += 1;
-        }
+      // A model label is only judgeable for this exercise when it belongs to
+      // the exercise AND the frame sits inside the model's training envelope.
+      // Outside that envelope the model is extrapolating (a standing squat
+      // pose, a locked-out push-up arm), so its answer is not a measurement.
+      const labelIsJudgeable =
+        fromModel &&
+        Boolean(label) &&
+        isLabelForExercise(label, exercise) &&
+        isWithinModelSupport(features, exercise).supported;
 
-        const total = totalPredictionsRef.current;
-        sessionAccuracy = Math.round(
-          (correctPredictionsRef.current / total) * 100
-        );
-        liveAccuracyRef.current = sessionAccuracy;
-        setLiveAccuracy(sessionAccuracy);
+      if (labelIsJudgeable) {
+        lastModelVerdictRef.current = label;
       }
 
-      // Movement-aware assessment: the authoritative form claim. It uses the
-      // rep tracker's smoothed knee angle, so standing between reps can never
-      // be mistaken for a shallow squat.
-      // Squat form is judged from the completed rep's deepest frame, never from
-      // a single mid-descent instant (the smoothed angle lags and would fire
-      // false "go lower" cues).
+      // The live form score. It changes only when a repetition is judged, so
+      // it is stable while the user is mid-set.
+      const sessionAccuracy = liveAccuracyRef.current;
+
+      // Movement-aware assessment: the authoritative form claim. It is
+      // computed from the completed repetition's deepest frame, so standing
+      // between reps can never be mistaken for a shallow squat.
       const rep = exercise === "squat" ? pendingRepRef.current : null;
       if (rep) pendingRepRef.current = null;
 
-      const assessment =
-        exercise === "squat"
-          ? rep && rep.features
-            ? assessSquatForm({
-                features: rep.features,
-                deepestKneeAngle: rep.deepestAngle,
-                phase: phaseRef.current,
-              })
-            : null
-          : null;
+      const assessment = rep ? rep.verdict ?? null : null;
 
       // Stabilise the label that will be spoken with the existing majority gate.
       const gate = gateRef.current;
@@ -576,10 +626,15 @@ const Camerafeed = ({
     setSaving(true);
     setIsCompleting(true);
 
-    const total = totalPredictionsRef.current;
-    const correct = correctPredictionsRef.current;
-    const sessionAccuracy =
-      total > 0 ? Math.round((correct / total) * 100) : null;
+    const {
+      totalPredictions: total,
+      correctPredictions: correct,
+      accuracy: sessionAccuracy,
+    } = accuracyTrackerRef.current?.snapshot() ?? {
+      totalPredictions: 0,
+      correctPredictions: 0,
+      accuracy: null,
+    };
 
     try {
       await completeWorkout({
@@ -606,9 +661,9 @@ const Camerafeed = ({
   };
 
   const handleRestart = () => {
-    totalPredictionsRef.current = 0;
-    correctPredictionsRef.current = 0;
+    accuracyTrackerRef.current = createAccuracyTracker({ exercise });
     liveAccuracyRef.current = null;
+    lastModelVerdictRef.current = null;
     lastSetRepsRef.current = 0;
     lastSetsRef.current = 1;
     trackerRef.current?.reset();
@@ -745,12 +800,12 @@ const Camerafeed = ({
                       <span>Session Accuracy: {completedInfo.accuracy}%</span>
                     </div>
                   )}
-                {exerciseCompleted && currentIndex < workoutPlan.length - 1 && (
+                {exerciseCompleted && nextWorkout && (
                   <p className="mt-2 text-xs font-medium text-indigo-600 animate-pulse">
                     Moving to next exercise...
                   </p>
                 )}
-                {exerciseCompleted && currentIndex >= workoutPlan.length - 1 && (
+                {exerciseCompleted && !nextWorkout && (
                   <p className="mt-2 text-xs font-medium text-emerald-600">
                     All exercises complete! Redirecting to Dashboard...
                   </p>

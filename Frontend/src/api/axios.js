@@ -37,9 +37,46 @@ const resolveBaseURL = () => {
   return envUrl || PRODUCTION_API_URL;
 };
 
+/**
+ * The browser's IANA time zone.
+ *
+ * A workout streak counts CALENDAR days, and the user's day starts in their
+ * own zone - not the server's (UTC on Render). A session finished at 00:30
+ * local is 19:00 UTC on the previous date, so the server needs to know the
+ * client's zone to file it under the right day.
+ *
+ * Returns null when the platform cannot report it; the backend then falls
+ * back to its own zone.
+ */
+const resolveClientTimeZone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+};
+
 const api = axios.create({
   baseURL: resolveBaseURL(),
   withCredentials: true,
+});
+
+// Every request carries the client's time zone so the backend can count
+// calendar days in the user's own day.
+api.interceptors.request.use((config) => {
+  const timeZone = resolveClientTimeZone();
+  if (!timeZone) return config;
+
+  if (config.headers && typeof config.headers.set === "function") {
+    config.headers.set("X-Client-Timezone", timeZone);
+  } else {
+    config.headers = {
+      ...(config.headers || {}),
+      "X-Client-Timezone": timeZone,
+    };
+  }
+
+  return config;
 });
 
 export default api;

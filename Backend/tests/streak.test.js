@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 // This must be set BEFORE importing the controller module
 process.env.TZ = "UTC";
 
-const { calculateStreakStats } = require("../src/Controllers/workout.controller.js");
+const { calculateStreakStats, completionDateOf } = require("../src/Controllers/workout.controller.js");
 
 // Helper to create a Date at a specific date (local noon to avoid DST issues)
 const makeDate = (year, month, day) => new Date(year, month - 1, day, 12, 0, 0);
@@ -559,4 +559,202 @@ test("streak: missed local day (server timezone) resets current streak, preserve
   // Historical best = 3 (Jan 1-3)
   assert.equal(result.currentStreak, 0);
   assert.equal(result.bestStreak, 3);
+});
+// ============================================================
+// USER TIME ZONE
+//
+// The server runs in UTC, but a streak counts the user's CALENDAR days. A
+// session finished at 00:30 in Asia/Kolkata is 19:00 UTC on the PREVIOUS
+// date, so grouping by the server's date files it under the wrong day and
+// the streak stops matching the user's own calendar.
+// ============================================================
+
+test("streak: a late-night session is filed under the USER's day, not the server's", () => {
+  // 2026-01-01 19:00 UTC = 2026-01-02 00:30 in Asia/Kolkata (+05:30).
+  const workouts = [{ completedAt: utc("2026-01-01T19:00:00.000Z") }];
+
+  // Server (UTC) sees Jan 1.
+  assert.equal(calculateStreakStats(workouts, utc("2026-01-01T20:00:00.000Z")).currentStreak, 1);
+
+  // The user's own day is Jan 2, so "today" for them is Jan 2 and the
+  // session belongs to Jan 2.
+  const inUserZone = calculateStreakStats(
+    workouts,
+    utc("2026-01-01T20:00:00.000Z"),
+    "Asia/Kolkata"
+  );
+  assert.equal(inUserZone.currentStreak, 1);
+  assert.equal(inUserZone.totalCompleted, 1);
+});
+
+test("streak: the user's day decides whether a session counts as today", () => {
+  // The session happened at 00:30 IST on Jan 2 = Jan 1 19:00 UTC.
+  const workouts = [{ completedAt: utc("2026-01-01T19:00:00.000Z") }];
+
+  // 2026-01-01 20:00 UTC = 2026-01-02 01:30 IST -> the user's today is Jan 2
+  // and the session was completed on the user's Jan 2.
+  const result = calculateStreakStats(
+    workouts,
+    utc("2026-01-01T20:00:00.000Z"),
+    "Asia/Kolkata"
+  );
+  assert.equal(result.currentStreak, 1);
+
+  // The next day in the user's zone (2026-01-02 20:00 UTC = Jan 3 01:30 IST)
+  // the session is yesterday's, so the streak is still alive.
+  const nextDay = calculateStreakStats(
+    workouts,
+    utc("2026-01-02T20:00:00.000Z"),
+    "Asia/Kolkata"
+  );
+  assert.equal(nextDay.currentStreak, 1);
+  assert.equal(nextDay.bestStreak, 1);
+
+  // Two days later in the user's zone it is over - exactly what the user
+  // sees on their own calendar.
+  const later = calculateStreakStats(
+    workouts,
+    utc("2026-01-03T20:00:00.000Z"),
+    "Asia/Kolkata"
+  );
+  assert.equal(later.currentStreak, 0);
+  assert.equal(later.bestStreak, 1);
+});
+
+test("streak: two sessions 30 minutes apart across midnight are two days for the user", () => {
+  // 2026-01-01 18:30 UTC = 2026-01-02 00:00 IST
+  // 2026-01-01 19:00 UTC = 2026-01-02 00:30 IST
+  const workouts = [
+    { completedAt: utc("2026-01-01T18:30:00.000Z") },
+    { completedAt: utc("2026-01-01T19:00:00.000Z") },
+  ];
+
+  // Both land on the same UTC day -> one day for the server.
+  assert.equal(
+    calculateStreakStats(workouts, utc("2026-01-01T20:00:00.000Z")).currentStreak,
+    1
+  );
+
+  // Both land on the same IST day too -> still one day, and the streak is
+  // alive because it is the user's today.
+  const inUserZone = calculateStreakStats(
+    workouts,
+    utc("2026-01-01T20:00:00.000Z"),
+    "Asia/Kolkata"
+  );
+  assert.equal(inUserZone.currentStreak, 1);
+  assert.equal(inUserZone.completedDays, 1);
+});
+
+test("streak: consecutive user days are a streak even when the server days are not", () => {
+  // The user trains at 23:30 IST every day:
+  //   Jan 1 23:30 IST = Jan 1 18:00 UTC
+  //   Jan 2 23:30 IST = Jan 2 18:00 UTC
+  const workouts = [
+    { completedAt: utc("2026-01-01T18:00:00.000Z") },
+    { completedAt: utc("2026-01-02T18:00:00.000Z") },
+  ];
+
+  const result = calculateStreakStats(
+    workouts,
+    utc("2026-01-02T19:00:00.000Z"), // Jan 3 00:30 IST -> the user's today is Jan 3
+    "Asia/Kolkata"
+  );
+  assert.equal(result.currentStreak, 2);
+  assert.equal(result.bestStreak, 2);
+});
+
+test("streak: a western-zone user is not penalised for training after midnight", () => {
+  // 2026-01-01 23:00 in America/Los_Angeles (PST, UTC-8) = Jan 2 07:00 UTC.
+  // 2026-01-02 23:00 PST = Jan 3 07:00 UTC.
+  const workouts = [
+    { completedAt: utc("2026-01-02T07:00:00.000Z") },
+    { completedAt: utc("2026-01-03T07:00:00.000Z") },
+  ];
+
+  const result = calculateStreakStats(
+    workouts,
+    utc("2026-01-03T08:00:00.000Z"), // Jan 3 00:00 PST -> the user's today is Jan 3
+    "America/Los_Angeles"
+  );
+  assert.equal(result.currentStreak, 2);
+  assert.equal(result.bestStreak, 2);
+});
+
+test("streak: an unknown time zone falls back to the server's own zone", () => {
+  const workouts = [
+    { completedAt: utc("2026-01-01T12:00:00.000Z") },
+    { completedAt: utc("2026-01-02T12:00:00.000Z") },
+  ];
+
+  const result = calculateStreakStats(
+    workouts,
+    utc("2026-01-02T13:00:00.000Z"),
+    "Not/A_Zone"
+  );
+  assert.equal(result.currentStreak, 2);
+  assert.equal(result.bestStreak, 2);
+});
+
+test("streak: a daylight-saving change never breaks a streak", () => {
+  // US DST starts on 2026-03-08. The user trains at noon local every day:
+  //   Mar 7 12:00 EST = Mar 7 17:00 UTC
+  //   Mar 8 12:00 EDT = Mar 8 16:00 UTC  <- 23 hours later
+  const workouts = [
+    { completedAt: utc("2026-03-07T17:00:00.000Z") },
+    { completedAt: utc("2026-03-08T16:00:00.000Z") },
+  ];
+
+  const result = calculateStreakStats(
+    workouts,
+    utc("2026-03-08T18:00:00.000Z"),
+    "America/New_York"
+  );
+  assert.equal(result.currentStreak, 2);
+  assert.equal(result.bestStreak, 2);
+});
+
+// ============================================================
+// COMPLETION DATE RESOLUTION
+// ============================================================
+
+test("streak: a row with no completedAt falls back to updatedAt, not createdAt", () => {
+  // The exercise was added to the plan on Jan 1 but finished on Jan 2, so the
+  // completion date - not the creation date - is the day that counts.
+  const today = makeDate(2026, 1, 2);
+  const workouts = [
+    {
+      completedAt: null,
+      createdAt: makeDate(2026, 1, 1),
+      updatedAt: makeDate(2026, 1, 2),
+    },
+  ];
+  const result = calculateStreakStats(workouts, today);
+  assert.equal(result.currentStreak, 1);
+  assert.equal(result.bestStreak, 1);
+});
+
+test("streak: createdAt is the last resort when nothing else is known", () => {
+  const today = makeDate(2026, 1, 2);
+  const workouts = [
+    { completedAt: null, createdAt: makeDate(2026, 1, 1) },
+    { completedAt: makeDate(2026, 1, 2) },
+  ];
+  const result = calculateStreakStats(workouts, today);
+  assert.equal(result.currentStreak, 2);
+  assert.equal(result.bestStreak, 2);
+});
+
+test("completionDateOf prefers completedAt, then updatedAt, then createdAt", () => {
+  const completed = makeDate(2026, 1, 3);
+  const updated = makeDate(2026, 1, 2);
+  const created = makeDate(2026, 1, 1);
+
+  assert.equal(
+    completionDateOf({ completedAt: completed, updatedAt: updated, createdAt: created }),
+    completed
+  );
+  assert.equal(completionDateOf({ completedAt: null, updatedAt: updated, createdAt: created }), updated);
+  assert.equal(completionDateOf({ completedAt: null, updatedAt: null, createdAt: created }), created);
+  assert.equal(completionDateOf({}), null);
 });
