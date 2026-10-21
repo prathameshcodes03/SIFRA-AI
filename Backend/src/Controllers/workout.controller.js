@@ -8,7 +8,7 @@ const formatDateKey = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const calculateStreakStats = (completedWorkouts) => {
+const calculateStreakStats = (completedWorkouts, now = new Date()) => {
   if (!completedWorkouts || completedWorkouts.length === 0) {
     return {
       currentStreak: 0,
@@ -52,7 +52,6 @@ const calculateStreakStats = (completedWorkouts) => {
     prevDateObj = currentDateObj;
   }
 
-  const now = new Date();
   const todayKey = formatDateKey(now);
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -172,12 +171,14 @@ const createWorkout = async (req, res) => {
       });
     }
 
+    const isCompleted = Boolean(completed || false);
     const workout = await prisma.workout.create({
       data: {
         exercise,
         sets: Number(sets),
         reps: Number(reps),
-        completed: Boolean(completed || false),
+        completed: isCompleted,
+        completedAt: isCompleted ? new Date() : null,
         accuracy:
           accuracy !== undefined && accuracy !== null
             ? Number(accuracy)
@@ -374,15 +375,30 @@ const updateWorkout = async (req, res) => {
       });
     }
 
+    const updateData = {
+      ...(exercise !== undefined ? { exercise } : {}),
+      ...(sets !== undefined ? { sets: Number(sets) } : {}),
+      ...(reps !== undefined ? { reps: Number(reps) } : {}),
+      ...(completed !== undefined ? { completed: Boolean(completed) } : {}),
+      ...(accuracy !== undefined ? { accuracy: Number(accuracy) } : {}),
+    };
+
+    // Handle completedAt timestamp based on completion status change
+    if (completed !== undefined) {
+      const isNowCompleted = Boolean(completed);
+      if (isNowCompleted && !workout.completed) {
+        // Marking as completed for the first time
+        updateData.completedAt = new Date();
+      } else if (!isNowCompleted && workout.completed) {
+        // Marking as incomplete - clear completedAt
+        updateData.completedAt = null;
+      }
+      // If status unchanged, preserve existing completedAt
+    }
+
     const updatedWorkout = await prisma.workout.update({
       where: { id },
-      data: {
-        ...(exercise !== undefined ? { exercise } : {}),
-        ...(sets !== undefined ? { sets: Number(sets) } : {}),
-        ...(reps !== undefined ? { reps: Number(reps) } : {}),
-        ...(completed !== undefined ? { completed: Boolean(completed) } : {}),
-        ...(accuracy !== undefined ? { accuracy: Number(accuracy) } : {}),
-      },
+      data: updateData,
     });
 
     return res.status(200).json({
@@ -450,5 +466,6 @@ module.exports = {
   deleteWorkout,
   summariseAccuracy,
   normaliseCounts,
+  calculateStreakStats,
 };
 
