@@ -67,6 +67,16 @@ export const PUSHUP_REP_THRESHOLDS = Object.freeze({
   maxSmoothedDepthAngle: 115,
 
   /**
+   * How long the SMOOTHED elbow angle must stay at or below the depth
+   * threshold.
+   *
+   * The stability requirement: a real push-up bottoms out, while a
+   * mis-read landmark - which is what moving the camera produces - crosses
+   * the threshold for a moment and comes straight back.
+   */
+  minDepthHoldMs: 150,
+
+  /**
    * How far the elbow must flex from the calibrated top position before the
    * movement counts as a descent at all.
    */
@@ -145,6 +155,8 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
   let deepestElbow = null; // deepest SMOOTHED elbow angle
   let deepestRawElbow = null; // deepest MEASURED elbow angle
   let depthReached = false;
+  let depthHoldSince = null; // when the smoothed angle first reached the depth
+  let depthHeld = false; // the depth has been HELD long enough to count
   let alignedAtBottom = false;
 
   // Pending transition timers.
@@ -168,6 +180,8 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
     deepestElbow = null;
     deepestRawElbow = null;
     depthReached = false;
+    depthHoldSince = null;
+    depthHeld = false;
     alignedAtBottom = false;
     candidateSince = null;
   };
@@ -265,9 +279,23 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
 
     // The depth is reached when BOTH signals say so. The measured angle
     // proves the user really was that deep; the smoothed angle proves it was
-    // not a one-frame mis-read. No duration is involved, so the rule behaves
-    // identically at 15fps and at 120fps.
+    // not a one-frame mis-read.
+    //
+    // And the smoothed angle has to STAY at the depth for the hold time: a
+    // real push-up bottoms out, while a mis-read landmark only crosses the
+    // threshold for a moment. The hold is latched once achieved, because the
+    // ascent starts as soon as the user presses back up.
+    if (!depthHeld) {
+      if (elbowEma <= cfg.maxSmoothedDepthAngle) {
+        if (depthHoldSince === null) depthHoldSince = nowMs;
+        if (nowMs - depthHoldSince >= cfg.minDepthHoldMs) depthHeld = true;
+      } else {
+        depthHoldSince = null;
+      }
+    }
+
     depthReached =
+      depthHeld &&
       deepestElbow !== null &&
       deepestRawElbow !== null &&
       deepestElbow <= cfg.maxSmoothedDepthAngle &&

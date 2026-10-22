@@ -3,7 +3,7 @@ import { useWorkout } from "../../Context/WorkoutContext";
 import { Dumbbell, Plus, Trash2, Layers, CheckCircle } from "lucide-react";
 
 const Exercises = () => {
-  const { workouts, addWorkout, deleteWorkout } = useWorkout();
+  const { planWorkouts, addWorkout, deleteWorkout } = useWorkout();
 
   const [exerciseName, setExerciseName] = useState("");
   const [sets, setSets] = useState("");
@@ -30,7 +30,7 @@ const Exercises = () => {
         </div>
 
         <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 border border-indigo-200">
-          {workouts.length} {workouts.length === 1 ? "Exercise" : "Exercises"}
+          {planWorkouts.length} {planWorkouts.length === 1 ? "Exercise" : "Exercises"}
         </span>
       </div>
 
@@ -111,7 +111,7 @@ const Exercises = () => {
 
       {/* Exercise List */}
       <div className="mt-6 space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
-        {workouts.length === 0 ? (
+        {planWorkouts.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
               <Dumbbell className="h-5 w-5" />
@@ -124,7 +124,7 @@ const Exercises = () => {
             </p>
           </div>
         ) : (
-          workouts.map((item) => (
+          planWorkouts.map((item) => (
             <div
               key={item.id}
               className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition hover:bg-slate-100/70"
@@ -140,17 +140,23 @@ const Exercises = () => {
                   </h4>
                   <p className="text-xs text-slate-500">
                     {item.sets} Sets • {item.reps} Reps
+                    {item.completed ? " • Done today" : ""}
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={() => deleteWorkout(item.id)}
-                title="Remove exercise"
-                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {/* A finished workout is HISTORY - it is what the streak and the
+                  accuracy are made of - so it cannot be removed from the
+                  plan. Only an outstanding exercise can be deleted. */}
+              {!item.completed && (
+                <button
+                  onClick={() => deleteWorkout(item.id)}
+                  title="Remove exercise"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ))
         )}

@@ -19,6 +19,53 @@
  */
 
 /**
+ * Is this timestamp on the same calendar day as now, in the browser's own
+ * time zone?
+ *
+ * The browser's zone is the user's zone, and it is the same one the backend
+ * groups workout days by (it is sent with every request), so the two agree
+ * on what "today" means.
+ *
+ * @param {string|Date|null} value
+ * @param {number|Date} [reference]
+ * @returns {boolean}
+ */
+export function isSameLocalDay(value, reference = Date.now()) {
+  if (!value) return false;
+  const date = new Date(value);
+  const now = new Date(reference);
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+/**
+ * The PLAN: the exercises that are still outstanding, plus the ones that were
+ * completed today.
+ *
+ * The plan builder used to list EVERY workout the user had ever created.
+ * That was actively harmful: yesterday's finished workouts sat in the list
+ * looking like plan entries, and removing them deleted the RECORD of those
+ * workouts - which is exactly what the streak is built from. A user tidying
+ * up their plan silently lost their history, and the streak went down with it.
+ *
+ * The plan is a plan, not a history.
+ *
+ * @param {Array<{id:string, completed?:boolean, completedAt?:string|null}>} workouts
+ * @param {number|Date} [now]
+ * @returns {Array<object>}
+ */
+export function selectPlanWorkouts(workouts = [], now = Date.now()) {
+  if (!Array.isArray(workouts)) return [];
+  return workouts.filter(
+    (workout) =>
+      workout && (!workout.completed || isSameLocalDay(workout.completedAt, now))
+  );
+}
+
+/**
  * @param {Array<{id:string, completed?:boolean}>} workouts
  * @param {string|null} currentWorkoutId the workout being performed right now
  * @returns {object|null} the next outstanding workout, or null when the plan

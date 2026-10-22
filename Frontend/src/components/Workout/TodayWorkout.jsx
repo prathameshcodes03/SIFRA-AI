@@ -3,7 +3,7 @@ import { useWorkout } from "../../Context/WorkoutContext";
 import { Dumbbell, Play, RotateCcw, CheckCircle2, Flame, ArrowRight } from "lucide-react";
 
 const TodayWorkout = () => {
-  const { workouts, setActiveWorkout } = useWorkout();
+  const { planWorkouts, setActiveWorkout } = useWorkout();
   const navigate = useNavigate();
 
   const handleStartWorkout = (exercise) => {
@@ -15,7 +15,7 @@ const TodayWorkout = () => {
     );
   };
 
-  const completedCount = workouts.filter((w) => w.completed).length;
+  const completedCount = planWorkouts.filter((w) => w.completed).length;
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -23,17 +23,17 @@ const TodayWorkout = () => {
         <div>
           <h2 className="text-lg font-bold text-slate-900">Today&apos;s Workout Queue</h2>
           <p className="text-xs text-slate-500">
-            {completedCount} of {workouts.length} completed
+            {completedCount} of {planWorkouts.length} completed
           </p>
         </div>
 
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-          Queue: {workouts.length}
+          Queue: {planWorkouts.length}
         </span>
       </div>
 
       <div className="mt-5 space-y-3">
-        {workouts.length === 0 ? (
+        {planWorkouts.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
               <Dumbbell className="h-5 w-5" />
@@ -46,7 +46,7 @@ const TodayWorkout = () => {
             </p>
           </div>
         ) : (
-          workouts.map((exercise) => (
+          planWorkouts.map((exercise) => (
             <div
               key={exercise.id}
               className={`flex items-center justify-between rounded-xl border p-4 transition-all duration-200 ${

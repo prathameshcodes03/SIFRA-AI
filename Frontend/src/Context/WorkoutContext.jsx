@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import api from "../api/axios";
+import { selectPlanWorkouts } from "../exercises/workoutPlan";
 
 const WorkoutContext = createContext();
 
@@ -101,6 +102,21 @@ export const WorkoutProvider = ({ children }) => {
       console.error("DELETE WORKOUT ERROR:", error);
     }
   };
+  /**
+   * The PLAN: the exercises that are still outstanding, plus the ones that
+   * were completed today.
+   *
+   * The plan builder and the queue used to list EVERY workout the user has
+   * ever created. That was actively harmful: yesterday's finished workouts
+   * sat in the list looking like plan entries, and removing them (the trash
+   * button) deleted the RECORD of those workouts - which is exactly what the
+   * streak is built from. A user tidying up their plan silently lost their
+   * history, and the streak went down with it.
+   *
+   * The plan is a plan, not a history. Yesterday's finished workouts are
+   * history now, and the history is not editable from the plan.
+   */
+  const planWorkouts = useMemo(() => selectPlanWorkouts(workouts), [workouts]);
 
   useEffect(() => {
     refreshAll();
@@ -135,6 +151,7 @@ export const WorkoutProvider = ({ children }) => {
     <WorkoutContext.Provider
       value={{
         workouts,
+        planWorkouts,
         stats,
         activeWorkout,
         setActiveWorkout,

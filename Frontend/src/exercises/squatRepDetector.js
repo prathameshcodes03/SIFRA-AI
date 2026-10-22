@@ -79,6 +79,30 @@ export const SQUAT_REP_THRESHOLDS = Object.freeze({
   maxSmoothedDepthAngle: 110,
 
   /**
+   * How long the SMOOTHED angle must stay at or below the depth threshold.
+   *
+   * This is the STABILITY requirement, and it is what stops a camera move
+   * from counting a repetition. A real squat bottoms out: the user stays at
+   * the bottom for a few hundred milliseconds. A mis-read landmark - which
+   * is exactly what moving the camera produces, because the knee is briefly
+   * mis-localised and the angle oscillates - crosses the threshold for a
+   * moment and comes straight back. Requiring the depth to be HELD separates
+   * the two, and the requirement is expressed in time so it behaves the same
+   * at 15fps and at 120fps.
+   */
+  minDepthHoldMs: 150,
+
+  /**
+   * How far the knee and the hip may differ in how much they flex.
+   *
+   * A squat rotates the thigh at the hip and the shin at the knee, so both
+   * angles fall by a similar amount. A camera move does not rotate the body
+   * - it changes the projection - so the two angles drift apart. The check
+   * only applies when the hip signal is demonstrably live.
+   */
+  maxFlexionMismatch: 55,
+
+  /**
    * How far below the calibrated standing angle the knee must go before the
    * movement counts as a descent at all. Absorbs perspective and individual
    * body proportions: a user who stands with slightly bent knees still has to
@@ -195,6 +219,8 @@ export function createSquatRepDetector({
   let deepestRawKnee = null; // deepest MEASURED knee angle
   let deepestHip = null;
   let depthReached = false;
+  let depthHoldSince = null; // when the smoothed angle first reached the depth
+  let depthHeld = false; // the depth has been HELD long enough to count
 
   /**
    * The deepest angle since the joint last sat at the top.
@@ -228,6 +254,8 @@ export function createSquatRepDetector({
     deepestRawKnee = null;
     deepestHip = null;
     depthReached = false;
+    depthHoldSince = null;
+    depthHeld = false;
     candidateSince = null;
   };
 
@@ -256,11 +284,27 @@ export function createSquatRepDetector({
    * When the hip is a usable signal it has to have flexed with the knee. A
    * "knee-only" movement - the knee dipping while the hip stays extended, as
    * a sideways weight shift does - is not a squat.
+   *
+   * And the two have to flex TOGETHER: a squat rotates the thigh at the hip
+   * and the shin at the knee, so both angles fall by a similar amount. A
+   * camera move changes the projection rather than the pose, so the two drift
+   * apart - which is how a moved camera is told apart from a squat.
    */
   const hipCorroborates = () => {
     if (!hipSignalIsUsable()) return true;
     if (standingHip === null || deepestHip === null) return true;
-    return standingHip - deepestHip >= cfg.minHipFlexion;
+
+    const hipFlexion = standingHip - deepestHip;
+    if (hipFlexion < cfg.minHipFlexion) return false;
+
+    if (standingKnee !== null && deepestKnee !== null) {
+      const kneeFlexion = standingKnee - deepestKnee;
+      if (Math.abs(kneeFlexion - hipFlexion) > cfg.maxFlexionMismatch) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   /**
@@ -392,9 +436,23 @@ export function createSquatRepDetector({
 
     // The depth is reached when BOTH signals say so. The measured angle
     // proves the user really was that deep; the smoothed angle proves it was
-    // not a one-frame mis-read. No duration is involved, so the rule behaves
-    // identically at 15fps and at 60fps.
+    // not a one-frame mis-read.
+    //
+    // And the smoothed angle has to STAY at the depth for the hold time: a
+    // real squat bottoms out, while a mis-read landmark (what a moved camera
+    // produces) only crosses the threshold for a moment. The hold is latched
+    // once achieved, because the ascent starts as soon as the user rises.
+    if (!depthHeld) {
+      if (kneeEma <= cfg.maxSmoothedDepthAngle) {
+        if (depthHoldSince === null) depthHoldSince = nowMs;
+        if (nowMs - depthHoldSince >= cfg.minDepthHoldMs) depthHeld = true;
+      } else {
+        depthHoldSince = null;
+      }
+    }
+
     depthReached =
+      depthHeld &&
       deepestKnee !== null &&
       deepestRawKnee !== null &&
       deepestKnee <= cfg.maxSmoothedDepthAngle &&
@@ -406,6 +464,8 @@ export function createSquatRepDetector({
       deepestKnee = kneeEma;
       deepestRawKnee = kneeAngle;
       deepestHip = hipEma;
+      depthHeld = false;
+      depthHoldSince = null;
     }
 
     if (belowStanding && cycleStartedAt === null) {

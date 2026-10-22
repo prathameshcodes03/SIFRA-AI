@@ -484,6 +484,19 @@ const deleteWorkout = async (req, res) => {
       });
     }
 
+    // A COMPLETED workout is history, not a plan entry: the streak and the
+    // form accuracy are both computed from it. Deleting one silently rewrote
+    // the user's training history - a workout that was finished on Monday
+    // vanished from the streak, and the streak went DOWN. Only an
+    // outstanding plan entry can be removed.
+    if (workout.completed) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "A completed workout is part of your history and cannot be deleted.",
+      });
+    }
+
     await prisma.workout.delete({
       where: { id },
     });
