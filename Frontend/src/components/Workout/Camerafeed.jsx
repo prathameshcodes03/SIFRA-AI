@@ -214,6 +214,32 @@ const Camerafeed = ({
     setLiveAccuracy(snapshot.accuracy);
   };
 
+  /**
+   * Announce the finished session.
+   *
+   * The announcement used to be made ONLY when nothing else was left in the
+   * plan, so completing a workout in a plan that still had another exercise
+   * in it was completely silent - no audio, no message. Finishing a session
+   * is always worth announcing, whatever happens next.
+   */
+  const announceCompletion = async (accuracy) => {
+    const handler = completionHandlerRef.current;
+    if (typeof handler !== "function") return;
+
+    const announce = handler({
+      workoutKey: workoutSessionKeyRef.current,
+      exercise,
+      accuracy,
+    });
+
+    // Hold the completion screen until the announcement settles so it is
+    // heard in full and the message stays readable. Bounded by the
+    // announcer's own timeout, and the existing buttons stay available.
+    if (announce && typeof announce.then === "function") {
+      await announce;
+    }
+  };
+
   const completeExercise = async () => {
     if (completionSentRef.current) return;
     completionSentRef.current = true;
@@ -248,28 +274,16 @@ const Camerafeed = ({
         accuracy: sessionAccuracy,
       });
 
-      // The workout is over only when no outstanding exercise is left. The
-      // next exercise is always a workout that has NOT been completed yet:
-      // auto-advancing into an already-completed one re-ran an old session
-      // and re-dated it, which is what made the streak stall.
+      // The session is finished: announce it FIRST, whatever happens next.
+      // The announcement used to be skipped whenever another exercise was
+      // still outstanding, so completing a workout in a plan with a second
+      // exercise in it was silent.
+      await announceCompletion(sessionAccuracy);
+
+      // The workout is over only when no outstanding exercise is left.
       const hasNextExercise = Boolean(nextWorkout);
 
-      if (!hasNextExercise && typeof completionHandlerRef.current === "function") {
-        // The backend has confirmed completion, so the announcement is safe to
-        // make. The handler is idempotent on the session key, so extra renders
-        // or duplicate events cannot replay it.
-        const announce = completionHandlerRef.current({
-          workoutKey: workoutSessionKeyRef.current,
-          exercise,
-          accuracy: sessionAccuracy,
-        });
-
-        // Hold the completion screen until the announcement settles so it is
-        // heard in full and the message stays readable. Bounded by the
-        // announcer's own timeout, and the existing buttons stay available.
-        if (announce && typeof announce.then === "function") {
-          await announce;
-        }
+      if (!hasNextExercise) {
         navigate("/Dashboard");
         return;
       }
@@ -636,6 +650,8 @@ const Camerafeed = ({
       accuracy: null,
     };
 
+    let saved = false;
+
     try {
       await completeWorkout({
         workoutId,
@@ -649,6 +665,7 @@ const Camerafeed = ({
 
       setCompletedInfo({ exercise, accuracy: sessionAccuracy });
       completionSentRef.current = true;
+      saved = true;
     } catch (err) {
       console.error("Failed to complete workout:", err);
       // Backend rejected the save: do not present it as permanently completed.
@@ -658,9 +675,22 @@ const Camerafeed = ({
       setSaving(false);
       setIsCompleting(false);
     }
+
+    // Ending the session early is still finishing a workout: it gets the
+    // announcement too - but only once the save actually succeeded. The
+    // announcement runs after the saving state is cleared, so the completion
+    // screen is not stuck on "Saving workout record..." while it plays.
+    if (saved) {
+      await announceCompletion(sessionAccuracy);
+    }
   };
 
   const handleRestart = () => {
+    // A restart is a NEW attempt, so it gets its own session key. Reusing the
+    // key of the attempt that just finished meant the announcer's
+    // "already announced" guard swallowed the second completion - the user
+    // restarted the session and never heard a thing.
+    workoutSessionKeyRef.current = createWorkoutSessionKey(workoutId, exercise);
     accuracyTrackerRef.current = createAccuracyTracker({ exercise });
     liveAccuracyRef.current = null;
     lastModelVerdictRef.current = null;

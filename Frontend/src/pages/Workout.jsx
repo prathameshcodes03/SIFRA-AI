@@ -5,7 +5,7 @@ import AppShell from "../components/Dashboard/AppShell";
 import Camerafeed from "../components/Workout/Camerafeed";
 import VoiceFeedback from "../components/Workout/VoiceFeedback";
 import { useWorkout } from "../Context/WorkoutContext";
-import { findNextOutstandingWorkout } from "../exercises/workoutPlan";
+import { findNextSessionExercise } from "../exercises/workoutPlan";
 import useVoiceCoach from "../hooks/useVoiceCoach";
 import { announceWorkoutCompletion } from "../voice/completionVoice";
 import { Dumbbell, ArrowLeft, Layers, Sparkles } from "lucide-react";
@@ -28,14 +28,14 @@ const Workout = () => {
   const reps = Number(searchParams.get("reps") || activeWorkout?.reps || 10);
 
   /**
-   * The next OUTSTANDING exercise, or null when the plan is done.
+   * The next exercise of THIS session, or null when the session is done.
    *
-   * Only workouts that have not been completed yet can be next. Auto-advancing
-   * into an already-completed workout re-ran an old session and re-dated it,
-   * which moved that workout's completion day and made the streak stall.
+   * Only an exercise added today continues the session. An exercise that has
+   * been sitting in the plan since last week is still in the queue, but it
+   * must not hijack the flow.
    */
   const nextWorkout = useMemo(
-    () => findNextOutstandingWorkout(workouts, workoutId),
+    () => findNextSessionExercise(workouts, workoutId),
     [workouts, workoutId]
   );
 

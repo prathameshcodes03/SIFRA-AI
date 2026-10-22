@@ -66,6 +66,37 @@ export function selectPlanWorkouts(workouts = [], now = Date.now()) {
 }
 
 /**
+ * The next exercise of the CURRENT session.
+ *
+ * Only an exercise that was added today continues the session. An exercise
+ * that has been sitting in the plan since last week is still available in
+ * the queue, but it must not hijack the flow: finishing today's squats used
+ * to fling the user into an unrelated camera instead of ending the session.
+ *
+ * @param {Array<{id:string, completed?:boolean, createdAt?:string}>} workouts
+ * @param {string|null} currentWorkoutId the workout being performed right now
+ * @param {number|Date} [now]
+ * @returns {object|null}
+ */
+export function findNextSessionExercise(
+  workouts,
+  currentWorkoutId = null,
+  now = Date.now()
+) {
+  if (!Array.isArray(workouts)) return null;
+
+  return (
+    workouts.find(
+      (workout) =>
+        workout &&
+        !workout.completed &&
+        workout.id !== currentWorkoutId &&
+        isSameLocalDay(workout.createdAt, now)
+    ) ?? null
+  );
+}
+
+/**
  * @param {Array<{id:string, completed?:boolean}>} workouts
  * @param {string|null} currentWorkoutId the workout being performed right now
  * @returns {object|null} the next outstanding workout, or null when the plan
