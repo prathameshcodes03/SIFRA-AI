@@ -9,6 +9,10 @@
  * It never counts a rep because the ML model said the form was correct.
  */
 
+import { createSquatRepDetector } from "./squatRepDetector.js";
+import { createPushupRepDetector } from "./pushupRepDetector.js";
+import { createPlankHold, isPlankPose } from "./plankHold.js";
+
 export const PHASE = {
   UP: "up",
   DOWN: "down",
@@ -70,12 +74,6 @@ export const MIN_TRACKING_VISIBILITY = 0.5;
  * not destroyed by one bad frame.
  */
 export const MAX_TRACKING_GAP_MS = 400;
-
-/**
- * Frames are ~33ms apart, but a backgrounded tab can deliver one enormous
- * step. Clamping stops a hidden tab from banking plank seconds on resume.
- */
-export const MAX_FRAME_DT_MS = 250;
 
 /**
  * A frame arriving much later than the previous one means the session was
@@ -155,6 +153,49 @@ export function createRepTracker({
   let armedAtTop = true;
 
   const isHold = normalized === "plank";
+  const isSquat = normalized === "squat";
+  const isPushup = normalized === "pushup";
+
+  /**
+   * The squat repetition detector.
+   *
+   * Squat repetitions are detected by a dedicated five-phase state machine:
+   * the generic two-phase machine further down (descend / return) could not
+   * tell a real repetition from a quarter squat - the only qualification was
+   * "the knee went below 110 deg and came back above 140 deg", and 110 deg
+   * is not a squat depth.
+   *
+   * The detector owns the whole squat cycle - standing calibration, descent,
+   * bottom validation, ascent and return - and hands the tracker a single
+   * verdict.
+   */
+  const squatDetector = isSquat
+    ? createSquatRepDetector({
+        descentAngle: REP_THRESHOLDS.squat.down,
+        standReturnAngle: REP_THRESHOLDS.squat.up,
+      })
+    : null;
+
+  /**
+   * The push-up repetition detector.
+   *
+   * A push-up is a whole-body movement, so its detector validates the body
+   * alignment and the body orientation as well as the elbow angle. Without
+   * that, a user lying on the floor waving their arms produced "repetitions".
+   */
+  const pushupDetector = isPushup
+    ? createPushupRepDetector({
+        minCycleMs: REP_THRESHOLDS.pushup.minCycleMs,
+      })
+    : null;
+
+  /**
+   * The plank hold timer.
+   *
+   * A plank is a timed hold, not a repetition: the timer measures the time
+   * the user actually spent in a valid plank position.
+   */
+  const plankHold = isHold ? createPlankHold() : null;
 
   function smooth(value) {
     if (typeof value !== "number" || Number.isNaN(value)) return smoothed;
@@ -175,6 +216,12 @@ export function createRepTracker({
     aboveStreak = 0;
     // A new descent must start from a real standing position again.
     armedAtTop = false;
+    // The squat detector keeps its own cycle, so it has to be told too.
+    squatDetector?.abandon();
+    pushupDetector?.abandon();
+    // A lost pose breaks the hold: the accumulated time survives, but the
+    // pose has to be confirmed again before any more is banked.
+    plankHold?.breakHold();
   }
 
   /**
@@ -261,37 +308,53 @@ export function createRepTracker({
     // A long gap means the session was interrupted (backgrounded tab, sleep,
     // camera stall), not that the user moved slowly. Anything half-finished is
     // abandoned so the first frame back cannot complete a rep nobody finished.
-    if (lastFrameAt > 0 && nowMs - lastFrameAt > RESUME_GAP_MS) {
+    const gapMs = lastFrameAt ? Math.max(0, nowMs - lastFrameAt) : 0;
+    const resumed = lastFrameAt > 0 && gapMs > RESUME_GAP_MS;
+    if (resumed) {
       abandonMotion();
     }
 
-    const dt = lastFrameAt
-      ? Math.min(MAX_FRAME_DT_MS, Math.max(0, nowMs - lastFrameAt))
-      : 0;
     lastFrameAt = nowMs;
 
+    // The plank banks the REAL elapsed time, not a capped frame delta: a
+    // slow camera must not make the hold run at a fraction of real time. The
+    // hold module caps the gap itself, and a resumed session banks nothing
+    // because the pose was not verified while the tab was hidden.
+    const holdDtMs = resumed ? 0 : gapMs;
+
     // ---- plank: a timed hold, never a repetition --------------------------
+    //
+    // The timer measures the time the user actually spent in a valid plank.
+    // It is not "how long the camera was running": a standing user has a
+    // perfectly straight body line, so the body ORIENTATION is what decides
+    // that the user is in a plank at all.
     if (isHold) {
       const body = smooth(features[PLANK_HOLD_SIGNAL]);
-      holdFormOk =
-        typeof body === "number" &&
-        features.symmetry_score >= 0.7 &&
-        body >= 150;
+      const poseValid = isPlankPose({
+        bodyAngle: typeof body === "number" ? body : null,
+        bodyTilt:
+          typeof features.body_tilt === "number" &&
+          Number.isFinite(features.body_tilt)
+            ? features.body_tilt
+            : null,
+        symmetryScore: features.symmetry_score,
+      });
 
-      if (!holdFormOk) {
-        // Never bank partial seconds across a broken line or a lost pose.
-        holdSeconds = 0;
-        return snapshot({ trackingOk: true });
-      }
+      const outcome = plankHold.update({
+        valid: poseValid,
+        nowMs,
+        dtMs: holdDtMs,
+      });
 
-      holdSeconds += dt / 1000;
+      holdFormOk = outcome.formOk;
+      // The whole seconds already banked live in `setReps`; this is only the
+      // fraction still to come.
+      holdSeconds = outcome.seconds - outcome.wholeSeconds;
+
       let setJustCompleted = false;
       let exerciseJustCompleted = false;
 
-      while (holdSeconds >= 1 && setReps < requiredReps) {
-        holdSeconds -= 1;
-        // Only the hold counter advances. `reps` stays 0: a plank has no
-        // repetitions, and the rep figure feeds rep-based workout reporting.
+      while (outcome.wholeSeconds > setReps && setReps < requiredReps) {
         setReps += 1;
 
         if (setReps >= requiredReps) {
@@ -317,8 +380,122 @@ export function createRepTracker({
 
     if (!thresholds) return snapshot({ trackingOk: true });
 
+    // ---- squat: a dedicated five-phase repetition machine ------------------
+    //
+    // The generic machine below only knows "below `down`" and "above `up`",
+    // which for squats could not tell a real repetition from a quarter squat.
+    // The detector validates the whole cycle instead: standing calibration,
+    // a meaningful descent, real squat depth, an ascent and a return to
+    // standing. It also owns the smoothing, so the tracker reads the
+    // smoothed knee angle straight from it.
+    if (isSquat) {
+      const outcome = squatDetector.update({
+        kneeAngle: features[thresholds.signal],
+        hipAngle:
+          typeof features.hip_angle === "number" &&
+          Number.isFinite(features.hip_angle)
+            ? features.hip_angle
+            : null,
+        nowMs,
+      });
+
+      smoothed = outcome.smoothedAngle;
+      repMinAngle = outcome.repMinAngle;
+      phase = outcome.phase === "up" ? PHASE.UP : PHASE.DOWN;
+
+      let setJustCompleted = false;
+      let exerciseJustCompleted = false;
+
+      if (outcome.repCompleted) {
+        reps += 1;
+        setReps += 1;
+
+        if (setReps >= requiredReps) {
+          setJustCompleted = true;
+          if (sets >= requiredSets) {
+            finished = true;
+            exerciseJustCompleted = true;
+          } else {
+            sets += 1;
+            setReps = 0;
+          }
+        }
+      }
+
+      return snapshot({
+        setJustCompleted,
+        exerciseJustCompleted,
+        trackingOk: true,
+      });
+    }
+
+    // ---- push-up: the same five-phase machine, with the body validated ----
+    //
+    // A push-up is a whole-body movement. The generic machine further down
+    // only knew the elbow angle, so a user lying on the floor waving their
+    // arms produced "repetitions", and so did a standing user raising and
+    // lowering their elbows.
+    if (isPushup) {
+      const outcome = pushupDetector.update({
+        elbowAngle: features[thresholds.signal],
+        bodyAngle:
+          typeof features.body_angle === "number" &&
+          Number.isFinite(features.body_angle)
+            ? features.body_angle
+            : null,
+        hipAngle:
+          typeof features.hip_angle === "number" &&
+          Number.isFinite(features.hip_angle)
+            ? features.hip_angle
+            : null,
+        bodyTilt:
+          typeof features.body_tilt === "number" &&
+          Number.isFinite(features.body_tilt)
+            ? features.body_tilt
+            : null,
+        nowMs,
+      });
+
+      smoothed = outcome.smoothedAngle;
+      repMinAngle = outcome.deepestAngle;
+      phase = outcome.phase === "up" ? PHASE.UP : PHASE.DOWN;
+
+      let setJustCompleted = false;
+      let exerciseJustCompleted = false;
+
+      if (outcome.repCompleted) {
+        reps += 1;
+        setReps += 1;
+
+        if (setReps >= requiredReps) {
+          setJustCompleted = true;
+          if (sets >= requiredSets) {
+            finished = true;
+            exerciseJustCompleted = true;
+          } else {
+            sets += 1;
+            setReps = 0;
+          }
+        }
+      }
+
+      return snapshot({
+        setJustCompleted,
+        exerciseJustCompleted,
+        trackingOk: true,
+      });
+    }
+
     const angle = smooth(features[thresholds.signal]);
     if (angle === null) return snapshot({ trackingOk: true });
+
+    // ---- the generic two-phase machine ------------------------------------
+    //
+    // The fallback for an exercise that has thresholds but no dedicated
+    // detector: "below `down`" and "above `up`", with a repetition counted
+    // when the joint goes down and comes back. Squats and push-ups have their
+    // own machines above, because this one cannot tell a real repetition
+    // from a partial one.
 
     // ---- stability counters ----------------------------------------------
     if (angle < thresholds.down) {
@@ -415,6 +592,11 @@ export function createRepTracker({
     abandonMotion();
     invalidSince = null;
     armedAtTop = true;
+    // The squat detector carries its own calibration and cycle state, so a
+    // new session must start from a clean slate as well.
+    squatDetector?.reset();
+    pushupDetector?.reset();
+    plankHold?.reset();
   }
 
   return { update, reset, isFinished: () => finished };

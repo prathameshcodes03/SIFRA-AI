@@ -99,4 +99,5 @@ const predictWorkoutForm = async (req, res) => {
 
 module.exports = {
   predictWorkoutForm,
+  validatePredictionFeatures,
 };

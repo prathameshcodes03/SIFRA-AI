@@ -8,5 +8,4 @@
 .DS_Store
 
 # Build
-Frontend/dist/
-Backend/dist/
+dist/

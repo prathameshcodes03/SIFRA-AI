@@ -28,6 +28,36 @@ import { PUSHUP_MAX_TRAINED_ELBOW } from "./modelSupport";
 /** A joint angle below this is degenerate, not a measurement. */
 const MIN_PLAUSIBLE_ANGLE = 1;
 
+/**
+ * How far the body leans away from the horizontal plane.
+ *
+ * The angles above CANNOT tell a plank from a push-up from standing: a
+ * standing person and a person lying flat on the floor both have a perfectly
+ * straight shoulder-hip-ankle line, so `body_angle` is 180 for all of them.
+ * The orientation of the body is the missing piece, and it is what decides
+ * whether the user is actually in a plank (or doing a push-up) at all.
+ *
+ * It is measured in the pseudo-3D landmark space, so it stays meaningful
+ * whatever the camera angle: a body seen from the side is horizontal in the
+ * image, a body seen head-on points away from the camera (and is therefore
+ * horizontal in 3D), and a standing body is vertical in both.
+ *
+ * 0 = perfectly horizontal, 90 = perfectly vertical.
+ */
+const bodyTiltOf = (shoulder, ankle) => {
+  if (!shoulder || !ankle) return null;
+
+  const dx = (ankle.x ?? 0) - (shoulder.x ?? 0);
+  const dy = (ankle.y ?? 0) - (shoulder.y ?? 0);
+  const dz = (ankle.z ?? 0) - (shoulder.z ?? 0);
+  const horizontal = Math.hypot(dx, dz);
+  if (!Number.isFinite(horizontal) || horizontal === 0) return null;
+
+  const tilt = (Math.atan2(Math.abs(dy), horizontal) * 180) / Math.PI;
+  if (!Number.isFinite(tilt)) return null;
+  return tilt;
+};
+
 const angleOf = (a, b, c) => {
   if (!a || !b || !c) return null;
   const angle = calculateAngle(a, b, c);
@@ -71,6 +101,7 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
     elbow: angleOf(shoulder, elbow, wrist),
     hip: angleOf(shoulder, hip, knee),
     body: angleOf(shoulder, hip, ankle),
+    tilt: bodyTiltOf(shoulder, ankle),
   });
 
   const left = side(
@@ -99,16 +130,24 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
   const elbow = pick("elbow");
   const hip = pick("hip");
   const body = pick("body");
+  const tilt = pick("tilt");
 
   const measured = {
     knee: knee.measured,
     elbow: elbow.measured,
     hip: hip.measured,
     body: body.measured,
+    tilt: tilt.measured,
   };
 
   // Nothing at all could be measured: there is no pose to report.
-  if (!knee.measured && !elbow.measured && !hip.measured && !body.measured) {
+  if (
+    !knee.measured &&
+    !elbow.measured &&
+    !hip.measured &&
+    !body.measured &&
+    !tilt.measured
+  ) {
     return null;
   }
 
@@ -156,6 +195,10 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
     elbow_angle: Number((elbow.value ?? 90).toFixed(2)),
     hip_angle: Number((hip.value ?? 90).toFixed(2)),
     body_angle: Number((body.value ?? 165).toFixed(2)),
+    // How far the body leans away from the horizontal plane: 0 = horizontal
+    // (a plank or a push-up), 90 = vertical (standing). It is what tells
+    // those two apart, because the joint angles alone cannot.
+    body_tilt: tilt.measured ? Number(tilt.value.toFixed(2)) : null,
     symmetry_score: Number(symmetryScore.toFixed(3)),
     landmark_visibility: Number(avgVisibility.toFixed(3)),
     knee_asymmetry: Number(kneeAsymmetry.toFixed(2)),

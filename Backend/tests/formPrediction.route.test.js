@@ -3,6 +3,9 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 
 const app = require("../src/app.js");
+const {
+  validatePredictionFeatures,
+} = require("../src/Controllers/formPrediction.controller.js");
 
 let server;
 let basePort;
@@ -131,6 +134,41 @@ test("prediction endpoint rejects a non-numeric angle", async () => {
 test("prediction endpoint rejects a missing body", async () => {
   const res = await postPredict({});
   assert.equal(res.status, 400);
+});
+
+test("the extra orientation fields the client now sends are ignored, not rejected", async () => {
+  // The browser sends the body's orientation alongside the joint angles.
+  // They are not model features, so they must neither fail validation nor be
+  // forwarded - the whitelist is what guarantees that.
+  const validation = validatePredictionFeatures({
+    exercise: "squat",
+    knee_angle: 90,
+    elbow_angle: 170,
+    hip_angle: 95,
+    body_angle: 165,
+    symmetry_score: 0.9,
+    landmark_visibility: 0.95,
+    body_tilt: 12,
+    pose_visibility: 0.95,
+    knee_asymmetry: 2,
+    hip_asymmetry: 1,
+    measured: { knee: true, elbow: true, hip: true, body: true, tilt: true },
+  });
+
+  assert.equal(validation.error, undefined, "an extra field must not fail validation");
+  assert.deepEqual(
+    Object.keys(validation.features).sort(),
+    [
+      "body_angle",
+      "elbow_angle",
+      "exercise",
+      "hip_angle",
+      "knee_angle",
+      "landmark_visibility",
+      "symmetry_score",
+    ],
+    "only the model's own features may be forwarded"
+  );
 });
 
 test("protected workout routes still require authentication", async () => {

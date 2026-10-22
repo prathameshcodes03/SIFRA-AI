@@ -209,8 +209,10 @@ test("plank: accumulates whole seconds while the hold is valid", () => {
   let t = 1000;
   let last;
   let completionEvents = 0;
-  // ~30fps sampling for ~3.2s of continuous good hold.
-  for (let i = 0; i < 96; i += 1) {
+  // ~30fps sampling for ~4.2s of continuous good hold. The hold only starts
+  // counting once the pose has been stable for the confirmation period, so
+  // the sampled time is longer than the credited time.
+  for (let i = 0; i < 126; i += 1) {
     last = tracker.update(plankFrame(175), t);
     t += 33;
     if (last.exerciseJustCompleted) completionEvents += 1;
