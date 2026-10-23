@@ -1,6 +1,5 @@
-import { useRef, useState, useLayoutEffect } from "react";
+import { useState, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
-import { useEffect } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Link } from "react-router-dom";
 import {
@@ -9,773 +8,752 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Star,
+  Camera,
+  Dumbbell,
+  Target,
+  Zap,
+  Cpu,
+  Layers,
+  Eye,
+  Volume2,
+  Play,
+  Sparkles,
   Quote,
 } from "lucide-react";
 
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import FitnessModelScene from "../components/Landing/FitnessModelScene";
+import { useAuth } from "../Context/AuthContext";
 
-import Speaking from "../assets/Audio/Speaking.mp3";
 import StudioFitnessPose from "../assets/models/studio_fitness_pose.glb";
-import AvaSteele from "../assets/models/ava_steele_athletic_female_weightlifter.glb";
+import Pushups from "../assets/Videos/Pushups.mp4";
 
 gsap.registerPlugin(ScrollTrigger);
 
 /* ─────────────────────────────────────────────────────────────
-   TELEMETRY DATA (Interactive Biomechanical Simulation)
+   DATA
 ───────────────────────────────────────────────────────────── */
-const EXERCISES = {
-  squat: { label: "Squat", joint: "Knee Flexion", defaultAngle: 90, min: 45, max: 140 },
-  pushup: { label: "Push-up", joint: "Elbow Angle", defaultAngle: 90, min: 45, max: 140 },
-  plank: { label: "Plank", joint: "Spine Linearity", defaultAngle: 165, min: 140, max: 180 },
-};
-
-const getTelemetry = (ex, angle) => ({
-  squat: {
-    name: "Barbell Back Squat",
-    score: angle <= 90 ? "98%" : "84%",
-    status: angle <= 90 ? "Optimal Depth" : "Go Deeper",
-    cue: angle <= 90 ? "Excellent depth! Drive through mid-foot." : "Lower hips 8° more to hit parallel.",
-    ok: angle <= 90,
-  },
-  pushup: {
-    name: "Standard Push-Up",
-    score: angle <= 85 ? "99%" : "81%",
-    status: angle <= 85 ? "Full Range" : "Descend Lower",
-    cue: angle <= 85 ? "Chest touches ground plane. Lock core." : "Break parallel with elbows tucked at 45°.",
-    ok: angle <= 85,
-  },
-  plank: {
-    name: "Isometric Plank",
-    score: angle >= 170 ? "96%" : "78%",
-    status: angle >= 170 ? "Neutral Alignment" : "Sagging Hip",
-    cue: angle >= 170 ? "Hold stable! Glutes & abs contracted." : "Elevate pelvis slightly to prevent lumbar load.",
-    ok: angle >= 170,
-  },
-}[ex]);
-
-/* ─────────────────────────────────────────────────────────────
-   TESTIMONIALS / WHAT PEOPLE SAY (For bottom marquee)
-───────────────────────────────────────────────────────────── */
-const TESTIMONIALS = [
+const HOW_IT_WORKS = [
   {
-    name: "Dr. Marcus Vance",
-    role: "Sports Biomechanics Researcher",
-    text: "SIFRA's real-time 33-point kinematic tracking matches laboratory motion-capture fidelity at 30+ FPS.",
-    rating: 5,
+    step: "01",
+    title: "Choose an exercise",
+    desc: "Select from supported exercises — squats, push-ups, or planks — and configure your sets and reps.",
   },
   {
-    name: "Elena Rostova",
-    role: "Olympic Lifting Coach",
-    text: "The audio cues fire in under 600ms. My lifters immediately correct bar path deviations on heavy sets.",
-    rating: 5,
+    step: "02",
+    title: "Start a camera-based workout",
+    desc: "Your webcam captures your movement. MediaPipe detects your pose in real time, right in the browser.",
   },
   {
-    name: "Karan Mehta",
-    role: "CrossFit Athlete",
-    text: "The automatic rep-cadence and depth detection completely eliminated subjective no-reps in my gym.",
-    rating: 5,
-  },
-  {
-    name: "Sarah Chen",
-    role: "Physical Therapist & DPT",
-    text: "Visualizing joint angles live on camera gives patients instant biofeedback for ACL rehab squats.",
-    rating: 5,
-  },
-  {
-    name: "David Lindqvist",
-    role: "Strength & Conditioning Specialist",
-    text: "Best form verification software built for web. Clean, responsive, and insanely precise.",
-    rating: 5,
+    step: "03",
+    title: "Review feedback and results",
+    desc: "Receive instant form feedback and voice coaching during the session. Review accuracy and streaks after.",
   },
 ];
 
+const MARQUEE_ITEMS = [
+  "AI FITNESS COACHING",
+  "REAL-TIME POSE DETECTION",
+  "SMART REP COUNTING",
+  "FORM FEEDBACK",
+  "VOICE COACHING",
+  "WORKOUT TRACKING",
+];
+
 /* ─────────────────────────────────────────────────────────────
-   TECH MARQUEE ITEMS
+   VERIFIED QUOTES
+   Sources verified via brainyquote.com, goodreads.com, and
+   published interviews.
 ───────────────────────────────────────────────────────────── */
-const TECH_PILLS = [
-  "MediaPipe 33-Keypoint Extraction",
-  "Sub-30ms Pose Latency",
-  "Zero Hardware Sensors Required",
-  "Real-Time Rep Cadence Detection",
-  "Voice Coaching Synthesis",
-  "Biomechanical Angle Analysis",
-  "Kinematic ML v2.4 Engine",
-  "Adaptive Training Calibration",
+const QUOTES = [
+  {
+    text: "Strength does not come from winning. Your struggles develop your strengths.",
+    author: "Arnold Schwarzenegger",
+  },
+  {
+    text: "Discipline is the bridge between goals and accomplishment.",
+    author: "Jim Rohn",
+  },
+  {
+    text: "The pain of discipline is far less than the pain of regret.",
+    author: "Jim Rohn",
+  },
+  {
+    text: "The only person you are destined to become is the person you decide to be.",
+    author: "Ralph Waldo Emerson",
+  },
+  {
+    text: "Motivation gets you going, but discipline keeps you growing.",
+    author: "John C. Maxwell",
+  },
+  {
+    text: "It is not the mountain we conquer, but ourselves.",
+    author: "Sir Edmund Hillary",
+  },
+  {
+    text: "Confidence comes from discipline and training.",
+    author: "Robert Kiyosaki",
+  },
+  {
+    text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+    author: "Will Durant",
+  },
 ];
 
 export default function Landing_Page() {
-  const pinRef = useRef(null);
+  const { user } = useAuth();
   const modelRef = useRef(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const slideRef = useRef(0);
-  const isAnimatingRef = useRef(false);
-  const currentMotionRef = useRef({ x: -1.85, rotY: 0 });
+  const heroRef = useRef(null);
+  const modelContainerRef = useRef(null);
+  const floatingPanelsRef = useRef([]);
+  const [modelLoaded, setModelLoaded] = useState(false);
 
-  const [simExercise, setSimExercise] = useState("squat");
-  const [simAngle, setSimAngle] = useState(90);
-  const sim = getTelemetry(simExercise, simAngle);
+  // Refs for "How It Works" section animation
+  const howItWorksRef = useRef(null);
+  const howItWorksHeadingRef = useRef(null);
+  const howItWorksLineRef = useRef(null);
+  const howItWorksMarkersRef = useRef([]);
+  const howItWorksTextsRef = useRef([]);
 
-  const [featuresComplete, setFeaturesComplete] = useState(false);
-  const featuresCompleteRef = useRef(false);
+  // Refs for Capabilities showcase animation
+  const showcaseCardRef = useRef(null);
+  const tabContentRef = useRef(null);
 
-  // Keep refs in sync
-  useEffect(() => {
-    slideRef.current = currentSlide;
-  }, [currentSlide]);
+  // Refs for "Detect → Analyze → Coach" flow animation
+  const processFlowRef = useRef(null);
+  const processHeadingRef = useRef(null);
+  const processLineRef = useRef(null);
+  const processStagesRef = useRef([]);
+  const processIconsRef = useRef([]);
+  const [activeTab, setActiveTab] = useState("pose");
+  const [repCount, setRepCount] = useState(0);
 
-  useEffect(() => {
-    featuresCompleteRef.current = featuresComplete;
-  }, [featuresComplete]);
+  // Manual rotation state
+  const manualRotationRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartRotationRef = useRef(0);
 
-  /* ───────────────────────────────────────────────────────────
-     STRICT SCROLL LOCK UNTIL ALL FEATURES COMPLETE:
-     The document is 100% prevented from scrolling until Feature 03
-     is fully reached and completed.
-  ─────────────────────────────────────────────────────────── */
-  useEffect(() => {
-    if (!featuresComplete) {
-      document.body.style.overflowY = "hidden";
-      document.documentElement.style.overflowY = "hidden";
-    } else {
-      document.body.style.overflowY = "auto";
-      document.documentElement.style.overflowY = "auto";
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Animate rep counter when reps tab is active
+  useLayoutEffect(() => {
+    if (activeTab !== "reps" || reducedMotion) {
+      setRepCount(0);
+      return;
     }
-
-    return () => {
-      document.body.style.overflowY = "auto";
-      document.documentElement.style.overflowY = "auto";
-    };
-  }, [featuresComplete]);
-
-  const goToSlide = (nextIndex) => {
-    if (nextIndex < 0 || nextIndex > 3) return;
-
-    const slides = gsap.utils.toArray(".timeline-slide");
-    const getXOffset = () => {
-      const w = window.innerWidth;
-      if (w < 1024) return 1.35;
-      if (w < 1280) return 1.6;
-      return 1.85;
-    };
-    const targetX = getXOffset();
-
-    // Slide 0: Model LEFT (-targetX), rot 0
-    // Slide 1: Model RIGHT (+targetX), rot 2pi (360°)
-    // Slide 2: Model LEFT (-targetX), rot 4pi (720°)
-    // Slide 3: Model RIGHT (+targetX), rot 6pi (1080°)
-    const configs = [
-      { x: -targetX, rotY: 0 },
-      { x: targetX, rotY: Math.PI * 2 },
-      { x: -targetX, rotY: Math.PI * 4 },
-      { x: targetX, rotY: Math.PI * 6 },
-    ];
-
-    const targetCfg = configs[nextIndex];
-
-    // Smoothly crossfade slides
-    slides.forEach((slide, i) => {
-      if (i === nextIndex) {
-        gsap.to(slide, {
-          autoAlpha: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.6,
-          ease: "power2.out",
-        });
-      } else {
-        gsap.to(slide, {
-          autoAlpha: 0,
-          y: i < nextIndex ? -20 : 20,
-          scale: 0.98,
-          duration: 0.45,
-          ease: "power2.inOut",
-        });
+    let count = 0;
+    const interval = setInterval(() => {
+      count += 1;
+      setRepCount(count);
+      if (count >= 12) {
+        clearInterval(interval);
       }
-    });
+    }, 400);
+    return () => clearInterval(interval);
+  }, [activeTab, reducedMotion]);
 
-    // Smoothly animate model position and roll
-    gsap.to(currentMotionRef.current, {
-      x: targetCfg.x,
-      rotY: targetCfg.rotY,
-      duration: 0.85,
-      ease: "power2.inOut",
-      onUpdate: () => {
-        modelRef.current?.setTransform(
-          currentMotionRef.current.x,
-          currentMotionRef.current.rotY,
-          0,
-          0
-        );
+  // Scroll-linked model rotation + floating panel parallax
+  useLayoutEffect(() => {
+    if (reducedMotion) return;
+
+    const hero = heroRef.current;
+    if (!hero) return;
+
+    // Scroll-linked model rotation (combines scroll + manual offset)
+    const modelTrigger = ScrollTrigger.create({
+      id: "hero-scroll",
+      trigger: hero,
+      start: "top top",
+      end: "bottom top",
+      scrub: 0.8,
+      onUpdate: (self) => {
+        const progress = self.progress;
+        const scrollRotation = progress * Math.PI * 2.5;
+        const totalRotation = scrollRotation + manualRotationRef.current;
+        modelRef.current?.setTransform(0, totalRotation, 0, 0);
       },
     });
 
-    setCurrentSlide(nextIndex);
+    // Floating panel parallax + opacity transitions
+    floatingPanelsRef.current.forEach((panel, i) => {
+      if (!panel) return;
+      const speed = 0.2 + i * 0.1;
+      gsap.to(panel, {
+        y: () => -ScrollTrigger.maxScroll(window) * speed * 0.03,
+        opacity: (i < 2) ? 1 : () => gsap.utils.interpolate(1, 0.4, ScrollTrigger.create({
+          trigger: hero,
+          start: "top top",
+          end: "bottom top",
+          scrub: true,
+        }).progress),
+        ease: "none",
+        scrollTrigger: {
+          trigger: hero,
+          start: "top top",
+          end: "bottom top",
+          scrub: true,
+        },
+      });
+    });
 
-    // Only allow page to scroll once user reaches Feature 03 (Slide 3)
-    if (nextIndex === 3) {
-      setTimeout(() => {
-        featuresCompleteRef.current = true;
-        setFeaturesComplete(true);
-      }, 700);
-    } else {
-      featuresCompleteRef.current = false;
-      setFeaturesComplete(false);
-    }
-  };
-
-  // Wheel, touch, and keyboard gesture listeners
-  useEffect(() => {
-    let touchStartY = 0;
-
-    const handleWheel = (e) => {
-      // If user has already scrolled down into lower sections of page
-      if (window.scrollY > 30) return;
-
-      // While features are NOT complete: lock page and only cycle slides
-      if (!featuresCompleteRef.current) {
-        e.preventDefault();
-
-        // Scrolling DOWN
-        if (e.deltaY > 15) {
-          if (isAnimatingRef.current) return;
-          if (slideRef.current < 3) {
-            isAnimatingRef.current = true;
-            goToSlide(slideRef.current + 1);
-            setTimeout(() => {
-              isAnimatingRef.current = false;
-            }, 600);
-          }
+    // Section fade-in reveals
+    const sections = gsap.utils.toArray(".reveal-section");
+    sections.forEach((section) => {
+      gsap.fromTo(
+        section,
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.8,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: section,
+            start: "top 82%",
+            toggleActions: "play none none none",
+          },
         }
-        // Scrolling UP
-        else if (e.deltaY < -15) {
-          if (isAnimatingRef.current) return;
-          if (slideRef.current > 0) {
-            isAnimatingRef.current = true;
-            goToSlide(slideRef.current - 1);
-            setTimeout(() => {
-              isAnimatingRef.current = false;
-            }, 600);
-          }
-        }
-      } else {
-        // Features are complete (Slide 3)
-        // If scrolling UP at the top of the page, cycle backward into features
-        if (window.scrollY <= 10 && e.deltaY < -20) {
-          e.preventDefault();
-          if (isAnimatingRef.current) return;
-          isAnimatingRef.current = true;
-          goToSlide(2);
-          setTimeout(() => {
-            isAnimatingRef.current = false;
-          }, 600);
-        }
-        // If scrolling DOWN, page scrolls naturally into lower sections
-      }
-    };
-
-    const handleTouchStart = (e) => {
-      touchStartY = e.touches[0].clientY;
-    };
-
-    const handleTouchMove = (e) => {
-      if (window.scrollY > 30) return;
-      const touchY = e.touches[0].clientY;
-      const diff = touchStartY - touchY;
-
-      if (!featuresCompleteRef.current) {
-        if (e.cancelable) e.preventDefault();
-        if (diff > 35) {
-          if (isAnimatingRef.current) return;
-          if (slideRef.current < 3) {
-            isAnimatingRef.current = true;
-            goToSlide(slideRef.current + 1);
-            setTimeout(() => {
-              isAnimatingRef.current = false;
-            }, 600);
-          }
-        } else if (diff < -35) {
-          if (isAnimatingRef.current) return;
-          if (slideRef.current > 0) {
-            isAnimatingRef.current = true;
-            goToSlide(slideRef.current - 1);
-            setTimeout(() => {
-              isAnimatingRef.current = false;
-            }, 600);
-          }
-        }
-      } else {
-        if (window.scrollY <= 10 && diff < -40) {
-          if (e.cancelable) e.preventDefault();
-          if (isAnimatingRef.current) return;
-          isAnimatingRef.current = true;
-          goToSlide(2);
-          setTimeout(() => {
-            isAnimatingRef.current = false;
-          }, 600);
-        }
-      }
-    };
-
-    const handleKeyDown = (e) => {
-      if (window.scrollY > 30) return;
-
-      if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") {
-        if (!featuresCompleteRef.current && slideRef.current < 3) {
-          e.preventDefault();
-          if (isAnimatingRef.current) return;
-          isAnimatingRef.current = true;
-          goToSlide(slideRef.current + 1);
-          setTimeout(() => {
-            isAnimatingRef.current = false;
-          }, 600);
-        }
-      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
-        if (window.scrollY <= 10 && slideRef.current > 0) {
-          e.preventDefault();
-          if (isAnimatingRef.current) return;
-          isAnimatingRef.current = true;
-          goToSlide(slideRef.current - 1);
-          setTimeout(() => {
-            isAnimatingRef.current = false;
-          }, 600);
-        }
-      }
-    };
-
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("keydown", handleKeyDown);
+      );
+    });
 
     return () => {
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("keydown", handleKeyDown);
+      modelTrigger.kill();
+      ScrollTrigger.getAll().forEach((t) => t.kill());
     };
-  }, []);
+  }, [reducedMotion]);
 
-  // Initial setup for slides
+  // Manual drag rotation (desktop only)
   useLayoutEffect(() => {
-    const slides = gsap.utils.toArray(".timeline-slide");
-    gsap.set(slides, { autoAlpha: 0, y: 25, scale: 0.98 });
-    gsap.set(slides[0], { autoAlpha: 1, y: 0, scale: 1 });
-  }, []);
+    if (reducedMotion) return;
+    const container = modelContainerRef.current;
+    if (!container) return;
 
-  const changeExercise = (ex) => {
-    setSimExercise(ex);
-    setSimAngle(EXERCISES[ex].defaultAngle);
+    const handlePointerDown = (e) => {
+      if (e.target.closest("button, a, input")) return;
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.clientX;
+      dragStartRotationRef.current = manualRotationRef.current;
+      container.style.cursor = "grabbing";
+    };
+
+    const handlePointerMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const deltaX = e.clientX - dragStartXRef.current;
+      const rotationDelta = deltaX * 0.005;
+      manualRotationRef.current = dragStartRotationRef.current + rotationDelta;
+
+      const hero = heroRef.current;
+      if (hero) {
+        const scrollTrigger = ScrollTrigger.getById("hero-scroll");
+        const scrollProgress = scrollTrigger ? scrollTrigger.progress : 0;
+        const scrollRotation = scrollProgress * Math.PI * 2.5;
+        modelRef.current?.setTransform(0, scrollRotation + manualRotationRef.current, 0, 0);
+      }
+    };
+
+    const handlePointerUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        container.style.cursor = "grab";
+      }
+    };
+
+    const isDesktop = window.matchMedia("(pointer: fine)").matches;
+    if (!isDesktop) return;
+
+    container.style.cursor = "grab";
+    container.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+
+    return () => {
+      container.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [reducedMotion]);
+
+  // ── Section animations: How It Works + Detect/Analyze/Coach + Showcase ──
+  useLayoutEffect(() => {
+    if (reducedMotion) return;
+
+    const ctx = gsap.context(() => {
+      // ── A. "Three steps to better training" ──
+      const hiw = howItWorksRef.current;
+      if (hiw) {
+        const heading = howItWorksHeadingRef.current;
+        const line = howItWorksLineRef.current;
+        const markers = howItWorksMarkersRef.current.filter(Boolean);
+        const texts = howItWorksTextsRef.current.filter(Boolean);
+
+        if (heading) {
+          gsap.fromTo(
+            heading,
+            { opacity: 0, y: 22 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: hiw,
+                start: "top 78%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        if (line) {
+          gsap.fromTo(
+            line,
+            { scaleX: 0 },
+            {
+              scaleX: 1,
+              duration: 1.0,
+              ease: "power2.inOut",
+              transformOrigin: "left center",
+              scrollTrigger: {
+                trigger: hiw,
+                start: "top 72%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        markers.forEach((marker, i) => {
+          gsap.fromTo(
+            marker,
+            { opacity: 0, scale: 0.85 },
+            {
+              opacity: 1,
+              scale: 1,
+              duration: 0.5,
+              delay: 0.15 + i * 0.12,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: hiw,
+                start: "top 72%",
+                toggleActions: "play none none none",
+              },
+              onStart: () => {
+                gsap.to(marker, {
+                  boxShadow: "0 0 0 4px rgba(99,102,241,0.15)",
+                  duration: 0.3,
+                  yoyo: true,
+                  repeat: 1,
+                });
+              },
+            }
+          );
+        });
+
+        texts.forEach((text, i) => {
+          gsap.fromTo(
+            text,
+            { opacity: 0, y: 16 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              delay: 0.2 + i * 0.1,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: hiw,
+                start: "top 72%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        });
+      }
+
+      // ── B. Capabilities showcase card entrance ──
+      const showcase = showcaseCardRef.current;
+      if (showcase) {
+        gsap.fromTo(
+          showcase,
+          { opacity: 0, y: 24 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.7,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: showcase,
+              start: "top 80%",
+              toggleActions: "play none none none",
+            },
+          }
+        );
+      }
+
+      // Visual panel glow shift removed (no target element assigned)
+
+      // ── C. "Detect → Analyze → Coach" flow ──
+      const flow = processFlowRef.current;
+      if (flow) {
+        const pHeading = processHeadingRef.current;
+        const pLine = processLineRef.current;
+        const pStages = processStagesRef.current.filter(Boolean);
+        const pIcons = processIconsRef.current.filter(Boolean);
+
+        if (pHeading) {
+          gsap.fromTo(
+            pHeading,
+            { opacity: 0, y: 20 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.6,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: flow,
+                start: "top 80%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        if (pLine) {
+          gsap.fromTo(
+            pLine,
+            { scaleX: 0 },
+            {
+              scaleX: 1,
+              duration: 0.9,
+              ease: "power2.inOut",
+              transformOrigin: "left center",
+              scrollTrigger: {
+                trigger: flow,
+                start: "top 75%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        }
+
+        pStages.forEach((stage, i) => {
+          gsap.fromTo(
+            stage,
+            { opacity: 0, y: 18 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.5,
+              delay: 0.15 + i * 0.15,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: flow,
+                start: "top 75%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        });
+
+        pIcons.forEach((icon, i) => {
+          gsap.fromTo(
+            icon,
+            { opacity: 0.6, scale: 0.96 },
+            {
+              opacity: 1,
+              scale: 1,
+              duration: 0.4,
+              delay: 0.2 + i * 0.15,
+              ease: "power2.out",
+              scrollTrigger: {
+                trigger: flow,
+                start: "top 75%",
+                toggleActions: "play none none none",
+              },
+            }
+          );
+        });
+      }
+    });
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
+
+  // ── Tab transition animation ──
+  useLayoutEffect(() => {
+    if (reducedMotion || !tabContentRef.current) return;
+    const panels = tabContentRef.current.querySelectorAll("[role='tabpanel']");
+    panels.forEach((panel) => {
+      if (!panel.hidden) {
+        gsap.fromTo(
+          panel,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+        );
+      }
+    });
+  }, [activeTab, reducedMotion]);
+
+  const handleModelLoaded = () => {
+    setModelLoaded(true);
+  };
+
+  const addPanelRef = (el, index) => {
+    floatingPanelsRef.current[index] = el;
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-[#F8FAFC] font-sans text-slate-900 selection:bg-indigo-500 selection:text-white">
-      {/* ── Layered Atmospheric Glass Glow Spheres (Continuous Across Entire Page) ── */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-36 left-1/4 h-[700px] w-[700px] rounded-full bg-gradient-to-br from-indigo-300/35 via-violet-300/25 to-transparent blur-[160px]" />
-        <div className="absolute top-1/4 -right-28 h-[650px] w-[650px] rounded-full bg-gradient-to-bl from-violet-300/30 via-pink-300/20 to-transparent blur-[150px]" />
-        <div className="absolute top-1/2 left-1/3 -translate-x-1/2 h-[500px] w-[500px] rounded-full bg-indigo-200/25 blur-[140px]" />
-        <div className="absolute top-2/3 -left-28 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-sky-300/35 via-cyan-200/25 to-transparent blur-[150px]" />
-        <div className="absolute bottom-10 right-1/4 h-[550px] w-[550px] rounded-full bg-gradient-to-tl from-indigo-200/35 via-violet-200/20 to-transparent blur-[140px]" />
-      </div>
-
+    <div className="min-h-screen bg-gradient-to-b from-[#F0F4FF] to-[#FAFAFF] text-slate-900 selection:bg-indigo-500/30 selection:text-indigo-900">
       <Navbar />
 
-      <main id="main" className="relative z-10">
-
+      <main id="main" className="relative">
         {/* ═════════════════════════════════════════════════════
-            1. HERO + FEATURES PINNED EXPERIENCE (Sticky 3D)
+            STAGE A: HERO
         ══════════════════════════════════════════════════════ */}
         <section
-          id="home-features-pin"
-          ref={pinRef}
-          className="relative h-screen w-full overflow-hidden"
+          ref={heroRef}
+          className="relative min-h-screen overflow-hidden px-6 pt-28 pb-16 sm:px-10 lg:px-16"
         >
-          {/* Subtle Ambient Grid & Frosted Overlay */}
-          <div className="pointer-events-none absolute inset-0 z-0">
-            <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:28px_28px] opacity-50" />
-            <div className="absolute inset-0 bg-white/20 backdrop-blur-[2px]" />
+          {/* Atmospheric background */}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-[700px] w-[700px] rounded-full bg-indigo-400/15 blur-[140px]" />
+            <div className="absolute top-1/4 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-400/10 blur-[120px]" />
+            <div className="absolute bottom-0 left-1/4 h-[300px] w-[300px] rounded-full bg-blue-400/8 blur-[100px]" />
           </div>
 
-          {/* ── Fixed Desktop 3D Canvas (Pinned In Viewport) ── */}
-          <div className="pointer-events-none absolute inset-0 z-10 hidden md:block">
-            <div className="h-full w-full">
-              <FitnessModelScene
-                ref={modelRef}
-                modelUrl={StudioFitnessPose}
-                variant="unified-journey"
-                scrollTriggerElement={pinRef.current}
-                onModelLoaded={() => ScrollTrigger.refresh()}
-              />
+          {/* Subtle grid overlay */}
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] [background-size:64px_64px]" />
+
+          <div className="relative mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-8">
+            {/* Hero Copy */}
+            <div className="relative z-10 text-center lg:text-left">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-xs font-medium text-indigo-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                <span>AI-Powered Fitness Coaching</span>
+              </div>
+
+              <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl xl:text-7xl">
+                Your personal
+                <br />
+                <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                  AI fitness coach.
+                </span>
+              </h1>
+
+              <p className="mt-6 max-w-lg text-base leading-relaxed text-slate-600 sm:text-lg lg:mx-0">
+                Train smarter. Track every rep. Improve your form with AI-powered
+                workout guidance.
+              </p>
+
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+                <Link
+                  to={user ? "/WorkoutPlan" : "/Register"}
+                  className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-indigo-700 hover:shadow-indigo-500/40 active:scale-[0.98] sm:w-auto"
+                >
+                  <span>Start Training</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.getElementById("product-showcase")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-7 py-3 text-sm font-semibold text-slate-700 backdrop-blur-sm transition-all duration-200 hover:border-indigo-300 hover:bg-white active:scale-[0.98] sm:w-auto"
+                >
+                  <span>Explore SIFRA</span>
+                </button>
+              </div>
+
+              <p className="mt-6 text-xs text-slate-500">
+                No equipment required. Works in your browser.
+              </p>
             </div>
-          </div>
 
-          {/* ── Timeline Slides Container (Stacked on Top of Model) ── */}
-          <div className="relative z-20 h-full w-full md:absolute md:inset-0 pointer-events-none">
-
-            {/* SLIDE 0 — HERO */}
+            {/* 3D Model + Floating Panels */}
             <div
-              id="home"
-              className="timeline-slide relative md:absolute md:inset-0 flex h-full w-full items-center px-6 sm:px-10 lg:px-16 pointer-events-auto"
+              ref={modelContainerRef}
+              className="relative mx-auto h-[420px] w-full max-w-md sm:h-[520px] lg:h-[640px] lg:max-w-none"
             >
-              <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 md:grid-cols-2">
-                {/* Mobile model */}
-                <div className="order-2 block h-[380px] w-full sm:h-[450px] md:hidden">
-                  <FitnessModelScene modelUrl={StudioFitnessPose} variant="hero" />
+              {/* Loading spinner */}
+              {!modelLoaded && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-500" />
                 </div>
+              )}
 
-                {/* Desktop placeholder for 3D model on the LEFT */}
-                <div className="hidden md:block" />
-
-                {/* Hero Copy (RIGHT side) */}
-                <div className="order-1 pt-6 text-center md:pt-0 md:text-left">
-                  {/* Frosted Eyebrow Badge */}
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3.5 py-1 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-xl ring-1 ring-white/80">
-                    <span className="h-2 w-2 rounded-full bg-indigo-600" />
-                    <span>Real-Time Biomechanical AI</span>
-                  </div>
-
-                  {/* Main Title */}
-                  <h1 className="max-w-xl text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
-                    Your AI Coach. <span className="text-indigo-600">Every Rep Perfected.</span>
-                  </h1>
-
-                  {/* Description */}
-                  <p className="mt-4 max-w-lg text-sm sm:text-base font-normal leading-relaxed text-slate-600">
-                    Instant computer vision pose correction, automatic rep counting, and voice feedback coaching — directly in your browser.
-                  </p>
-
-                  {/* Glass Action Buttons */}
-                  <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row md:justify-start">
-                    <Link
-                      to="/Workout"
-                      className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all duration-200 hover:bg-indigo-700 hover:shadow-indigo-600/35 active:scale-[0.98] sm:w-auto"
-                    >
-                      <span>Start Workout Station</span>
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-
-                    <Link
-                      to="/WorkoutPlan"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/90 bg-white/80 px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-2xl ring-1 ring-white/60 transition-all duration-200 hover:border-slate-300 hover:bg-white active:scale-[0.98] sm:w-auto"
-                    >
-                      <span>Build Custom Plan</span>
-                    </Link>
-                  </div>
-
-                  {/* Mini feature status indicator */}
-                  <div className="mt-6 flex items-center justify-center md:justify-start gap-4 text-xs text-slate-500 font-medium">
-                    <div className="flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                      <span>Zero Sensors Required</span>
-                    </div>
-                    <span>•</span>
-                    <div className="flex items-center gap-1.5">
-                      <Activity className="h-4 w-4 text-indigo-600" />
-                      <span>Sub-30ms Latency</span>
-                    </div>
-                  </div>
-                </div>
+              {/* 3D Model */}
+              <div className="absolute inset-0">
+                <FitnessModelScene
+                  ref={modelRef}
+                  modelUrl={StudioFitnessPose}
+                  variant="hero"
+                  onModelLoaded={handleModelLoaded}
+                />
               </div>
-            </div>
 
-            {/* SLIDE 1 — FEATURE 01: FORM ACCURACY (Text on LEFT, Model on RIGHT) */}
-            <div
-              id="features"
-              className="timeline-slide relative md:absolute md:inset-0 flex h-full w-full items-center px-6 sm:px-10 lg:px-16 pointer-events-auto"
-            >
-              <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 md:grid-cols-2">
-                <div className="text-center md:text-left">
-                  {/* Heavy Frosted Glass Feature Card */}
-                  <div className="relative overflow-hidden rounded-3xl border border-white/90 bg-white/65 p-7 sm:p-9 shadow-xl shadow-slate-200/40 backdrop-blur-3xl ring-1 ring-white/70">
-                    <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-indigo-300/20 blur-3xl" />
-
-                    <span className="mb-3 inline-block rounded-full border border-indigo-200/80 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-700 backdrop-blur-md">
-                      Feature 01
-                    </span>
-
-                    <h2 className="mb-3 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-                      98% Form Accuracy
-                    </h2>
-
-                    <p className="max-w-md text-sm sm:text-base leading-relaxed text-slate-600">
-                      Real-time AI posture analysis powered by high-frequency computer vision. Detects deviations in knee travel, spine linearity, and hip depth to keep your joints protected.
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5 pt-2">
-                      <span className="rounded-lg border border-slate-200/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl">
-                        33 Joint Landmarks
-                      </span>
-                      <span className="rounded-lg border border-slate-200/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl">
-                        Sub-Degree Precision
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="hidden md:block" />
-              </div>
-            </div>
-
-            {/* SLIDE 2 — FEATURE 02: SMART REP COUNTING (Text on RIGHT, Model on LEFT) */}
-            <div className="timeline-slide relative md:absolute md:inset-0 flex h-full w-full items-center px-6 sm:px-10 lg:px-16 pointer-events-auto">
-              <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 md:grid-cols-2">
-                <div className="hidden md:block" />
-
-                <div className="text-center md:text-left">
-                  {/* Heavy Frosted Glass Feature Card */}
-                  <div className="relative overflow-hidden rounded-3xl border border-white/90 bg-white/65 p-7 sm:p-9 shadow-xl shadow-slate-200/40 backdrop-blur-3xl ring-1 ring-white/70">
-                    <div className="pointer-events-none absolute -left-8 -top-8 h-40 w-40 rounded-full bg-violet-300/20 blur-3xl" />
-
-                    <span className="mb-3 inline-block rounded-full border border-indigo-200/80 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-700 backdrop-blur-md">
-                      Feature 02
-                    </span>
-
-                    <h2 className="mb-3 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-                      Smart Rep Counting
-                    </h2>
-
-                    <p className="max-w-md text-sm sm:text-base leading-relaxed text-slate-600">
-                      Automatically tracks cadence, concentric and eccentric tempos, and enforces true full range-of-motion. Zero manual keyboard or screen taps required during sets.
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5 pt-2">
-                      <span className="rounded-lg border border-slate-200/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl">
-                        Automated Ingestion
-                      </span>
-                      <span className="rounded-lg border border-slate-200/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl">
-                        Cadence Velocity
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* SLIDE 3 — FEATURE 03: VOICE COACHING (Text on LEFT, Model on RIGHT) */}
-            <div className="timeline-slide relative md:absolute md:inset-0 flex h-full w-full items-center px-6 sm:px-10 lg:px-16 pointer-events-auto">
-              <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-8 md:grid-cols-2">
-                <div className="text-center md:text-left">
-                  {/* Heavy Frosted Glass Feature Card */}
-                  <div className="relative overflow-hidden rounded-3xl border border-white/90 bg-white/65 p-7 sm:p-9 shadow-xl shadow-slate-200/40 backdrop-blur-3xl ring-1 ring-white/70">
-                    <div className="pointer-events-none absolute -right-8 -bottom-8 h-40 w-40 rounded-full bg-sky-300/20 blur-3xl" />
-
-                    <span className="mb-3 inline-block rounded-full border border-indigo-200/80 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-700 backdrop-blur-md">
-                      Feature 03
-                    </span>
-
-                    <h2 className="mb-3 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-                      Real-Time Voice Coaching
-                    </h2>
-
-                    <p className="max-w-md text-sm sm:text-base leading-relaxed text-slate-600">
-                      Receive instant audio coaching cues tuned to your exact technique flaws — just like having an elite personal trainer right in your corner.
-                    </p>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5 pt-2">
-                      <span className="rounded-lg border border-slate-200/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl">
-                        Sub-Second Audio Cue
-                      </span>
-                      <span className="rounded-lg border border-slate-200/70 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm backdrop-blur-xl">
-                        Adaptive Motivation
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="hidden md:block" />
-              </div>
-            </div>
-
-          </div>
-
-          {/* Interactive Slide Pills Indicator */}
-          <div className="pointer-events-auto absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full border border-white/90 bg-white/75 p-1.5 shadow-sm backdrop-blur-2xl ring-1 ring-white/70">
-            {[
-              { id: 0, label: "Overview" },
-              { id: 1, label: "01 Form" },
-              { id: 2, label: "02 Reps" },
-              { id: 3, label: "03 Voice" },
-            ].map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => goToSlide(item.id)}
-                className={`cursor-pointer rounded-full px-3.5 py-1 text-xs font-medium transition-all ${
-                  currentSlide === item.id
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/60"
-                }`}
+              {/* Floating UI Panels */}
+              <div
+                ref={(el) => addPanelRef(el, 0)}
+                className="absolute top-8 left-4 z-20 hidden sm:block"
               >
-                {item.label}
-              </button>
-            ))}
+                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      AI Pose Detection
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs font-medium text-slate-800">33 landmarks tracked</p>
+                </div>
+              </div>
 
-            {featuresComplete && (
-              <button
-                type="button"
-                onClick={() => {
-                  document.getElementById("simulator")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="cursor-pointer ml-1 inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white transition hover:bg-slate-800 active:scale-95 animate-in fade-in duration-300"
+              <div
+                ref={(el) => addPanelRef(el, 1)}
+                className="absolute top-16 right-4 z-20 hidden sm:block"
               >
-                <span>Explore ↓</span>
-              </button>
-            )}
+                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
+                  <div className="flex items-center gap-2">
+                    <Dumbbell className="h-3.5 w-3.5 text-indigo-500" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      Rep Count
+                    </span>
+                  </div>
+                  <p className="mt-1 text-lg font-bold text-slate-900">12</p>
+                </div>
+              </div>
+
+              <div
+                ref={(el) => addPanelRef(el, 2)}
+                className="absolute bottom-24 left-6 z-20 hidden md:block"
+              >
+                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-3.5 w-3.5 text-violet-500" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      Form Feedback
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 w-28 rounded-full bg-slate-200">
+                    <div className="h-1.5 w-4/5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div
+                ref={(el) => addPanelRef(el, 3)}
+                className="absolute bottom-16 right-6 z-20 hidden md:block"
+              >
+                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="h-3.5 w-3.5 text-indigo-500" />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      AI Coach
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs font-medium text-slate-800">Voice cue active</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* ═════════════════════════════════════════════════════
-            2. FAST TECH SPEC MARQUEE STRIP
+            2. MARQUEE (Feature strip)
         ══════════════════════════════════════════════════════ */}
-        <div className="relative z-20 overflow-hidden border-y border-white/80 bg-white/60 py-3.5 backdrop-blur-2xl">
+        <section className="relative overflow-hidden border-y border-slate-200 bg-white py-5">
           <style>{`
-            @keyframes marqueeLoop {
+            @keyframes marqueeScroll {
               0% { transform: translateX(0); }
               100% { transform: translateX(-50%); }
             }
-            .tech-marquee-track {
+            .marquee-track {
               display: flex;
               width: max-content;
-              animation: marqueeLoop 30s linear infinite;
+              animation: marqueeScroll 24s linear infinite;
             }
-            .tech-marquee-track:hover {
+            .marquee-track:hover {
               animation-play-state: paused;
             }
+            @media (prefers-reduced-motion: reduce) {
+              .marquee-track {
+                animation: none;
+              }
+            }
           `}</style>
-          <div className="tech-marquee-track">
-            {[...TECH_PILLS, ...TECH_PILLS].map((item, i) => (
+          <div className="marquee-track">
+            {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
               <span
                 key={i}
-                className="mx-6 flex items-center gap-3 whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+                className="mx-8 flex items-center gap-3 whitespace-nowrap text-sm font-semibold tracking-[0.12em] text-slate-400"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                <span className="text-indigo-500">✳</span>
                 <span>{item}</span>
               </span>
             ))}
           </div>
-        </div>
+        </section>
 
         {/* ═════════════════════════════════════════════════════
-            3. LIVE TELEMETRY SIMULATOR SECTION
+            3. PRODUCT SHOWCASE
         ══════════════════════════════════════════════════════ */}
-        <section id="simulator" className="relative px-6 py-24 sm:px-10 lg:px-16">
+        <section
+          id="product-showcase"
+          className="reveal-section relative px-6 py-24 sm:px-10 lg:px-16"
+        >
           <div className="mx-auto max-w-7xl">
-            {/* Header */}
-            <div className="mb-10 max-w-xl">
-              <span className="mb-3 inline-block rounded-full border border-white/80 bg-white/70 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 shadow-sm backdrop-blur-xl">
-                Live Simulator
+            <div className="mb-12 max-w-2xl">
+              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                Product
               </span>
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                Target Joint Telemetry
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Train with real-time AI guidance
               </h2>
-              <p className="mt-3 text-slate-600">
-                Adjust the telemetry angle slider below to experience how SIFRA live evaluates joint kinematics in real time.
+              <p className="mt-4 text-base leading-relaxed text-slate-600">
+                SIFRA uses your webcam to detect your pose, count repetitions,
+                assess your form, and provide voice coaching — all without
+                leaving your browser.
               </p>
             </div>
 
-            {/* Exercise Selector Buttons */}
-            <div className="mb-7 flex flex-wrap gap-2.5">
-              {Object.entries(EXERCISES).map(([key, ex]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => changeExercise(key)}
-                  className={`cursor-pointer rounded-2xl border px-5 py-2.5 text-sm font-semibold transition-all ${
-                    simExercise === key
-                      ? "border-indigo-600 bg-indigo-600 text-white shadow-xl shadow-indigo-600/25"
-                      : "border-white/90 bg-white/70 text-slate-700 backdrop-blur-2xl hover:border-indigo-300 hover:bg-white"
-                  }`}
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
+              {/* Window chrome */}
+              <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
+                <div className="h-3 w-3 rounded-full bg-slate-300" />
+                <div className="h-3 w-3 rounded-full bg-slate-300" />
+                <div className="h-3 w-3 rounded-full bg-slate-300" />
+                <span className="ml-2 text-xs text-slate-400">SIFRA AI — Workout Session</span>
+              </div>
+
+              {/* Video */}
+              <div className="relative">
+                <video
+                  className="w-full"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
                 >
-                  {ex.label}
-                </button>
-              ))}
-            </div>
+                  <source src={Pushups} type="video/mp4" />
+                </video>
 
-            {/* 3 Telemetry Data Cards */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              {/* Telemetry Meter Slider */}
-              <div className="rounded-3xl border border-white/90 bg-white/60 p-7 shadow-2xl shadow-slate-200/50 backdrop-blur-3xl ring-1 ring-white/60">
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Target Joint Telemetry
-                </span>
-                <div className="mb-4 text-2xl font-bold text-slate-900">
-                  {sim.name}
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <div className="mb-1.5 flex justify-between font-mono text-xs text-slate-600">
-                      <span>{EXERCISES[simExercise].joint}</span>
-                      <span className="font-bold text-indigo-600">{simAngle}°</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={EXERCISES[simExercise].min}
-                      max={EXERCISES[simExercise].max}
-                      value={simAngle}
-                      onChange={(e) => setSimAngle(Number(e.target.value))}
-                      className="h-1.5 w-full cursor-pointer rounded-lg bg-slate-200 accent-indigo-600"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between border-t border-slate-100/80 pt-2 text-xs">
-                    <span className="text-slate-500">Biomechanical Score</span>
-                    <span className="font-mono text-sm font-bold text-emerald-600">
-                      {sim.score}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Form Status Card */}
-              <div className="flex flex-col justify-between rounded-3xl border border-white/90 bg-white/60 p-7 shadow-2xl shadow-slate-200/50 backdrop-blur-3xl ring-1 ring-white/60">
-                <div>
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Kinematic Classification
+                {/* Overlay labels */}
+                <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
+                  <span className="rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-sm shadow-sm">
+                    <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Pose Detection Active
                   </span>
-                  <div className="text-xl font-bold text-slate-900">Form Status</div>
-                </div>
-
-                <div className="my-5">
-                  <div
-                    className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold shadow-sm ${
-                      sim.ok
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                        : "border-amber-200 bg-amber-50 text-amber-800"
-                    }`}
-                  >
-                    {sim.ok ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
-                    )}
-                    <span>{sim.status}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-slate-100/80 pt-2 text-xs">
-                  <span className="text-slate-500">Active Joint Target:</span>
-                  <span className="font-semibold text-slate-700">
-                    {EXERCISES[simExercise].joint}
+                  <span className="rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-sm shadow-sm">
+                    Rep Count: 12
                   </span>
-                </div>
-              </div>
-
-              {/* Real-Time Tactical Feedback */}
-              <div className="flex flex-col justify-between rounded-3xl border border-white/90 bg-white/60 p-7 shadow-2xl shadow-slate-200/50 backdrop-blur-3xl ring-1 ring-white/60">
-                <div>
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    AI Tactical Feedback
+                  <span className="rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-sm shadow-sm">
+                    Form: Good
                   </span>
-                  <div className="text-xl font-bold text-slate-900">Coaching Cue</div>
-                </div>
-
-                <p className="my-5 border-l-2 border-indigo-500 pl-3.5 text-sm font-medium italic leading-relaxed text-slate-700">
-                  &ldquo;{sim.cue}&rdquo;
-                </p>
-
-                <div className="flex items-center justify-between border-t border-slate-100/80 pt-2 text-xs">
-                  <span className="text-slate-500">Audio Synthesis Engine:</span>
-                  <span className="font-semibold text-indigo-600">Active</span>
                 </div>
               </div>
             </div>
@@ -783,115 +761,516 @@ export default function Landing_Page() {
         </section>
 
         {/* ═════════════════════════════════════════════════════
-            4. PAGE 2: INTERACTIVE AI TRAINER (Ava Steele)
+            4. CAPABILITIES — Alternating Layout
         ══════════════════════════════════════════════════════ */}
         <section
-          id="trainer"
-          data-model-section
-          className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 items-center gap-10 px-6 py-20 sm:px-10 lg:grid-cols-2 lg:px-16"
+          id="capabilities"
+          className="reveal-section relative bg-[#F5F3FF] px-6 py-24 sm:px-10 lg:px-16"
         >
-          <div className="text-center lg:text-left">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3.5 py-1 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-xl">
-              <span className="h-2 w-2 rounded-full bg-indigo-600" />
-              <span>Next-Gen AI Trainer</span>
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-12 max-w-2xl">
+              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                Capabilities
+              </span>
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Everything you need to train smarter
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-600">
+                Built on computer vision and machine learning, running entirely
+                in your browser.
+              </p>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
-              Meet Your AI <span className="text-indigo-600">Personal Coach</span>
-            </h2>
+            {/* ── Interactive Feature Showcase ── */}
+            <div ref={showcaseCardRef} className="mb-16">
+              <div className="mb-8 text-center sm:text-left">
+                <h3 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                  Your workout. Understood.
+                </h3>
+                <p className="mt-2 text-base leading-relaxed text-slate-600">
+                  See how SIFRA transforms movement into actionable workout feedback.
+                </p>
+              </div>
 
-            <p className="mt-4 max-w-xl text-sm sm:text-base font-normal leading-relaxed text-slate-600">
-              Available 24/7 with real-time biometric feedback, adaptive training programs, and interactive 3D motion analytics.
-            </p>
-
-            <div className="mt-8 flex justify-center lg:justify-start">
-              <button
-                type="button"
-                onClick={() => {
-                  const audio = new Audio(Speaking);
-                  audio.play();
-                }}
-                className="cursor-pointer rounded-2xl bg-indigo-600 px-7 py-3.5 font-semibold text-white shadow-xl shadow-indigo-600/30 transition-all duration-300 hover:scale-105 hover:bg-indigo-700 active:scale-[0.98]"
+              {/* Tab controls */}
+              <div
+                role="tablist"
+                aria-label="Feature showcase"
+                className="mb-6 flex flex-wrap gap-2"
               >
-                Listen to Sifra
-              </button>
-            </div>
-          </div>
+                {[
+                  { id: "pose", label: "Pose Intelligence" },
+                  { id: "reps", label: "Smart Repetitions" },
+                  { id: "form", label: "Form Feedback" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    aria-controls={`panel-${tab.id}`}
+                    id={`tab-${tab.id}`}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`cursor-pointer rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
+                      activeTab === tab.id
+                        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
+                        : "border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-          {/* Interactive 3D Model Card */}
-          <div className="group relative h-[480px] w-full rounded-3xl border border-white/90 bg-white/60 p-2 shadow-2xl shadow-indigo-500/10 backdrop-blur-3xl ring-1 ring-white/60 transition-all duration-500 hover:border-indigo-300 lg:h-[620px]">
-            <div className="pointer-events-none absolute right-4 top-4 z-20 flex items-center gap-1.5 rounded-full border border-white/90 bg-white/85 px-3.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-2xl">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-600" />
-              <span>Interactive 3D • Move cursor or drag</span>
+              {/* Tab panels */}
+              <div ref={tabContentRef} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                {/* Pose Intelligence */}
+                <div
+                  role="tabpanel"
+                  id="panel-pose"
+                  aria-labelledby="tab-pose"
+                  hidden={activeTab !== "pose"}
+                  className="p-6 sm:p-8"
+                >
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">
+                        Pose Intelligence
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                        SIFRA uses MediaPipe to detect 33 body landmarks in real
+                        time, directly in your browser. No wearables, no extra
+                        hardware — just your webcam and AI.
+                      </p>
+                      <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>33-point skeletal landmark tracking</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Runs entirely client-side via WebGL</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Sub-second pose estimation latency</span>
+                        </li>
+                      </ul>
+                    </div>
+                    {/* Illustration: clean landmark dots (no skeleton lines) */}
+                    <div className="flex items-center justify-center">
+                      <div className="relative h-48 w-32 rounded-2xl bg-gradient-to-b from-indigo-50 to-violet-50 border border-indigo-100 p-4">
+                        {[
+                          { x: 50, y: 8 }, { x: 50, y: 16 }, { x: 40, y: 22 },
+                          { x: 60, y: 22 }, { x: 35, y: 34 }, { x: 65, y: 34 },
+                          { x: 50, y: 36 }, { x: 42, y: 48 }, { x: 58, y: 48 },
+                          { x: 40, y: 62 }, { x: 60, y: 62 }, { x: 38, y: 78 },
+                          { x: 62, y: 78 },
+                        ].map((pt, i) => (
+                          <div
+                            key={i}
+                            className="absolute h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.5)]"
+                            style={{
+                              left: `${pt.x}%`,
+                              top: `${pt.y}%`,
+                              transform: "translate(-50%, -50%)",
+                            }}
+                          />
+                        ))}
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-medium text-indigo-400">
+                          Preview
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smart Repetitions */}
+                <div
+                  role="tabpanel"
+                  id="panel-reps"
+                  aria-labelledby="tab-reps"
+                  hidden={activeTab !== "reps"}
+                  className="p-6 sm:p-8"
+                >
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">
+                        Smart Repetitions
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                        Reps and sets are counted automatically using phase
+                        detection. The tracker identifies concentric and eccentric
+                        movements to count only complete repetitions.
+                      </p>
+                      <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Phase-based rep counting (up/down)</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Set tracking with configurable targets</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Supports squats, push-ups, and planks</span>
+                        </li>
+                      </ul>
+                    </div>
+                    {/* Animated rep counter preview */}
+                    <div className="flex items-center justify-center">
+                      <div className="flex flex-col items-center rounded-2xl border border-indigo-100 bg-gradient-to-b from-indigo-50 to-violet-50 px-8 py-6">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">
+                          Preview
+                        </p>
+                        <p className="mt-2 text-5xl font-bold text-indigo-600 tabular-nums">
+                          {repCount}
+                        </p>
+                        <p className="mt-1 text-xs font-medium text-slate-500">
+                          Reps Completed
+                        </p>
+                        <div className="mt-4 h-2 w-32 rounded-full bg-slate-200">
+                          <div
+                            className="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-300"
+                            style={{ width: `${(repCount / 12) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Feedback */}
+                <div
+                  role="tabpanel"
+                  id="panel-form"
+                  aria-labelledby="tab-form"
+                  hidden={activeTab !== "form"}
+                  className="p-6 sm:p-8"
+                >
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-900">
+                        Form Feedback
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                        Each completed repetition is evaluated using rule-based
+                        form assessment and, where available, machine learning
+                        classification. Feedback is delivered as instant coaching
+                        cues via voice.
+                      </p>
+                      <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Per-repetition form scoring</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Rule-based + ML assessment</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                          <span>Voice coaching cues in real time</span>
+                        </li>
+                      </ul>
+                    </div>
+                    {/* Feedback preview */}
+                    <div className="flex items-center justify-center">
+                      <div className="w-full max-w-xs rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                          Preview
+                        </p>
+                        <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <span className="text-sm font-medium text-emerald-700">
+                            Good form — keep it up!
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <span className="text-sm font-medium text-amber-700">
+                            Go deeper on next rep
+                          </span>
+                        </div>
+                        <p className="mt-3 text-xs text-slate-400">
+                          Feedback updates per completed repetition.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <FitnessModelScene modelUrl={AvaSteele} variant="workout" />
+            {/* ── Three-Step Intelligence Flow ── */}
+            <div ref={processFlowRef} className="mt-16">
+              <div ref={processHeadingRef} className="mb-8">
+                <h3 className="text-xl font-bold tracking-tight text-slate-900">
+                  How SIFRA processes your movement
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  A three-stage pipeline from camera input to coaching output.
+                </p>
+              </div>
+
+              <div className="relative">
+                {/* Connecting line (desktop) */}
+                <div
+                  ref={processLineRef}
+                  className="absolute top-10 left-0 hidden h-px w-full origin-left bg-gradient-to-r from-indigo-200 via-violet-200 to-indigo-200 md:block"
+                  style={{ transform: "scaleX(0)" }}
+                />
+
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
+                  {[
+                    {
+                      step: "01",
+                      title: "DETECT",
+                      desc: "MediaPipe identifies 33 body landmarks from your webcam feed in real time. No wearables required.",
+                      icon: Eye,
+                    },
+                    {
+                      step: "02",
+                      title: "ANALYZE",
+                      desc: "Exercise-specific logic evaluates movement phases, joint angles, and repetition completion. Rule-based and ML assessment where available.",
+                      icon: Zap,
+                    },
+                    {
+                      step: "03",
+                      title: "COACH",
+                      desc: "Instant coaching cues are delivered via voice and on-screen feedback. Form scores are tracked per repetition.",
+                      icon: Volume2,
+                    },
+                  ].map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={item.step}
+                        ref={(el) => { processStagesRef.current[index] = el; }}
+                        className="relative"
+                      >
+                        <div className="mb-4 flex items-center gap-3">
+                          <div
+                            ref={(el) => { processIconsRef.current[index] = el; }}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50"
+                          >
+                            <Icon className="h-4 w-4 text-indigo-600" />
+                          </div>
+                          <span className="text-xs font-bold tracking-wider text-indigo-400">
+                            {item.step}
+                          </span>
+                        </div>
+                        <h4 className="text-base font-bold text-slate-900">
+                          {item.title}
+                        </h4>
+                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
+                          {item.desc}
+                        </p>
+                        {index < 2 && (
+                          <div className="mt-4 h-px w-full bg-indigo-200 md:hidden" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* ═════════════════════════════════════════════════════
-            5. TESTIMONIALS MARQUEE: "WHAT PEOPLE SAY"
+            5. HOW IT WORKS
         ══════════════════════════════════════════════════════ */}
-        <section className="relative overflow-hidden border-t border-white/80 bg-white/40 py-20 backdrop-blur-3xl">
-          <div className="mx-auto mb-12 max-w-7xl px-6 text-center sm:px-10">
-            <span className="mb-3 inline-block rounded-full border border-white/80 bg-white/70 px-4 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 shadow-sm backdrop-blur-xl">
-              Community & Coaches
-            </span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              What Athletes & Coaches Say
-            </h2>
-            <p className="mt-3 text-slate-600">
-              Trusted by strength athletes, physical therapists, and performance coaches worldwide.
-            </p>
-          </div>
+        <section
+          ref={howItWorksRef}
+          id="how-it-works"
+          className="reveal-section relative bg-white px-6 py-24 sm:px-10 lg:px-16"
+        >
+          <div className="mx-auto max-w-7xl">
+            <div ref={howItWorksHeadingRef} className="mb-16 max-w-2xl">
+              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                How It Works
+              </span>
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Three steps to better training
+              </h2>
+            </div>
 
-          <style>{`
-            @keyframes testimonialScroll {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-50%); }
-            }
-            .testimonial-track {
-              display: flex;
-              width: max-content;
-              animation: testimonialScroll 36s linear infinite;
-            }
-            .testimonial-track:hover {
-              animation-play-state: paused;
-            }
-          `}</style>
-
-          <div className="testimonial-track py-2">
-            {[...TESTIMONIALS, ...TESTIMONIALS].map((t, index) => (
+            {/* Connected step sequence */}
+            <div className="relative">
+              {/* Connecting line (desktop) */}
               <div
-                key={index}
-                className="mx-4 w-[360px] sm:w-[420px] rounded-3xl border border-white/90 bg-white/70 p-6 sm:p-7 shadow-xl shadow-slate-200/40 backdrop-blur-2xl ring-1 ring-white/60 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300"
-              >
-                {/* 5 Stars */}
-                <div className="flex items-center gap-1 text-amber-400 mb-3">
-                  {[...Array(t.rating)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-amber-400" />
-                  ))}
-                </div>
+                ref={howItWorksLineRef}
+                className="absolute top-8 left-0 hidden h-px w-full origin-left bg-gradient-to-r from-transparent via-indigo-300 to-transparent md:block"
+                style={{ transform: "scaleX(0)" }}
+              />
 
-                <p className="text-sm font-medium leading-relaxed text-slate-700">
-                  &ldquo;{t.text}&rdquo;
-                </p>
-
-                <div className="mt-5 flex items-center justify-between border-t border-slate-100/80 pt-3">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">{t.name}</h4>
-                    <p className="text-xs text-slate-500">{t.role}</p>
+              <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-8">
+                {HOW_IT_WORKS.map((item, index) => (
+                  <div
+                    key={item.step}
+                    ref={(el) => { howItWorksTextsRef.current[index] = el; }}
+                    className="relative"
+                  >
+                    {/* Step number circle */}
+                    <div className="mb-6 flex items-center gap-4 md:flex-col md:items-start md:gap-0">
+                      <div
+                        ref={(el) => { howItWorksMarkersRef.current[index] = el; }}
+                        className="flex h-16 w-16 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 text-2xl font-bold text-indigo-600"
+                      >
+                        {item.step}
+                      </div>
+                      {index < HOW_IT_WORKS.length - 1 && (
+                        <div className="h-px w-full bg-indigo-200 md:hidden" />
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                      {item.desc}
+                    </p>
                   </div>
-                  <Quote className="h-6 w-6 text-indigo-200" />
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </section>
 
-        {/* Footer */}
-        <Footer />
+        {/* ═════════════════════════════════════════════════════
+            6. QUOTE MARQUEE (replaces Technology section)
+        ══════════════════════════════════════════════════════ */}
+        <section id="quote-marquee" className="reveal-section relative overflow-hidden bg-gradient-to-b from-[#F5F3FF] to-white px-6 py-24 sm:px-10 lg:px-16">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-12 text-center">
+              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                Mindset Matters
+              </span>
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Stronger habits. Stronger you.
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-slate-600">
+                Every rep is a step toward becoming stronger.
+              </p>
+            </div>
+          </div>
+
+          {/* Quote marquee row 1 */}
+          <div className="relative mb-6">
+            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-[#F5F3FF] to-transparent" />
+            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-white to-transparent" />
+
+            <style>{`
+              @keyframes quoteScroll {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+              @keyframes quoteScrollReverse {
+                0% { transform: translateX(-50%); }
+                100% { transform: translateX(0); }
+              }
+              .quote-track {
+                display: flex;
+                width: max-content;
+                animation: quoteScroll 40s linear infinite;
+              }
+              .quote-track-reverse {
+                display: flex;
+                width: max-content;
+                animation: quoteScrollReverse 45s linear infinite;
+              }
+              .quote-track:hover,
+              .quote-track-reverse:hover {
+                animation-play-state: paused;
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .quote-track,
+                .quote-track-reverse {
+                  animation: none;
+                }
+              }
+            `}</style>
+
+            <div className="quote-track">
+              {[...QUOTES, ...QUOTES].map((q, i) => (
+                <div
+                  key={i}
+                  className="mx-4 flex w-[340px] shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:w-[400px]"
+                >
+                  <Quote className="mb-3 h-5 w-5 text-indigo-300" />
+                  <p className="flex-1 text-sm font-medium leading-relaxed text-slate-700">
+                    &ldquo;{q.text}&rdquo;
+                  </p>
+                  <p className="mt-4 text-xs font-semibold text-indigo-600">
+                    — {q.author}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quote marquee row 2 (reverse) */}
+          <div className="relative">
+            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-[#F5F3FF] to-transparent" />
+            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-white to-transparent" />
+
+            <div className="quote-track-reverse">
+              {[...QUOTES.slice().reverse(), ...QUOTES.slice().reverse()].map((q, i) => (
+                <div
+                  key={i}
+                  className="mx-4 flex w-[340px] shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:w-[400px]"
+                >
+                  <Quote className="mb-3 h-5 w-5 text-violet-300" />
+                  <p className="flex-1 text-sm font-medium leading-relaxed text-slate-700">
+                    &ldquo;{q.text}&rdquo;
+                  </p>
+                  <p className="mt-4 text-xs font-semibold text-violet-600">
+                    — {q.author}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═════════════════════════════════════════════════════
+            7. FINAL CTA
+        ══════════════════════════════════════════════════════ */}
+        <section className="relative overflow-hidden px-6 py-24 sm:px-10 lg:px-16">
+          {/* Gradient background */}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/60 via-[#FAFAFF] to-violet-100/40" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-indigo-200/30 blur-[120px]" />
+          </div>
+
+          <div className="relative mx-auto max-w-3xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Ready to train smarter?
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-600">
+              Start your first AI-guided workout session in seconds. No
+              equipment, no downloads.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Link
+                to={user ? "/WorkoutPlan" : "/Register"}
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-indigo-700 hover:shadow-indigo-500/40 active:scale-[0.98] sm:w-auto"
+              >
+                <span>Start Training</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              <Link
+                to={user ? "/Dashboard" : "/Login"}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-indigo-300 hover:bg-slate-50 active:scale-[0.98] sm:w-auto"
+              >
+                <span>{user ? "Go to Dashboard" : "Sign In"}</span>
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <Footer />
     </div>
   );
 }

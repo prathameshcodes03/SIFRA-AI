@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
 } from "react";
 
 import api from "../api/axios";
@@ -32,14 +33,14 @@ export const AuthProvider = ({ children }) => {
   // UPDATE USER
   // ==========================================
 
-  const updateUser = (updatedUser) => {
+  const updateUser = useCallback((updatedUser) => {
     setUser(updatedUser);
 
     localStorage.setItem(
       "user",
       JSON.stringify(updatedUser)
     );
-  };
+  }, []);
 
   // ==========================================
   // LOGOUT

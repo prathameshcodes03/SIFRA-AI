@@ -23,12 +23,12 @@ const pending = (id) => ({ id, completed: false, completedAt: null });
 const doneToday = (id) => ({
   id,
   completed: true,
-  completedAt: new Date().toISOString(),
+  completedAt: new Date(NOW).toISOString(),
 });
 const doneEarlier = (id) => ({
   id,
   completed: true,
-  completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  completedAt: new Date(NOW - 3 * 24 * 60 * 60 * 1000).toISOString(),
 });
 
 test("the plan keeps the outstanding exercises", () => {
@@ -89,4 +89,71 @@ test("the next exercise is never a completed workout", () => {
 
   const next = findNextOutstandingWorkout(workouts, "old");
   assert.equal(next.id, "next");
+});
+
+// ── Boundary / regression tests ──
+
+test("boundary: workout completed at midnight boundary (same day)", () => {
+  // NOW is 2026-10-22T10:00:00Z. A workout completed at 00:00:00 on the
+  // same calendar day should still be "today".
+  const midnightToday = new Date("2026-10-22T00:00:00.000Z").getTime();
+  const workout = {
+    id: "midnight",
+    completed: true,
+    completedAt: new Date(midnightToday).toISOString(),
+  };
+  const plan = selectPlanWorkouts([workout], NOW);
+  assert.deepEqual(plan.map((w) => w.id), ["midnight"]);
+});
+
+test("boundary: workout completed two days ago is excluded", () => {
+  // Use a timestamp clearly on a different calendar day in any timezone.
+  const twoDaysAgo = NOW - 2 * 24 * 60 * 60 * 1000;
+  const workout = {
+    id: "two-days-ago",
+    completed: true,
+    completedAt: new Date(twoDaysAgo).toISOString(),
+  };
+  const plan = selectPlanWorkouts([workout], NOW);
+  assert.deepEqual(plan.map((w) => w.id), []);
+});
+
+test("boundary: workout completed one second after midnight (same day)", () => {
+  // 2026-10-22T00:00:01Z is the same calendar day as NOW.
+  const sameDay = new Date("2026-10-22T00:00:01.000Z").getTime();
+  const workout = {
+    id: "same-day",
+    completed: true,
+    completedAt: new Date(sameDay).toISOString(),
+  };
+  const plan = selectPlanWorkouts([workout], NOW);
+  assert.deepEqual(plan.map((w) => w.id), ["same-day"]);
+});
+
+test("boundary: mix of today and previous day workouts", () => {
+  const todayWorkout = {
+    id: "today",
+    completed: true,
+    completedAt: new Date(NOW).toISOString(),
+  };
+  const prevWorkout = {
+    id: "prev",
+    completed: true,
+    completedAt: new Date(NOW - 24 * 60 * 60 * 1000).toISOString(),
+  };
+  const pendingWorkout = { id: "pending", completed: false, completedAt: null };
+
+  const plan = selectPlanWorkouts([todayWorkout, prevWorkout, pendingWorkout], NOW);
+  assert.deepEqual(plan.map((w) => w.id), ["today", "pending"]);
+});
+
+test("boundary: isSameLocalDay with same instant", () => {
+  const ts = NOW;
+  assert.equal(isSameLocalDay(new Date(ts).toISOString(), ts), true);
+});
+
+test("boundary: isSameLocalDay with one day apart", () => {
+  const ts = NOW;
+  const oneDayLater = ts + 24 * 60 * 60 * 1000;
+  assert.equal(isSameLocalDay(new Date(ts).toISOString(), oneDayLater), false);
 });

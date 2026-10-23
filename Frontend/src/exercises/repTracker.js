@@ -12,6 +12,7 @@
 import { createSquatRepDetector } from "./squatRepDetector.js";
 import { createPushupRepDetector } from "./pushupRepDetector.js";
 import { createPlankHold, isPlankPose } from "./plankHold.js";
+import { normalizeExerciseName } from "./featureExtractor.js";
 
 export const PHASE = {
   UP: "up",
@@ -113,7 +114,7 @@ export function createRepTracker({
   smoothing = DEFAULT_SMOOTHING,
   maxTrackingGapMs = MAX_TRACKING_GAP_MS,
 } = {}) {
-  const normalized = String(exercise || "").trim().toLowerCase();
+  const normalized = normalizeExerciseName(exercise);
 
   let smoothed = null;
   let phase = PHASE.UP;
@@ -279,6 +280,7 @@ export function createRepTracker({
    *            trackingOk:boolean}}
    */
   function update(features, nowMs, context = {}) {
+    const safeNowMs = typeof nowMs === "number" && Number.isFinite(nowMs) ? nowMs : Date.now();
     if (finished) return snapshot({ trackingOk: invalidSince === null });
 
     const thresholds = REP_THRESHOLDS[normalized];
@@ -292,10 +294,10 @@ export function createRepTracker({
       Number.isFinite(features[signal]);
 
     if (!usable) {
-      if (invalidSince === null) invalidSince = nowMs;
+      if (invalidSince === null) invalidSince = safeNowMs;
       // A brief occlusion is tolerated; sustained loss abandons the movement
       // so that recovery cannot complete a repetition nobody performed.
-      if (nowMs - invalidSince >= maxTrackingGapMs) {
+      if (safeNowMs - invalidSince >= maxTrackingGapMs) {
         abandonMotion();
         if (isHold) holdSeconds = 0;
         holdFormOk = false;
@@ -308,13 +310,13 @@ export function createRepTracker({
     // A long gap means the session was interrupted (backgrounded tab, sleep,
     // camera stall), not that the user moved slowly. Anything half-finished is
     // abandoned so the first frame back cannot complete a rep nobody finished.
-    const gapMs = lastFrameAt ? Math.max(0, nowMs - lastFrameAt) : 0;
+    const gapMs = lastFrameAt ? Math.max(0, safeNowMs - lastFrameAt) : 0;
     const resumed = lastFrameAt > 0 && gapMs > RESUME_GAP_MS;
     if (resumed) {
       abandonMotion();
     }
 
-    lastFrameAt = nowMs;
+    lastFrameAt = safeNowMs;
 
     // The plank banks the REAL elapsed time, not a capped frame delta: a
     // slow camera must not make the hold run at a fraction of real time. The
@@ -338,11 +340,16 @@ export function createRepTracker({
             ? features.body_tilt
             : null,
         symmetryScore: features.symmetry_score,
+        hipAngle:
+          typeof features.hip_angle === "number" &&
+          Number.isFinite(features.hip_angle)
+            ? features.hip_angle
+            : null,
       });
 
       const outcome = plankHold.update({
         valid: poseValid,
-        nowMs,
+        nowMs: safeNowMs,
         dtMs: holdDtMs,
       });
 
@@ -396,7 +403,7 @@ export function createRepTracker({
           Number.isFinite(features.hip_angle)
             ? features.hip_angle
             : null,
-        nowMs,
+        nowMs: safeNowMs,
       });
 
       smoothed = outcome.smoothedAngle;
@@ -453,7 +460,7 @@ export function createRepTracker({
           Number.isFinite(features.body_tilt)
             ? features.body_tilt
             : null,
-        nowMs,
+        nowMs: safeNowMs,
       });
 
       smoothed = outcome.smoothedAngle;

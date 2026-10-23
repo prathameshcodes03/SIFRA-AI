@@ -84,14 +84,15 @@ export const PUSHUP_REP_THRESHOLDS = Object.freeze({
 
   /**
    * How far below the calibrated top the elbow may sit and still count as
-   * the top position. The old fixed threshold (140 deg) meant a user whose
-   * arms never fully lock out could not complete a repetition, while a user
-   * whose top measured 145 deg had almost no travel to prove.
+   * the top position. Tolerates normal individual variations in lockout.
    */
-  topTolerance: 15,
+  topTolerance: 20,
 
   /** The starting assumption for the top position, before one is observed. */
-  defaultTopAngle: 150,
+  defaultTopAngle: 140,
+
+  /** Floor above which an observed elbow extension can calibrate topAngle. */
+  topFloor: 135,
 
   /**
    * The body line (shoulder-hip-ankle) must be at least this straight for
@@ -133,6 +134,9 @@ export const PUSHUP_REP_THRESHOLDS = Object.freeze({
 
   /** EMA factor for the elbow angle. */
   smoothing: 0.4,
+
+  /** How fast the top baseline is allowed to follow a relaxed or fatigued posture. */
+  baselineDecayDegPerSec: 5,
 });
 
 const isNumber = (value) => typeof value === "number" && Number.isFinite(value);
@@ -165,6 +169,7 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
   // Guards.
   let armed = true; // the top position has been established
   let lastRepAt = null;
+  let lastTimestamp = null;
   let reps = 0;
 
   const ema = (previous, value) =>
@@ -249,17 +254,24 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
    */
   function update({ elbowAngle, bodyAngle = null, hipAngle = null, bodyTilt = null, nowMs }) {
     if (!isNumber(elbowAngle)) return snapshot();
+    const safeNowMs = isNumber(nowMs) ? nowMs : Date.now();
 
     elbowEma = ema(elbowEma, elbowAngle);
+
+    const dt = lastTimestamp === null ? 0 : Math.max(0, safeNowMs - lastTimestamp);
+    lastTimestamp = safeNowMs;
 
     // --- the top position ---------------------------------------------------
     // The most extended elbow the user reaches is their top. It is learned
     // from the pose itself, so a user who does not fully lock out their arms
     // is not punished for it.
     if (topAngle === null) {
-      if (elbowEma >= cfg.defaultTopAngle) topAngle = elbowEma;
+      if (elbowEma >= (cfg.topFloor ?? 135)) topAngle = elbowEma;
     } else if (elbowEma > topAngle) {
       topAngle = elbowEma;
+    } else if (state === PUSHUP_REP_STATE.TOP && elbowAngle >= 90 && isNumber(dt)) {
+      const decay = ((cfg.baselineDecayDegPerSec ?? 5) * dt) / 1000;
+      topAngle = Math.max(elbowEma, topAngle - decay);
     }
     const topThreshold = Math.max(
       90,
@@ -287,8 +299,8 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
     // ascent starts as soon as the user presses back up.
     if (!depthHeld) {
       if (elbowEma <= cfg.maxSmoothedDepthAngle) {
-        if (depthHoldSince === null) depthHoldSince = nowMs;
-        if (nowMs - depthHoldSince >= cfg.minDepthHoldMs) depthHeld = true;
+        if (depthHoldSince === null) depthHoldSince = safeNowMs;
+        if (safeNowMs - depthHoldSince >= cfg.minDepthHoldMs) depthHeld = true;
       } else {
         depthHoldSince = null;
       }
@@ -316,10 +328,10 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
         if (atTop && aligned) armed = true;
 
         if (armed && aligned && elbowAngle <= descentThreshold) {
-          if (candidateSince === null) candidateSince = nowMs;
-          if (nowMs - candidateSince >= cfg.minDescentMs) {
+          if (candidateSince === null) candidateSince = safeNowMs;
+          if (safeNowMs - candidateSince >= cfg.minDescentMs) {
             enterState(PUSHUP_REP_STATE.DESCENDING);
-            cycleStartedAt = nowMs;
+            cycleStartedAt = safeNowMs;
             depthReached = false;
             alignedAtBottom = false;
           }
@@ -359,12 +371,12 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
         }
 
         if (atTop && aligned) {
-          if (candidateSince === null) candidateSince = nowMs;
-          if (nowMs - candidateSince >= cfg.minTopMs) {
-            repCompleted = isRepQualified(nowMs);
+          if (candidateSince === null) candidateSince = safeNowMs;
+          if (safeNowMs - candidateSince >= cfg.minTopMs) {
+            repCompleted = isRepQualified(safeNowMs);
             if (repCompleted) {
               reps += 1;
-              lastRepAt = nowMs;
+              lastRepAt = safeNowMs;
             }
             enterState(PUSHUP_REP_STATE.TOP);
             resetMovement();
@@ -400,6 +412,7 @@ export function createPushupRepDetector({ thresholds = {} } = {}) {
     elbowEma = null;
     topAngle = null;
     lastRepAt = null;
+    lastTimestamp = null;
     reps = 0;
   }
 

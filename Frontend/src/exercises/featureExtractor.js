@@ -28,6 +28,14 @@ import { PUSHUP_MAX_TRAINED_ELBOW } from "./modelSupport";
 /** A joint angle below this is degenerate, not a measurement. */
 const MIN_PLAUSIBLE_ANGLE = 1;
 
+export function normalizeExerciseName(exercise) {
+  const norm = String(exercise || "").trim().toLowerCase();
+  if (norm === "squat" || norm === "squats") return "squat";
+  if (norm === "pushup" || norm === "pushups" || norm === "push-up" || norm === "push-ups") return "pushup";
+  if (norm === "plank" || norm === "planks") return "plank";
+  return norm;
+}
+
 /**
  * How far the body leans away from the horizontal plane.
  *
@@ -42,16 +50,31 @@ const MIN_PLAUSIBLE_ANGLE = 1;
  * image, a body seen head-on points away from the camera (and is therefore
  * horizontal in 3D), and a standing body is vertical in both.
  *
+ * When ankles are not visible (e.g. waist-up framing), torso tilt using the hip
+ * provides the critical orientation information so standing is not accepted as
+ * a plank or push-up.
+ *
  * 0 = perfectly horizontal, 90 = perfectly vertical.
  */
-const bodyTiltOf = (shoulder, ankle) => {
-  if (!shoulder || !ankle) return null;
+const bodyTiltOf = (shoulder, ankle, hip = null) => {
+  const target =
+    ankle && typeof ankle.x === "number" && Number.isFinite(ankle.x)
+      ? ankle
+      : hip && typeof hip.x === "number" && Number.isFinite(hip.x)
+      ? hip
+      : null;
 
-  const dx = (ankle.x ?? 0) - (shoulder.x ?? 0);
-  const dy = (ankle.y ?? 0) - (shoulder.y ?? 0);
-  const dz = (ankle.z ?? 0) - (shoulder.z ?? 0);
+  if (!shoulder || !target) return null;
+  if (!Number.isFinite(shoulder.x) || !Number.isFinite(shoulder.y)) return null;
+
+  const dx = (target.x ?? 0) - (shoulder.x ?? 0);
+  const dy = (target.y ?? 0) - (shoulder.y ?? 0);
+  const tz = typeof target.z === "number" && Number.isFinite(target.z) ? target.z : 0;
+  const sz = typeof shoulder.z === "number" && Number.isFinite(shoulder.z) ? shoulder.z : 0;
+  const dz = tz - sz;
   const horizontal = Math.hypot(dx, dz);
-  if (!Number.isFinite(horizontal) || horizontal === 0) return null;
+  if (!Number.isFinite(horizontal)) return null;
+  if (horizontal === 0 && dy === 0) return null;
 
   const tilt = (Math.atan2(Math.abs(dy), horizontal) * 180) / Math.PI;
   if (!Number.isFinite(tilt)) return null;
@@ -101,7 +124,7 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
     elbow: angleOf(shoulder, elbow, wrist),
     hip: angleOf(shoulder, hip, knee),
     body: angleOf(shoulder, hip, ankle),
-    tilt: bodyTiltOf(shoulder, ankle),
+    tilt: bodyTiltOf(shoulder, ankle, hip),
   });
 
   const left = side(
@@ -145,8 +168,7 @@ export function extractExerciseFeatures(landmarks, exercise = "squat") {
     !knee.measured &&
     !elbow.measured &&
     !hip.measured &&
-    !body.measured &&
-    !tilt.measured
+    !body.measured
   ) {
     return null;
   }
@@ -259,7 +281,8 @@ export function getPoseReliability(landmarks) {
 export function evaluateFormRuleBased(features) {
   // No usable features must NOT be reported as good form.
   if (!features) return null;
-  const { exercise, knee_angle, elbow_angle, hip_angle, body_angle, symmetry_score } = features;
+  const exercise = normalizeExerciseName(features.exercise);
+  const { knee_angle, elbow_angle, hip_angle, body_angle, symmetry_score } = features;
 
   // Never form a claim from an angle that was never measured.
   const measured = features.measured;
@@ -289,7 +312,7 @@ export function evaluateFormRuleBased(features) {
     return "plank_correct";
   }
 
-  return "correct";
+  return null;
 }
 
 /**

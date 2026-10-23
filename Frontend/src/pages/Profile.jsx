@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   UserRound,
   CalendarDays,
@@ -35,7 +35,7 @@ const Profile = () => {
     weight: "",
   });
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get("/api/profile");
@@ -57,11 +57,11 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [updateUser]);
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -170,8 +170,26 @@ const Profile = () => {
   if (loading) {
     return (
       <AppShell footer={<Footer />}>
-        <div className="flex min-h-[60vh] items-center justify-center text-slate-500 text-sm">
-          Loading profile settings...
+        <div className="space-y-6 max-w-4xl mx-auto animate-pulse">
+          <div className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:p-8">
+            <div className="h-28 w-28 shrink-0 rounded-full bg-slate-200 sm:h-32 sm:w-32" />
+            <div className="flex-1 space-y-3">
+              <div className="h-6 w-40 rounded bg-slate-200" />
+              <div className="h-4 w-56 rounded bg-slate-200" />
+              <div className="h-6 w-32 rounded-full bg-slate-200" />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <div className="mb-4 h-5 w-48 rounded bg-slate-200" />
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center justify-between py-4">
+                  <div className="h-4 w-24 rounded bg-slate-200" />
+                  <div className="h-9 w-48 rounded-xl bg-slate-200" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </AppShell>
     );

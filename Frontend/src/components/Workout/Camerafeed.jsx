@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { CheckCircle2, RefreshCw, VideoOff } from "lucide-react";
 import Webcam from "react-webcam";
 import { useNavigate } from "react-router-dom";
 import { useWorkout } from "../../Context/WorkoutContext";
@@ -7,13 +8,20 @@ import api from "../../api/axios";
 import {
   initializePoseDetector,
   detectPose,
+  disposePoseDetector,
 } from "../../mediapipe/poseDetector";
+import {
+  CAMERA_STATUS,
+  describeCameraError,
+  trackingStatusCopy,
+} from "./cameraStatus";
 
 import { DrawingUtils } from "@mediapipe/tasks-vision";
 import {
   extractExerciseFeatures,
   evaluateFormRuleBased,
   getPoseReliability,
+  normalizeExerciseName,
 } from "../../exercises/featureExtractor";
 import { createRepTracker, PHASE } from "../../exercises/repTracker";
 import {
@@ -51,11 +59,18 @@ const Camerafeed = ({
   onWorkoutComplete,
   nextWorkout = null,
 }) => {
+  const canonicalExercise = normalizeExerciseName(exercise);
   const [cameraOn, setCameraOn] = useState(true);
   const [completedInfo, setCompletedInfo] = useState(null);
   const [saving, setSaving] = useState(false);
   const [livePrediction, setLivePrediction] = useState(null);
   const [liveAccuracy, setLiveAccuracy] = useState(null);
+  const [cameraStatus, setCameraStatus] = useState(
+    CAMERA_STATUS.REQUESTING_PERMISSION,
+  );
+  const [cameraError, setCameraError] = useState(null);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
+  const [saveError, setSaveError] = useState(null);
 
   // Rep/set tracking state (mirrors of the tracker, updated per frame)
   const [currentSet, setCurrentSet] = useState(1);
@@ -80,6 +95,9 @@ const Camerafeed = ({
   const formCueRef = useRef(null);
   const completionSentRef = useRef(false);
   const mountedRef = useRef(true);
+  const cameraSessionRef = useRef(0);
+  const detectorReadyRef = useRef(false);
+  const mediaReadyRef = useRef(false);
 
   // Accuracy is scored PER COMPLETED REPETITION, from the same verdict the
   // coach speaks - never per sampled frame. Counting frames measured the
@@ -97,6 +115,8 @@ const Camerafeed = ({
   // Live mirrors of the tracker to avoid re-renders when nothing changed.
   const lastSetRepsRef = useRef(0);
   const lastSetsRef = useRef(1);
+  const repsRef = useRef(reps);
+  repsRef.current = reps;
   const trackerRef = useRef(null);
   const phaseRef = useRef(PHASE.UP);
   const gateRef = useRef(null);
@@ -147,15 +167,61 @@ const Camerafeed = ({
     height: 720,
   };
 
+  const stopCameraStream = () => {
+    const stream = webcamRef.current?.video?.srcObject;
+    stream?.getTracks?.().forEach((track) => track.stop());
+  };
+
   useEffect(() => {
-    initializePoseDetector();
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cameraOn) {
+      detectorReadyRef.current = false;
+      disposePoseDetector();
+      return undefined;
+    }
+
+    const session = ++cameraSessionRef.current;
+    let cancelled = false;
+
+    detectorReadyRef.current = false;
+    mediaReadyRef.current = false;
+    setCameraStatus(CAMERA_STATUS.REQUESTING_PERMISSION);
+    setCameraError(null);
+
+    initializePoseDetector()
+      .then(() => {
+        if (cancelled || session !== cameraSessionRef.current) return;
+        detectorReadyRef.current = true;
+        setCameraStatus(
+          mediaReadyRef.current
+            ? CAMERA_STATUS.WAITING_FOR_POSE
+            : CAMERA_STATUS.INITIALIZING_TRACKER,
+        );
+      })
+      .catch((error) => {
+        console.error("Pose detector initialization failed:", error);
+        if (cancelled || session !== cameraSessionRef.current) return;
+        setCameraError(
+          "Pose tracking could not start. Check your connection and try again.",
+        );
+        setCameraStatus(CAMERA_STATUS.TRACKER_ERROR);
+      });
+
+    return () => {
+      cancelled = true;
+      cameraSessionRef.current += 1;
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       if (setFlashTimerRef.current) clearTimeout(setFlashTimerRef.current);
       visibilityWarningRef.current?.reset();
+      disposePoseDetector();
     };
-  }, []);
+  }, [cameraAttempt, cameraOn]);
 
   // Rebuild trackers when the exercise or its targets change.
   useEffect(() => {
@@ -191,6 +257,7 @@ const Camerafeed = ({
     setShowSetComplete(false);
     setLivePrediction(null);
     setLiveAccuracy(null);
+    setSaveError(null);
     // `workoutId` is read only to build a fresh session key; the reset is
     // intentionally keyed to the exercise and its targets.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -243,9 +310,11 @@ const Camerafeed = ({
   const completeExercise = async () => {
     if (completionSentRef.current) return;
     completionSentRef.current = true;
+    const completionSessionKey = workoutSessionKeyRef.current;
 
     setExerciseCompleted(true);
     setIsCompleting(true);
+    stopCameraStream();
     setCameraOn(false);
 
     const {
@@ -269,21 +338,28 @@ const Camerafeed = ({
         accuracy: sessionAccuracy,
       });
 
+      // The user may have restarted or moved to another exercise while this
+      // request was in flight. Its old response must not replace the new
+      // workout screen or navigate away from it.
+      if (
+        !mountedRef.current ||
+        completionSessionKey !== workoutSessionKeyRef.current
+      ) {
+        return;
+      }
+
       setCompletedInfo({
         exercise,
         accuracy: sessionAccuracy,
       });
 
-      // The session is finished: announce it FIRST, whatever happens next.
-      // The announcement used to be skipped whenever another exercise was
-      // still outstanding, so completing a workout in a plan with a second
-      // exercise in it was silent.
-      await announceCompletion(sessionAccuracy);
-
-      // The workout is over only when no outstanding exercise is left.
       const hasNextExercise = Boolean(nextWorkout);
 
+      // Completion audio is reserved for the FINAL workout result. An
+      // individual exercise still gets visual confirmation before the next
+      // route opens, but it must not receive a false "workout complete" cue.
       if (!hasNextExercise) {
+        await announceCompletion(sessionAccuracy);
         navigate("/Dashboard");
         return;
       }
@@ -297,9 +373,16 @@ const Camerafeed = ({
       );
     } catch (err) {
       console.error("Failed to complete exercise:", err);
+      if (
+        !mountedRef.current ||
+        completionSessionKey !== workoutSessionKeyRef.current
+      ) {
+        return;
+      }
       completionSentRef.current = false;
       setIsCompleting(false);
       setCameraOn(true);
+      setSaveError("We could not save this exercise. Please try again.");
     }
   };
 
@@ -328,7 +411,7 @@ const Camerafeed = ({
 
       // Frame-driven rep summary: remembers the deepest frame of the rep so a
       // prediction landing anywhere in the rep can judge it correctly.
-      const completedRep = exercise === "squat"
+      const completedRep = canonicalExercise === "squat"
         ? squatRepRef.current?.observe(features, result)
         : null;
 
@@ -352,17 +435,22 @@ const Camerafeed = ({
       // Mirrors are compared against the tracker's last emitted values so an
       // unchanged frame does not trigger a React render.
       if (result.setReps !== lastSetRepsRef.current) {
-        const completedReps = result.setReps - lastSetRepsRef.current;
+        const targetReps = repsRef.current;
+        const completedReps = result.setJustCompleted
+          ? (targetReps - lastSetRepsRef.current)
+          : (result.setReps - lastSetRepsRef.current);
         lastSetRepsRef.current = result.setReps;
         setCompletedReps(result.setReps);
 
-        // Push-up and plank have no geometry assessment, so their repetitions
-        // are scored from the last judgeable model verdict of that repetition.
-        // A repetition with no judgeable verdict is excluded from the
-        // denominator instead of being counted as wrong form.
-        if (exercise !== "squat") {
+        // Push-up and plank repetitions are scored from the latest judgeable
+        // model verdict, or fall back to rule-based form evaluation if the
+        // network/model is offline. A repetition with no judgeable verdict is
+        // excluded from the denominator instead of being counted as wrong form.
+        if (canonicalExercise !== "squat" && completedReps > 0) {
+          const fallbackVerdict = evaluateFormRuleBased(features);
+          const repVerdict = lastModelVerdictRef.current || fallbackVerdict;
           for (let i = 0; i < completedReps; i += 1) {
-            recordFormVerdict(lastModelVerdictRef.current);
+            recordFormVerdict(repVerdict);
           }
         }
       }
@@ -441,8 +529,8 @@ const Camerafeed = ({
       const labelIsJudgeable =
         fromModel &&
         Boolean(label) &&
-        isLabelForExercise(label, exercise) &&
-        isWithinModelSupport(features, exercise).supported;
+        isLabelForExercise(label, canonicalExercise) &&
+        isWithinModelSupport(features, canonicalExercise).supported;
 
       if (labelIsJudgeable) {
         lastModelVerdictRef.current = label;
@@ -455,7 +543,7 @@ const Camerafeed = ({
       // Movement-aware assessment: the authoritative form claim. It is
       // computed from the completed repetition's deepest frame, so standing
       // between reps can never be mistaken for a shallow squat.
-      const rep = exercise === "squat" ? pendingRepRef.current : null;
+      const rep = canonicalExercise === "squat" ? pendingRepRef.current : null;
       if (rep) pendingRepRef.current = null;
 
       const assessment = rep ? rep.verdict ?? null : null;
@@ -468,37 +556,37 @@ const Camerafeed = ({
         assessment: assessment ?? { label: null, reason: "no_completed_rep" },
         mlLabel: label,
         features: rep?.features ?? features,
-        exercise,
+        exercise: canonicalExercise,
       });
 
       // Show the model's label in the HUD only when it belongs to this
       // exercise, so the telemetry never contradicts the spoken cue.
       if (fromModel && label) {
-        setLivePrediction(isLabelForExercise(label, exercise) ? label : null);
+        setLivePrediction(isLabelForExercise(label, canonicalExercise) ? label : null);
       }
 
       let message = null;
       let spokenLabel = null;
 
-      if (resolution.message && exercise === "squat") {
+      if (resolution.message && canonicalExercise === "squat") {
         // Squats are already event-driven: one verdict per completed rep.
         message = resolution.message;
         spokenLabel = resolution.label;
-      } else if (exercise !== "squat") {
+      } else if (canonicalExercise !== "squat") {
         // Push-up / plank keep their existing arbitration path: the model label
         // when one arrives, otherwise the rule-based fallback.
         const decision = arbitrateCoaching({
           label: label || evaluateFormRuleBased(features),
           phase: phaseRef.current,
           reliable,
-          exercise,
+          exercise: canonicalExercise,
         });
-        const cue = resolveCoachingCue({ decision, exercise });
+        const cue = resolveCoachingCue({ decision, exercise: canonicalExercise });
 
         // Speak only when the confirmed form label CHANGES, not every 600ms.
         // A pose that could not be assessed is not observable: it must not be
         // mistaken for the posture having changed.
-        const verdict = formCueRef.current.consider(cue?.label ?? null, exercise, {
+        const verdict = formCueRef.current.consider(cue?.label ?? null, canonicalExercise, {
           observable: Boolean(cue),
         });
         if (verdict.announce && cue) {
@@ -513,7 +601,7 @@ const Camerafeed = ({
           kind: "coaching",
           prediction: spokenLabel,
           message,
-          isCorrect: spokenLabel === CORRECT_LABEL_BY_EXERCISE[exercise],
+          isCorrect: spokenLabel === CORRECT_LABEL_BY_EXERCISE[canonicalExercise],
           accuracy: sessionAccuracy,
         });
       }
@@ -562,7 +650,20 @@ const Camerafeed = ({
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
-        const results = detectPose(video);
+        let results = null;
+        try {
+          results = detectorReadyRef.current ? detectPose(video) : null;
+        } catch (error) {
+          console.error("Pose tracking failed:", error);
+          detectorReadyRef.current = false;
+          setCameraError(
+            "Pose tracking stopped unexpectedly. Restart the camera to continue.",
+          );
+          setCameraStatus(CAMERA_STATUS.TRACKER_ERROR);
+          stopCameraStream();
+          setCameraOn(false);
+          return;
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const landmarks = results?.landmarks?.[0];
@@ -583,6 +684,14 @@ const Camerafeed = ({
           const features = extractExerciseFeatures(landmarks, exercise);
           const reliability = getPoseReliability(landmarks);
           const reliable = reliability >= MIN_RELIABLE_VISIBILITY;
+
+          if (features && reliable) {
+            setCameraStatus((current) =>
+              current === CAMERA_STATUS.TRACKING
+                ? current
+                : CAMERA_STATUS.TRACKING,
+            );
+          }
 
           checkVisibility(
             features
@@ -630,15 +739,19 @@ const Camerafeed = ({
     };
     // onFormFeedback is read through feedbackHandlerRef so that a parent
     // re-render cannot tear down and re-arm the camera loop.
-  }, [cameraOn, exercise]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraOn, canonicalExercise]);
 
   const handleEndWorkout = async () => {
     // Guard against a double submit while a completion request is in flight.
     if (exerciseCompleted || completionSentRef.current || isCompleting) return;
 
+    stopCameraStream();
     setCameraOn(false);
     setSaving(true);
     setIsCompleting(true);
+    setSaveError(null);
+    const completionSessionKey = workoutSessionKeyRef.current;
 
     const {
       totalPredictions: total,
@@ -663,24 +776,47 @@ const Camerafeed = ({
         accuracy: sessionAccuracy,
       });
 
+      if (
+        !mountedRef.current ||
+        completionSessionKey !== workoutSessionKeyRef.current
+      ) {
+        return;
+      }
+
       setCompletedInfo({ exercise, accuracy: sessionAccuracy });
       completionSentRef.current = true;
       saved = true;
     } catch (err) {
       console.error("Failed to complete workout:", err);
+      if (
+        !mountedRef.current ||
+        completionSessionKey !== workoutSessionKeyRef.current
+      ) {
+        return;
+      }
       // Backend rejected the save: do not present it as permanently completed.
       completionSentRef.current = false;
       setCameraOn(true);
+      setSaveError("We could not save this session. Please retry when ready.");
     } finally {
-      setSaving(false);
-      setIsCompleting(false);
+      if (
+        mountedRef.current &&
+        completionSessionKey === workoutSessionKeyRef.current
+      ) {
+        setSaving(false);
+        setIsCompleting(false);
+      }
     }
 
     // Ending the session early is still finishing a workout: it gets the
     // announcement too - but only once the save actually succeeded. The
     // announcement runs after the saving state is cleared, so the completion
     // screen is not stuck on "Saving workout record..." while it plays.
-    if (saved) {
+    if (
+      saved &&
+      mountedRef.current &&
+      completionSessionKey === workoutSessionKeyRef.current
+    ) {
       await announceCompletion(sessionAccuracy);
     }
   };
@@ -715,24 +851,47 @@ const Camerafeed = ({
     setExerciseCompleted(false);
     setIsCompleting(false);
     setShowSetComplete(false);
+    setSaveError(null);
+    setCameraError(null);
+    detectorReadyRef.current = false;
+    setCameraStatus(CAMERA_STATUS.REQUESTING_PERMISSION);
     setCameraOn(true);
+    setCameraAttempt((attempt) => attempt + 1);
+  };
+
+  const handleCameraReady = () => {
+    mediaReadyRef.current = true;
+    if (detectorReadyRef.current) {
+      setCameraStatus(CAMERA_STATUS.WAITING_FOR_POSE);
+    }
+  };
+
+  const handleCameraError = (error) => {
+    console.error("Camera access failed:", error);
+    setCameraError(describeCameraError(error));
+    setCameraStatus(CAMERA_STATUS.CAMERA_ERROR);
+    stopCameraStream();
+    setCameraOn(false);
   };
 
   const isFormCorrect =
     livePrediction != null &&
-    livePrediction === CORRECT_LABEL_BY_EXERCISE[exercise];
+    livePrediction === CORRECT_LABEL_BY_EXERCISE[canonicalExercise];
 
-  const isHold = exercise === "plank";
+  const isHold = canonicalExercise === "plank";
 
   return (
     <div className="relative mx-auto aspect-video min-h-[15rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-lg sm:min-h-[24rem]">
       {cameraOn ? (
         <>
           <Webcam
+            key={cameraAttempt}
             ref={webcamRef}
             audio={false}
             videoConstraints={videoConstraints}
             screenshotFormat="image/jpeg"
+            onUserMedia={handleCameraReady}
+            onUserMediaError={handleCameraError}
             className="absolute h-full w-full object-cover"
           />
 
@@ -745,7 +904,7 @@ const Camerafeed = ({
           <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-2">
             <span
               className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 font-mono text-xs font-semibold shadow-md backdrop-blur-md transition-colors ${
-                !livePrediction
+                cameraStatus !== CAMERA_STATUS.TRACKING
                   ? "border border-slate-700 bg-slate-900/80 text-slate-300"
                   : isFormCorrect
                   ? "border border-emerald-500/40 bg-emerald-950/80 text-emerald-300"
@@ -754,16 +913,16 @@ const Camerafeed = ({
             >
               <span
                 className={`h-2 w-2 rounded-full ${
-                  !livePrediction
+                cameraStatus !== CAMERA_STATUS.TRACKING
                     ? "bg-slate-400"
                     : isFormCorrect
                     ? "bg-emerald-400 animate-pulse"
                     : "bg-rose-400 animate-ping"
                 }`}
               />
-              {livePrediction
+              {cameraStatus === CAMERA_STATUS.TRACKING && livePrediction
                 ? livePrediction.replace(/_/g, " ").toUpperCase()
-                : "CALIBRATING POSE..."}
+                : trackingStatusCopy(cameraStatus)}
             </span>
 
             <span className="rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-1.5 font-mono text-xs font-medium text-slate-200 shadow-md backdrop-blur-md">
@@ -806,9 +965,9 @@ const Camerafeed = ({
       ) : (
         <div className="flex flex-col items-center justify-center h-full p-6 text-center bg-white text-slate-900">
           {completedInfo ? (
-            <div className="space-y-4 max-w-md">
+            <div className="space-y-4 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200">
-                <i className="fa-solid fa-circle-check text-3xl"></i>
+                <CheckCircle2 className="h-8 w-8" />
               </div>
 
               <div>
@@ -866,12 +1025,37 @@ const Camerafeed = ({
           ) : (
             <div className="flex flex-col items-center justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 border border-rose-200">
-                <i className="fa-solid fa-video-slash text-2xl"></i>
+                <VideoOff className="h-6 w-6" />
               </div>
               {saving ? (
                 <p className="mt-4 text-sm font-medium text-slate-600">
                   Saving workout record...
                 </p>
+              ) : cameraError ? (
+                <>
+                  <p role="alert" className="mt-4 max-w-sm text-sm font-medium text-slate-600">
+                    {cameraError}
+                  </p>
+                  <button
+                    onClick={handleRestart}
+                    className="mt-6 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Try Camera Again
+                  </button>
+                </>
+              ) : saveError ? (
+                <>
+                  <p role="alert" className="mt-4 max-w-sm text-sm font-medium text-rose-700">
+                    {saveError}
+                  </p>
+                  <button
+                    onClick={handleEndWorkout}
+                    className="mt-6 cursor-pointer rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                  >
+                    Retry Save
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={handleRestart}

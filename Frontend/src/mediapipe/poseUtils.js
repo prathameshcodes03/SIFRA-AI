@@ -3,7 +3,17 @@ export function getLandmark(landmarks, index) {
     return null;
   }
 
-  return landmarks[index];
+  const lm = landmarks[index];
+  if (
+    typeof lm.x !== "number" ||
+    !Number.isFinite(lm.x) ||
+    typeof lm.y !== "number" ||
+    !Number.isFinite(lm.y)
+  ) {
+    return null;
+  }
+
+  return lm;
 }
 
 
@@ -20,6 +30,8 @@ export function isLandmarkVisible(
 
   return (
     landmark.visibility === undefined ||
-    landmark.visibility >= threshold
+    (typeof landmark.visibility === "number" &&
+      Number.isFinite(landmark.visibility) &&
+      landmark.visibility >= threshold)
   );
 }

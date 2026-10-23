@@ -81,7 +81,7 @@ const isNumber = (value) => typeof value === "number" && Number.isFinite(value);
  * @returns {boolean}
  */
 export function isPlankPose(features = {}) {
-  const { bodyAngle, bodyTilt, symmetryScore } = features;
+  const { bodyAngle, bodyTilt, symmetryScore, hipAngle } = features;
 
   if (!isNumber(bodyAngle) || bodyAngle < PLANK_HOLD_THRESHOLDS.minBodyAngle) {
     return false;
@@ -97,6 +97,10 @@ export function isPlankPose(features = {}) {
     isNumber(symmetryScore) &&
     symmetryScore < PLANK_HOLD_THRESHOLDS.minSymmetry
   ) {
+    return false;
+  }
+
+  if (isNumber(hipAngle) && hipAngle < 140) {
     return false;
   }
 
@@ -136,12 +140,13 @@ export function createPlankHold({ thresholds = {} } = {}) {
   function update({ valid, nowMs, dtMs }) {
     formOk = Boolean(valid);
     const wasValid = previousValid;
+    const safeNowMs = isNumber(nowMs) ? nowMs : Date.now();
 
     if (valid) {
-      if (validSince === null) validSince = nowMs;
+      if (validSince === null) validSince = safeNowMs;
       invalidSince = null;
 
-      if (nowMs - validSince >= cfg.confirmationMs) {
+      if (safeNowMs - validSince >= cfg.confirmationMs) {
         confirmed = true;
         // Only the time between two VERIFIED frames is credited. A break in
         // the pose is never banked, however short it was - so a pose that
@@ -152,14 +157,14 @@ export function createPlankHold({ thresholds = {} } = {}) {
         }
       }
     } else {
-      if (invalidSince === null) invalidSince = nowMs;
+      if (invalidSince === null) invalidSince = safeNowMs;
 
       // Within the grace window the timer is merely PAUSED: the hold
       // continues, the accumulated time survives, and the pose does not have
       // to be confirmed again. A sustained break ends the hold - the time
       // already banked still survives, but the pose has to hold again before
       // any more is banked.
-      if (nowMs - invalidSince > cfg.graceMs) {
+      if (safeNowMs - invalidSince > cfg.graceMs) {
         validSince = null;
         confirmed = false;
       }

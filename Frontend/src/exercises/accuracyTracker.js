@@ -30,16 +30,15 @@
  */
 
 import { CORRECT_LABEL_BY_EXERCISE } from "./coaching.js";
-
-const normalizeExercise = (exercise) =>
-  String(exercise || "").trim().toLowerCase();
+import { normalizeExerciseName } from "./featureExtractor.js";
 
 /**
  * @param {object} [options]
  * @param {string} [options.exercise] "squat" | "pushup" | "plank"
  */
 export function createAccuracyTracker({ exercise = "squat" } = {}) {
-  const correctLabel = CORRECT_LABEL_BY_EXERCISE[normalizeExercise(exercise)] ?? null;
+  const canonical = normalizeExerciseName(exercise);
+  const correctLabel = CORRECT_LABEL_BY_EXERCISE[canonical] ?? null;
 
   let total = 0;
   let correct = 0;

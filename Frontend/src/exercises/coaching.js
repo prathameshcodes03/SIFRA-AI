@@ -19,7 +19,7 @@
  */
 
 import { PHASE } from "./repTracker.js";
-import { getFeedbackForPrediction } from "./featureExtractor.js";
+import { getFeedbackForPrediction, normalizeExerciseName } from "./featureExtractor.js";
 import { isWithinModelSupport } from "./modelSupport.js";
 
 /** Pseudo-label used when the pose itself is not measurable. Never sent to the model. */
@@ -67,7 +67,8 @@ export const CORRECT_LABEL_BY_EXERCISE = {
  */
 export function isLabelForExercise(label, exercise) {
   if (!label) return false;
-  const allowed = EXERCISE_LABELS[String(exercise || "").toLowerCase()];
+  const canonical = normalizeExerciseName(exercise);
+  const allowed = EXERCISE_LABELS[canonical];
   // Unknown exercise: don't invent a restriction.
   if (!allowed) return true;
   return allowed.has(label);

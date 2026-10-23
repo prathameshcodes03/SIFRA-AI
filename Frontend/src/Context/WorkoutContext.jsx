@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import api from "../api/axios";
 import { selectPlanWorkouts } from "../exercises/workoutPlan";
 
@@ -18,17 +18,25 @@ export const WorkoutProvider = ({ children }) => {
     weeklyGoal: 7,
     totalCompleted: 0,
   });
+  const [statsError, setStatsError] = useState(null);
+  const [workoutsError, setWorkoutsError] = useState(null);
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
 
   const fetchStats = useCallback(async () => {
     try {
       const res = await api.get("/api/workouts/stats");
       if (res.data?.success && res.data.stats) {
         setStats(res.data.stats);
+        setStatsError(null);
+      } else {
+        setStatsError("Unable to load workout statistics.");
       }
     } catch (error) {
       console.error("FETCH STATS ERROR:", error);
+      setStatsError("Unable to load workout statistics. Please try again.");
     }
   }, []);
 
@@ -37,16 +45,28 @@ export const WorkoutProvider = ({ children }) => {
       const res = await api.get("/api/workouts");
       if (res.data?.workouts) {
         setWorkouts(res.data.workouts);
+        setWorkoutsError(null);
+      } else {
+        setWorkoutsError("Unable to load workout history.");
       }
     } catch (error) {
       console.error("FETCH WORKOUTS ERROR:", error);
+      setWorkoutsError("Unable to load workout history. Please try again.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([fetchWorkouts(), fetchStats()]);
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchWorkouts(), fetchStats()]);
+    } finally {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
   }, [fetchWorkouts, fetchStats]);
 
   const addWorkout = async (exercise, sets, reps) => {
@@ -153,9 +173,12 @@ export const WorkoutProvider = ({ children }) => {
         workouts,
         planWorkouts,
         stats,
+        statsError,
+        workoutsError,
         activeWorkout,
         setActiveWorkout,
         loading,
+        refreshing,
         fetchWorkouts,
         fetchStats,
         refreshAll,

@@ -4,7 +4,6 @@ import { useAuth } from "../../Context/AuthContext";
 import api from "../../api/axios";
 import {
   Menu,
-  Bell,
   User,
   LogOut,
   Dumbbell,

@@ -121,11 +121,12 @@ const centerAndScaleModel = (model, targetHeight) => {
 const FitnessModelScene = forwardRef(({
   modelUrl,
   variant = "coach", // "unified-journey" | "hero" | "workout" | "coach"
-  scrollTriggerElement = null,
   onModelLoaded = null,
 }, ref) => {
   const containerRef = useRef(null);
   const [loadError, setLoadError] = useState(false);
+  const onModelLoadedRef = useRef(onModelLoaded);
+  onModelLoadedRef.current = onModelLoaded;
 
   // Direct transform state for master timeline control
   const liveTransformRef = useRef({
@@ -445,7 +446,7 @@ const FitnessModelScene = forwardRef(({
           });
         }
 
-        if (onModelLoaded) onModelLoaded();
+        if (onModelLoadedRef.current) onModelLoadedRef.current();
         ScrollTrigger.refresh();
       },
       undefined,

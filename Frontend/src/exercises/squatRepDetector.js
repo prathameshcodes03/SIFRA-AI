@@ -355,13 +355,14 @@ export function createSquatRepDetector({
    */
   function update({ kneeAngle, hipAngle = null, nowMs }) {
     if (!isNumber(kneeAngle)) return snapshot();
+    const safeNowMs = isNumber(nowMs) ? nowMs : Date.now();
 
     // --- smoothing ---------------------------------------------------------
     kneeEma = ema(kneeEma, kneeAngle);
     if (isNumber(hipAngle)) hipEma = ema(hipEma, hipAngle);
 
-    const dt = lastTimestamp === null ? 0 : Math.max(0, nowMs - lastTimestamp);
-    lastTimestamp = nowMs;
+    const dt = lastTimestamp === null ? 0 : Math.max(0, safeNowMs - lastTimestamp);
+    lastTimestamp = safeNowMs;
 
     // --- standing calibration ---------------------------------------------
     // The upright posture is the highest knee angle the user reaches. It is
@@ -444,8 +445,8 @@ export function createSquatRepDetector({
     // once achieved, because the ascent starts as soon as the user rises.
     if (!depthHeld) {
       if (kneeEma <= cfg.maxSmoothedDepthAngle) {
-        if (depthHoldSince === null) depthHoldSince = nowMs;
-        if (nowMs - depthHoldSince >= cfg.minDepthHoldMs) depthHeld = true;
+        if (depthHoldSince === null) depthHoldSince = safeNowMs;
+        if (safeNowMs - depthHoldSince >= cfg.minDepthHoldMs) depthHeld = true;
       } else {
         depthHoldSince = null;
       }
@@ -470,7 +471,7 @@ export function createSquatRepDetector({
 
     if (belowStanding && cycleStartedAt === null) {
       // The user left the standing position: the cycle begins now.
-      cycleStartedAt = nowMs;
+      cycleStartedAt = safeNowMs;
     }
 
     let repCompleted = false;
@@ -481,9 +482,9 @@ export function createSquatRepDetector({
         if (atStanding) armed = true;
 
         if (armed && kneeAngle <= descentThreshold) {
-          if (candidateSince === null) candidateSince = nowMs;
-          if (nowMs - candidateSince >= cfg.minDescentMs) {
-            enterState(SQUAT_REP_STATE.DESCENDING, nowMs);
+          if (candidateSince === null) candidateSince = safeNowMs;
+          if (safeNowMs - candidateSince >= cfg.minDescentMs) {
+            enterState(SQUAT_REP_STATE.DESCENDING, safeNowMs);
             candidateSince = null;
           }
         } else {
@@ -499,13 +500,13 @@ export function createSquatRepDetector({
           state === SQUAT_REP_STATE.DESCENDING &&
           kneeEma <= cfg.maxSmoothedDepthAngle
         ) {
-          enterState(SQUAT_REP_STATE.BOTTOM, nowMs);
+          enterState(SQUAT_REP_STATE.BOTTOM, safeNowMs);
         }
 
         // The ascent starts once the knee has risen meaningfully off the
         // bottom. A jitter around the minimum is not an ascent.
         if (kneeEma - (deepestKnee ?? kneeEma) >= cfg.minAscentRise) {
-          enterState(SQUAT_REP_STATE.ASCENDING, nowMs);
+          enterState(SQUAT_REP_STATE.ASCENDING, safeNowMs);
           candidateSince = null;
         }
         break;
@@ -515,20 +516,20 @@ export function createSquatRepDetector({
       case SQUAT_REP_STATE.ASCENDING: {
         if (kneeEma < (deepestKnee ?? kneeEma)) {
           // The user sank again: that was not an ascent.
-          enterState(SQUAT_REP_STATE.BOTTOM, nowMs);
+          enterState(SQUAT_REP_STATE.BOTTOM, safeNowMs);
           candidateSince = null;
           break;
         }
 
         if (atStanding) {
-          if (candidateSince === null) candidateSince = nowMs;
-          if (nowMs - candidateSince >= cfg.minStandMs) {
-            repCompleted = isRepQualified(nowMs);
+          if (candidateSince === null) candidateSince = safeNowMs;
+          if (safeNowMs - candidateSince >= cfg.minStandMs) {
+            repCompleted = isRepQualified(safeNowMs);
             if (repCompleted) {
               reps += 1;
-              lastRepAt = nowMs;
+              lastRepAt = safeNowMs;
             }
-            enterState(SQUAT_REP_STATE.STANDING, nowMs);
+            enterState(SQUAT_REP_STATE.STANDING, safeNowMs);
             resetMovement();
           }
         } else {

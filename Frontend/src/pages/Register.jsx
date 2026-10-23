@@ -302,7 +302,7 @@ const Register = () => {
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           {/* Frosted Glass Card */}
-          <div className="backdrop-blur-2xl bg-white/90 border border-white shadow-2xl shadow-slate-900/10 rounded-3xl p-8 sm:p-9">
+          <div className="backdrop-blur-2xl bg-white/90 border border-white shadow-2xl shadow-slate-900/10 rounded-3xl p-8 sm:p-9 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {/* Header Badge & Title */}
             <div className="text-center mb-6">
