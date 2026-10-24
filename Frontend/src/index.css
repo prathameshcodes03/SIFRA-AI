@@ -11,6 +11,35 @@
   --duration-slow: 350ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+
+  /* SIFRA & 404 Animations */
+  @keyframes sifra-orbit {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes sifra-rock {
+    0%, 100% { transform: rotate(-10deg) translateY(0); }
+    50%      { transform: rotate(10deg) translateY(-3px); }
+  }
+  @keyframes sifra-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50%      { transform: scale(1.06); opacity: 0.3; }
+  }
+  @keyframes nf-rise {
+    from { transform: translateY(105%); }
+    to { transform: none; }
+  }
+  @keyframes nf-spin {
+    from { transform: rotate(-250deg); }
+    to { transform: rotate(0); }
+  }
+  @keyframes nf-pop {
+    from { opacity: 0; transform: scale(0.6) rotate(-20deg); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes nf-fade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
 }
 
 html {

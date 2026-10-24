@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Activity } from "lucide-react";
+import Logo from "./Logo";
 
 const Footer = () => {
   return (
@@ -10,13 +10,8 @@ const Footer = () => {
           {/* Brand Col */}
           <div className="md:col-span-1">
             <Link to="/Landing_Page" className="inline-flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-500/20">
-                <Activity className="h-4 w-4" />
-              </div>
-              <span className="text-lg font-bold tracking-tight text-slate-900">
-                SIFRA AI
-              </span>
-            </Link>
+            <Logo size="md" variant="primary" showWordmark={true} />
+          </Link>
 
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">
               Browser-based AI fitness coaching. Pose detection, rep counting,

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
-import { Activity, ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
+import Logo from "./Logo";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -50,17 +51,7 @@ const Navbar = () => {
           to="/Landing_Page"
           className="group flex items-center gap-2.5 focus:outline-none"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 transition-transform duration-200 group-hover:scale-105">
-            <Activity className="h-5 w-5" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-lg font-bold tracking-tight text-slate-900">
-              SIFRA
-            </span>
-            <span className="rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-600">
-              AI
-            </span>
-          </div>
+          <Logo size={42} />
         </Link>
 
         {/* Desktop Navigation Links */}

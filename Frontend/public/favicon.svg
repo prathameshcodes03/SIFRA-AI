@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="sifraFaviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#4F46E5" />
+      <stop offset="100%" stopColor="#6366F1" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#sifraFaviconGradient)" />
+  <!-- Dumbbell icon - white, centered -->
+  <path
+    d="M8 12h4v8H8v4h8v-4h4v-4h-4V12h-4V8h-4v4Z"
+    fill="white"
+  />
+</svg>

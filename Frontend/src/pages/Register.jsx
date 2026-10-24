@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import Pushups from "../assets/Videos/Pushups.mp4";
 import { 
-  Activity, 
   Mail, 
   Lock, 
   User, 
@@ -18,6 +17,7 @@ import {
   KeyRound,
   RefreshCw
 } from "lucide-react";
+import Logo from "../components/Logo";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -273,17 +273,7 @@ const Register = () => {
       <header className="relative z-10 w-full border-b border-slate-200/60 bg-white/75 backdrop-blur-xl px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/Landing_Page" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-600/20 group-hover:scale-105 transition-transform">
-              <Activity className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-base font-bold tracking-tight text-slate-900">
-                SIFRA
-              </span>
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                AI
-              </span>
-            </div>
+            <Logo size="md" variant="primary" showWordmark={true} />
           </Link>
           
           <div className="flex items-center gap-4 text-xs font-mono">

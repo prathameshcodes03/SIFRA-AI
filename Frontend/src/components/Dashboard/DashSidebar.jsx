@@ -4,10 +4,10 @@ import {
   Dumbbell,
   CalendarCheck,
   User,
-  Activity,
   LogOut,
   Sparkles,
 } from "lucide-react";
+import Logo from "../Logo";
 import { useAuth } from "../../Context/AuthContext";
 import api from "../../api/axios";
 
@@ -57,17 +57,7 @@ const DashSidebar = ({ isOpen, onClose }) => {
             to="/Landing_Page"
             className="flex items-center gap-2.5 focus:outline-none"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-              <Activity className="h-4 w-4" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-base font-bold tracking-tight text-slate-900">
-                SIFRA
-              </span>
-              <span className="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
-                AI
-              </span>
-            </div>
+            <Logo size={38} />
           </Link>
         </div>
 

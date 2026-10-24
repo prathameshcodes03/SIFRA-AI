@@ -42,6 +42,7 @@ function App() {
           <Routes location={location}>
           {/* Public */}
           <Route path="/"             element={<Landing_Page/>}/>
+          <Route path="/Landing_Page" element={<Landing_Page/>}/>
 
           <Route path="/Login"        element={<Login />} />
           <Route path="/Register"     element={<Register />} />

@@ -1,0 +1,36 @@
+{
+  "name": "SIFRA AI - Your AI Fitness Coach",
+  "short_name": "SIFRA AI",
+  "description": "Your AI-powered fitness coach with real-time pose analysis, rep counting, and form coaching.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAFC",
+  "theme_color": "#4F46E5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start Workout",
+      "short_name": "Workout",
+      "description": "Start a new workout session",
+      "url": "/WorkoutPlan",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Workout Plan",
+      "short_name": "Plan",
+      "description": "View or edit your workout plan",
+      "url": "/WorkoutPlan",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    }
+  ]
+}
