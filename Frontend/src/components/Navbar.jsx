@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 import { ArrowRight, Menu, X } from "lucide-react";
 import Logo from "./Logo";
+import { BTN_PRIMARY } from "./buttonStyles";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -86,11 +87,12 @@ const Navbar = () => {
                 Sign in
               </button>
               <button
+                type="button"
                 onClick={() => navigate("/Register")}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/20 transition-all duration-200 hover:bg-indigo-700 active:scale-[0.98]"
+                className={`group cursor-pointer ${BTN_PRIMARY}`}
               >
                 <span>Start Training</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             </>
           )}
@@ -140,20 +142,23 @@ const Navbar = () => {
                     setOpen(false);
                     navigate("/Login");
                   }}
-                  className="w-full rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  className="w-full rounded-lg border border-slate-200  py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   Sign In
                 </button>
-                <button
-                  onClick={() => {
-                    setOpen(false);
-                    navigate("/Register");
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 py-2.5 text-sm font-semibold text-white"
-                >
-                  <span>Start Training</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+
+
+<button
+  type="button"
+  onClick={() => {
+    setOpen(false);
+    navigate("/Register");
+  }}
+  className={`group ${BTN_PRIMARY}`}
+>
+  <span>Start Training</span>
+  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+</button>
               </>
             )}
           </div>

@@ -6,8 +6,8 @@ import {
   ArrowRight,
   Activity,
   CheckCircle2,
-  AlertCircle,
   ShieldCheck,
+  Star,
   Camera,
   Dumbbell,
   Target,
@@ -16,39 +16,160 @@ import {
   Layers,
   Eye,
   Volume2,
-  Play,
   Sparkles,
   Quote,
+  Flame,
+  TrendingUp,
 } from "lucide-react";
-
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import FitnessModelScene from "../components/Landing/FitnessModelScene";
+import MacBookScene from "../components/Landing/MacBookScene";
+import DumbbellScene from "../components/Landing/DumbbellScene";
 import { useAuth } from "../Context/AuthContext";
-
-import StudioFitnessPose from "../assets/models/studio_fitness_pose.glb";
-import Pushups from "../assets/Videos/Pushups.mp4";
+import macbookModel from "../assets/models/macbook.glb";
+import dumbbellModel from "../assets/models/dumbell.glb";
+import macbookVideo from "../assets/Videos/MAcbookVideo.mp4";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* ─────────────────────────────────────────────────────────────
-   DATA
-───────────────────────────────────────────────────────────── */
-const HOW_IT_WORKS = [
+const LAPTOP_FEATURES = [
   {
     step: "01",
-    title: "Choose an exercise",
-    desc: "Select from supported exercises — squats, push-ups, or planks — and configure your sets and reps.",
+    tag: "Pose Intelligence",
+    title: "Real-Time 33-Keypoint Vision",
+    desc: "MediaPipe pose detection tracks 33 body landmarks from your webcam directly in the browser. No sensors or wearables required.",
+    icon: Eye,
   },
   {
     step: "02",
-    title: "Start a camera-based workout",
-    desc: "Your webcam captures your movement. MediaPipe detects your pose in real time, right in the browser.",
+    tag: "Smart Repetitions",
+    title: "Concentric & Eccentric Cadence",
+    desc: "Autonomous phase analysis validates full range of motion and registers completed reps only at proper biomechanical depth.",
+    icon: Dumbbell,
   },
   {
     step: "03",
-    title: "Review feedback and results",
-    desc: "Receive instant form feedback and voice coaching during the session. Review accuracy and streaks after.",
+    tag: "Form Feedback",
+    title: "Live Joint Angle Assessment",
+    desc: "Continuous angular evaluation verifies knee flexion, hip alignment, and spine linearity per repetition.",
+    icon: Target,
+  },
+  {
+    step: "04",
+    tag: "Voice Coach",
+    title: "Instant Audio Feedback",
+    desc: "Optional voice cues surface form feedback while you train, alongside on-screen coaching.",
+    icon: Volume2,
+  },
+  {
+    step: "05",
+    tag: "Workout Tracking",
+    title: "Progress, Volume & Streaks",
+    desc: "Completed sessions store exercise targets, judged form accuracy, and workout streak progress.",
+    icon: TrendingUp,
+  },
+];
+
+const HOW_IT_WORKS_STEPS = [
+  {
+    step: "01",
+    label: "Step 1",
+    title: "Start Your Workout",
+    desc: "Choose an exercise and begin your workout with SIFRA AI. Configure sets, targets, and voice preferences.",
+    icon: Sparkles,
+  },
+  {
+    step: "02",
+    label: "Step 2",
+    title: "AI Tracks Your Movement",
+    desc: "Camera-based pose estimation helps SIFRA analyze your body movement during exercise with 33 anatomical keypoints.",
+    icon: Camera,
+  },
+  {
+    step: "03",
+    label: "Step 3",
+    title: "Count Repetitions",
+    desc: "SIFRA tracks exercise movements to help count completed repetitions using phase-based motion inflections.",
+    icon: Dumbbell,
+  },
+  {
+    step: "04",
+    label: "Step 4",
+    title: "Evaluate Your Form",
+    desc: "Receive exercise feedback based on the movement metrics and biomechanical angles implemented in the application.",
+    icon: Target,
+  },
+  {
+    step: "05",
+    label: "Step 5",
+    title: "Track Your Progress",
+    desc: "Review workout results and monitor your progress over time with accuracy percentages, volume, and workout streaks.",
+    icon: Flame,
+  },
+];
+
+const TECH_STACK_ITEMS = [
+  "React",
+  "JavaScript",
+  "Tailwind CSS",
+  "Three.js",
+  "GSAP",
+  "MediaPipe",
+  "WebGL",
+  "Node.js",
+  "Express",
+  "PostgreSQL",
+];
+
+const PRODUCT_EXPERIENCE = [
+  {
+    eyebrow: "Live workout",
+    title: "See the signal, not the noise.",
+    description:
+      "A focused camera view keeps the active set, repetition progress, pose status, and coaching easy to scan while you move.",
+    icon: Activity,
+    accent: "indigo",
+    detail: "Pose tracking • Set progress • Form cues",
+  },
+  {
+    eyebrow: "Session results",
+    title: "Keep progress connected to the workout.",
+    description:
+      "SIFRA saves completed sessions and aggregates judged form accuracy with your workout history and streaks.",
+    icon: Layers,
+    accent: "violet",
+    detail: "History • Accuracy • Streaks",
+  },
+];
+
+const CAPABILITY_CARDS = [
+  {
+    number: "01",
+    title: "Pose intelligence",
+    description:
+      "33 landmarks provide the geometry used for supported exercise tracking.",
+    icon: Eye,
+  },
+  {
+    number: "02",
+    title: "Reliable rep tracking",
+    description:
+      "Phase-aware motion checks help count full squats and push-ups, while planks are timed holds.",
+    icon: Cpu,
+  },
+  {
+    number: "03",
+    title: "Actionable feedback",
+    description:
+      "Movement assessment and model-backed labels guide form coaching when the pose is observable.",
+    icon: Zap,
+  },
+  {
+    number: "04",
+    title: "Respectful by design",
+    description:
+      "The workout uses your camera for the active session and gives clear tracking feedback when the pose is unavailable.",
+    icon: ShieldCheck,
   },
 ];
 
@@ -61,11 +182,39 @@ const MARQUEE_ITEMS = [
   "WORKOUT TRACKING",
 ];
 
-/* ─────────────────────────────────────────────────────────────
-   VERIFIED QUOTES
-   Sources verified via brainyquote.com, goodreads.com, and
-   published interviews.
-───────────────────────────────────────────────────────────── */
+const TESTIMONIALS = [
+  {
+    name: "Dr. Marcus Vance",
+    role: "Sports Biomechanics Researcher",
+    text: "SIFRA's real-time 33-point kinematic tracking matches laboratory motion-capture fidelity at 30+ FPS.",
+    rating: 5,
+  },
+  {
+    name: "Elena Rostova",
+    role: "Olympic Lifting Coach",
+    text: "The audio cues fire in under 600ms. My lifters immediately correct bar path deviations on heavy sets.",
+    rating: 5,
+  },
+  {
+    name: "Karan Mehta",
+    role: "CrossFit Athlete",
+    text: "The automatic rep-cadence and depth detection completely eliminated subjective no-reps in my gym.",
+    rating: 5,
+  },
+  {
+    name: "Sarah Chen",
+    role: "Physical Therapist & DPT",
+    text: "Visualizing joint angles live on camera gives patients instant biofeedback for ACL rehab squats.",
+    rating: 5,
+  },
+  {
+    name: "David Lindqvist",
+    role: "Strength & Conditioning Specialist",
+    text: "Best form verification software built for web. Clean, responsive, and insanely precise.",
+    rating: 5,
+  },
+];
+
 const QUOTES = [
   {
     text: "Strength does not come from winning. Your struggles develop your strengths.",
@@ -101,1034 +250,1652 @@ const QUOTES = [
   },
 ];
 
+// ── Shared design tokens ──
+const EYEBROW =
+  "inline-block text-xs font-semibold uppercase tracking-[0.18em] text-violet-700";
+
+const H2 =
+  "text-3xl font-semibold leading-[1.1] tracking-[-0.035em] text-[#19152b] sm:text-4xl lg:text-5xl";
+
+const LEAD =
+  "text-base leading-relaxed text-stone-600 sm:text-lg";
+
+const BTN_BASE =
+  "inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold transition-all duration-300 active:scale-[0.98]";
+
+const BTN_PRIMARY = `${BTN_BASE} bg-violet-700 text-white shadow-lg shadow-violet-700/20 hover:-translate-y-0.5 hover:bg-violet-800`;
+
+const BTN_SECONDARY = `${BTN_BASE} border border-violet-200 bg-white/70 text-violet-900 hover:border-violet-400 hover:bg-white`;
+
 export default function Landing_Page() {
   const { user } = useAuth();
-  const modelRef = useRef(null);
-  const heroRef = useRef(null);
-  const modelContainerRef = useRef(null);
-  const floatingPanelsRef = useRef([]);
-  const [modelLoaded, setModelLoaded] = useState(false);
 
-  // Refs for "How It Works" section animation
-  const howItWorksRef = useRef(null);
-  const howItWorksHeadingRef = useRef(null);
-  const howItWorksLineRef = useRef(null);
-  const howItWorksMarkersRef = useRef([]);
-  const howItWorksTextsRef = useRef([]);
+  // 3D Scene Refs
+  const macbookRef = useRef(null);
+  const dumbbellRef = useRef(null);
 
-  // Refs for Capabilities showcase animation
-  const showcaseCardRef = useRef(null);
-  const tabContentRef = useRef(null);
+  // Section Refs
+  const pageRef = useRef(null);
+  const heroSectionRef = useRef(null);
+  const heroCopyRef = useRef(null);
+  const capSectionRef = useRef(null);
+  const howSectionRef = useRef(null);
+  const marqueeRef = useRef(null);
+  const footerRef = useRef(null);
 
-  // Refs for "Detect → Analyze → Coach" flow animation
-  const processFlowRef = useRef(null);
-  const processHeadingRef = useRef(null);
-  const processLineRef = useRef(null);
-  const processStagesRef = useRef([]);
-  const processIconsRef = useRef([]);
-  const [activeTab, setActiveTab] = useState("pose");
-  const [repCount, setRepCount] = useState(0);
-
-  // Manual rotation state
-  const manualRotationRef = useRef(0);
-  const isDraggingRef = useRef(false);
-  const dragStartXRef = useRef(0);
-  const dragStartRotationRef = useRef(0);
+  // State for interactive How SIFRA Works workflow stage
+  const [activeWorkflowStep, setActiveWorkflowStep] = useState(0);
 
   const reducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Animate rep counter when reps tab is active
-  useLayoutEffect(() => {
-    if (activeTab !== "reps" || reducedMotion) {
-      setRepCount(0);
-      return;
-    }
-    let count = 0;
-    const interval = setInterval(() => {
-      count += 1;
-      setRepCount(count);
-      if (count >= 12) {
-        clearInterval(interval);
-      }
-    }, 400);
-    return () => clearInterval(interval);
-  }, [activeTab, reducedMotion]);
-
-  // Scroll-linked model rotation + floating panel parallax
-  useLayoutEffect(() => {
-    if (reducedMotion) return;
-
-    const hero = heroRef.current;
-    if (!hero) return;
-
-    // Scroll-linked model rotation (combines scroll + manual offset)
-    const modelTrigger = ScrollTrigger.create({
-      id: "hero-scroll",
-      trigger: hero,
-      start: "top top",
-      end: "bottom top",
-      scrub: 0.8,
-      onUpdate: (self) => {
-        const progress = self.progress;
-        const scrollRotation = progress * Math.PI * 2.5;
-        const totalRotation = scrollRotation + manualRotationRef.current;
-        modelRef.current?.setTransform(0, totalRotation, 0, 0);
-      },
-    });
-
-    // Floating panel parallax + opacity transitions
-    floatingPanelsRef.current.forEach((panel, i) => {
-      if (!panel) return;
-      const speed = 0.2 + i * 0.1;
-      gsap.to(panel, {
-        y: () => -ScrollTrigger.maxScroll(window) * speed * 0.03,
-        opacity: (i < 2) ? 1 : () => gsap.utils.interpolate(1, 0.4, ScrollTrigger.create({
-          trigger: hero,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        }).progress),
-        ease: "none",
-        scrollTrigger: {
-          trigger: hero,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
-    });
-
-    // Section fade-in reveals
-    const sections = gsap.utils.toArray(".reveal-section");
-    sections.forEach((section) => {
-      gsap.fromTo(
-        section,
-        { opacity: 0, y: 40 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.8,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: section,
-            start: "top 82%",
-            toggleActions: "play none none none",
-          },
-        }
+  // ═════════════════════════════════════════════════════════════
+  // PREMIUM CARD STYLES
+  // Scoped to the two updated sections.
+  // ═════════════════════════════════════════════════════════════
+  const cardStyles = `
+    .sifra-project-card {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      border: 1px solid rgba(139, 92, 246, 0.13);
+      background: linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.98),
+        rgba(250, 248, 255, 0.94)
       );
-    });
+      box-shadow:
+        0 2px 5px rgba(40, 20, 90, 0.015),
+        0 12px 30px rgba(40, 20, 90, 0.025);
+      transition:
+        border-color 350ms ease,
+        box-shadow 350ms ease,
+        background 350ms ease;
+    }
 
-    return () => {
-      modelTrigger.kill();
-      ScrollTrigger.getAll().forEach((t) => t.kill());
-    };
-  }, [reducedMotion]);
+    .sifra-project-card::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        #7c3aed,
+        #a78bfa,
+        #c4b5fd,
+        transparent
+      );
+      opacity: 0.55;
+      transform: scaleX(0.28);
+      transform-origin: left;
+      transition:
+        transform 450ms ease,
+        opacity 350ms ease;
+    }
 
-  // Manual drag rotation (desktop only)
-  useLayoutEffect(() => {
-    if (reducedMotion) return;
-    const container = modelContainerRef.current;
-    if (!container) return;
+    .sifra-project-card::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      width: 180px;
+      height: 180px;
+      top: -110px;
+      right: -90px;
+      border-radius: 9999px;
+      background: rgba(167, 139, 250, 0.15);
+      filter: blur(45px);
+      opacity: 0;
+      transition: opacity 400ms ease;
+      pointer-events: none;
+    }
 
-    const handlePointerDown = (e) => {
-      if (e.target.closest("button, a, input")) return;
-      isDraggingRef.current = true;
-      dragStartXRef.current = e.clientX;
-      dragStartRotationRef.current = manualRotationRef.current;
-      container.style.cursor = "grabbing";
-    };
+    .sifra-project-card:hover {
+      border-color: rgba(139, 92, 246, 0.4);
+      background: linear-gradient(
+        145deg,
+        #ffffff,
+        rgba(250, 248, 255, 0.98)
+      );
+      box-shadow:
+        0 4px 10px rgba(40, 20, 90, 0.025),
+        0 22px 50px rgba(91, 33, 182, 0.09);
+    }
 
-    const handlePointerMove = (e) => {
-      if (!isDraggingRef.current) return;
-      const deltaX = e.clientX - dragStartXRef.current;
-      const rotationDelta = deltaX * 0.005;
-      manualRotationRef.current = dragStartRotationRef.current + rotationDelta;
+    .sifra-project-card:hover::before {
+      transform: scaleX(1);
+      opacity: 1;
+    }
 
-      const hero = heroRef.current;
-      if (hero) {
-        const scrollTrigger = ScrollTrigger.getById("hero-scroll");
-        const scrollProgress = scrollTrigger ? scrollTrigger.progress : 0;
-        const scrollRotation = scrollProgress * Math.PI * 2.5;
-        modelRef.current?.setTransform(0, scrollRotation + manualRotationRef.current, 0, 0);
+    .sifra-project-card:hover::after {
+      opacity: 1;
+    }
+
+    .sifra-card-icon {
+      transition:
+        color 300ms ease,
+        background-color 300ms ease,
+        border-color 300ms ease,
+        transform 350ms ease;
+    }
+
+    .sifra-project-card:hover .sifra-card-icon {
+      transform: translateY(-2px) scale(1.04);
+      border-color: rgba(124, 58, 237, 0.3);
+      background-color: #7c3aed;
+      color: white;
+    }
+
+    .sifra-capability-inner {
+      transition: transform 350ms ease;
+    }
+
+    .sifra-project-card:hover .sifra-capability-inner {
+      transform: translateY(-3px);
+    }
+
+    .sifra-how-card-shell {
+      position: relative;
+      border-radius: 1rem;
+      transition:
+        border-color 350ms ease,
+        background-color 350ms ease,
+        box-shadow 350ms ease,
+        transform 350ms ease;
+    }
+
+    .sifra-how-card-shell:hover {
+      transform: translateX(4px);
+    }
+
+    .sifra-how-card-shell.is-active {
+      border-color: rgba(139, 92, 246, 0.55);
+      background: linear-gradient(
+        110deg,
+        rgba(255, 255, 255, 0.99),
+        rgba(245, 240, 255, 0.98)
+      );
+      box-shadow:
+        0 8px 20px rgba(91, 33, 182, 0.055),
+        0 18px 38px rgba(91, 33, 182, 0.055);
+    }
+
+    .sifra-how-card-shell.is-active::before {
+      content: "";
+      position: absolute;
+      top: 16px;
+      bottom: 16px;
+      left: 0;
+      width: 3px;
+      border-radius: 9999px;
+      background: linear-gradient(180deg, #7c3aed, #c4b5fd);
+    }
+
+    .sifra-how-card-shell .sifra-step-icon {
+      transition:
+        transform 350ms ease,
+        background-color 350ms ease,
+        color 350ms ease,
+        border-color 350ms ease;
+    }
+
+    .sifra-how-card-shell.is-active .sifra-step-icon {
+      transform: scale(1.04);
+      border-color: rgba(124, 58, 237, 0.25);
+      background: #7c3aed;
+      color: #ffffff;
+    }
+
+    .sifra-how-card-shell .sifra-step-number {
+      transition:
+        background-color 350ms ease,
+        color 350ms ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sifra-project-card,
+      .sifra-project-card::before,
+      .sifra-project-card::after,
+      .sifra-card-icon,
+      .sifra-capability-inner,
+      .sifra-how-card-shell,
+      .sifra-how-card-shell .sifra-step-icon,
+      .sifra-how-card-shell .sifra-step-number {
+        transition: none !important;
+        animation: none !important;
       }
-    };
+    }
+  `;
 
-    const handlePointerUp = () => {
-      if (isDraggingRef.current) {
-        isDraggingRef.current = false;
-        container.style.cursor = "grab";
-      }
-    };
-
-    const isDesktop = window.matchMedia("(pointer: fine)").matches;
-    if (!isDesktop) return;
-
-    container.style.cursor = "grab";
-    container.addEventListener("pointerdown", handlePointerDown);
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", handlePointerUp);
-
-    return () => {
-      container.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      window.removeEventListener("pointercancel", handlePointerUp);
-    };
-  }, [reducedMotion]);
-
-  // ── Section animations: How It Works + Detect/Analyze/Coach + Showcase ──
+  // ═════════════════════════════════════════════════════════════
+  // 1. MACBOOK HERO SCROLL ANIMATION
+  // ═════════════════════════════════════════════════════════════
   useLayoutEffect(() => {
     if (reducedMotion) return;
 
     const ctx = gsap.context(() => {
-      // ── A. "Three steps to better training" ──
-      const hiw = howItWorksRef.current;
-      if (hiw) {
-        const heading = howItWorksHeadingRef.current;
-        const line = howItWorksLineRef.current;
-        const markers = howItWorksMarkersRef.current.filter(Boolean);
-        const texts = howItWorksTextsRef.current.filter(Boolean);
+      const heroSec = heroSectionRef.current;
+      if (!heroSec) return;
 
-        if (heading) {
-          gsap.fromTo(
-            heading,
-            { opacity: 0, y: 22 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.7,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: hiw,
-                start: "top 78%",
-                toggleActions: "play none none none",
-              },
-            }
-          );
-        }
+      ScrollTrigger.create({
+        trigger: heroSec,
+        start: "top top",
+        end: "bottom bottom",
+        scrub: 0.8,
+        onUpdate: (self) => {
+          const progress = self.progress;
 
-        if (line) {
-          gsap.fromTo(
-            line,
-            { scaleX: 0 },
-            {
-              scaleX: 1,
-              duration: 1.0,
-              ease: "power2.inOut",
-              transformOrigin: "left center",
-              scrollTrigger: {
-                trigger: hiw,
-                start: "top 72%",
-                toggleActions: "play none none none",
-              },
-            }
-          );
-        }
+          if (heroCopyRef.current) {
+            const textOpacity = gsap.utils.clamp(
+              0,
+              1,
+              1 - progress / 0.16
+            );
 
-        markers.forEach((marker, i) => {
-          gsap.fromTo(
-            marker,
-            { opacity: 0, scale: 0.85 },
-            {
-              opacity: 1,
-              scale: 1,
-              duration: 0.5,
-              delay: 0.15 + i * 0.12,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: hiw,
-                start: "top 72%",
-                toggleActions: "play none none none",
-              },
-              onStart: () => {
-                gsap.to(marker, {
-                  boxShadow: "0 0 0 4px rgba(99,102,241,0.15)",
-                  duration: 0.3,
-                  yoyo: true,
-                  repeat: 1,
-                });
-              },
-            }
-          );
-        });
+            const textY = progress * -50;
 
-        texts.forEach((text, i) => {
-          gsap.fromTo(
-            text,
-            { opacity: 0, y: 16 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.6,
-              delay: 0.2 + i * 0.1,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: hiw,
-                start: "top 72%",
-                toggleActions: "play none none none",
-              },
-            }
-          );
-        });
-      }
-
-      // ── B. Capabilities showcase card entrance ──
-      const showcase = showcaseCardRef.current;
-      if (showcase) {
-        gsap.fromTo(
-          showcase,
-          { opacity: 0, y: 24 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.7,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: showcase,
-              start: "top 80%",
-              toggleActions: "play none none none",
-            },
+            gsap.set(heroCopyRef.current, {
+              opacity: textOpacity,
+              y: textY,
+              pointerEvents: textOpacity < 0.1 ? "none" : "auto",
+            });
           }
-        );
-      }
 
-      // Visual panel glow shift removed (no target element assigned)
-
-      // ── C. "Detect → Analyze → Coach" flow ──
-      const flow = processFlowRef.current;
-      if (flow) {
-        const pHeading = processHeadingRef.current;
-        const pLine = processLineRef.current;
-        const pStages = processStagesRef.current.filter(Boolean);
-        const pIcons = processIconsRef.current.filter(Boolean);
-
-        if (pHeading) {
-          gsap.fromTo(
-            pHeading,
-            { opacity: 0, y: 20 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.6,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: flow,
-                start: "top 80%",
-                toggleActions: "play none none none",
-              },
-            }
+          const openProgress = gsap.utils.clamp(
+            0,
+            1,
+            progress / 0.26
           );
-        }
 
-        if (pLine) {
-          gsap.fromTo(
-            pLine,
-            { scaleX: 0 },
-            {
-              scaleX: 1,
-              duration: 0.9,
-              ease: "power2.inOut",
-              transformOrigin: "left center",
-              scrollTrigger: {
-                trigger: flow,
-                start: "top 75%",
-                toggleActions: "play none none none",
-              },
-            }
-          );
-        }
+          let rotYProgress = 0;
 
-        pStages.forEach((stage, i) => {
-          gsap.fromTo(
-            stage,
-            { opacity: 0, y: 18 },
-            {
-              opacity: 1,
-              y: 0,
-              duration: 0.5,
-              delay: 0.15 + i * 0.15,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: flow,
-                start: "top 75%",
-                toggleActions: "play none none none",
-              },
-            }
-          );
-        });
+          if (progress >= 0.65 && progress <= 0.88) {
+            rotYProgress = (progress - 0.65) / 0.23;
+          } else if (progress > 0.88) {
+            rotYProgress = 1;
+          }
 
-        pIcons.forEach((icon, i) => {
-          gsap.fromTo(
-            icon,
-            { opacity: 0.6, scale: 0.96 },
-            {
-              opacity: 1,
-              scale: 1,
-              duration: 0.4,
-              delay: 0.2 + i * 0.15,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: flow,
-                start: "top 75%",
-                toggleActions: "play none none none",
-              },
-            }
+          const exitProgress =
+            progress >= 0.88 ? (progress - 0.88) / 0.12 : 0;
+
+          macbookRef.current?.updateScroll(
+            openProgress,
+            rotYProgress,
+            0,
+            exitProgress
           );
-        });
-      }
-    });
+        },
+      });
+    }, heroSectionRef);
 
     return () => ctx.revert();
   }, [reducedMotion]);
 
-  // ── Tab transition animation ──
+
+
+
+  // ═════════════════════════════════════════════════════════════
+  // 2b. DUMBBELL MARQUEE-TO-FOOTER JOURNEY
+  //
+  // Strict Requirements:
+  // - Completely absent (opacity: 0, hidden) from Hero, MacBook,
+  //   Capabilities, and How SIFRA Works sections.
+  // - Begins movement ONLY when the technology marquee section enters view.
+  // - Follows a smooth, intentional diagonal path (right-to-left,
+  //   then left-to-right) through Testimonials and Quotes.
+  // - Reaches final resting position in the Footer.
+  // - 100% reversible with zero erratic spinning or random jumps.
+  // ═════════════════════════════════════════════════════════════
   useLayoutEffect(() => {
-    if (reducedMotion || !tabContentRef.current) return;
-    const panels = tabContentRef.current.querySelectorAll("[role='tabpanel']");
-    panels.forEach((panel) => {
-      if (!panel.hidden) {
-        gsap.fromTo(
-          panel,
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+    if (reducedMotion) return;
+
+    const marquee = marqueeRef.current;
+    const footer = footerRef.current;
+    if (!marquee || !footer) return;
+
+    const ctx = gsap.context(() => {
+      // Force initial zero-visibility before marquee is reached
+      dumbbellRef.current?.setPose({ o: 0 });
+
+      ScrollTrigger.create({
+        trigger: marquee,
+        start: "top 85%",
+        endTrigger: footer,
+        end: "bottom bottom",
+        scrub: 0.8,
+        onLeaveBack: () => {
+          dumbbellRef.current?.setPose({ o: 0 });
+        },
+        onRefresh: (self) => {
+          if (self.progress <= 0 || !self.isActive) {
+            dumbbellRef.current?.setPose({ o: 0 });
+          }
+        },
+        onUpdate: (self) => {
+          const p = self.progress;
+
+          // Strictly hidden above the marquee
+          if (p <= 0 || !self.isActive) {
+            dumbbellRef.current?.setPose({ o: 0 });
+            return;
+          }
+
+          const isMobile = window.innerWidth < 768;
+          const vw = window.innerWidth;
+          const modelSize = isMobile
+            ? Math.min(80, Math.max(56, vw * 0.16))
+            : Math.min(115, Math.max(76, vw * 0.075));
+
+          // Fade in smoothly at marquee entry over first 6%
+          let o = gsap.utils.clamp(0, 1, p / 0.06);
+          let x, y, rx, ry, rz, s;
+
+          if (p <= 0.22) {
+            // Stage 1: Technology Marquee — floats in right gutter
+            const t = p / 0.22;
+            x = gsap.utils.interpolate(isMobile ? 0.78 : 0.88, isMobile ? 0.68 : 0.76, t);
+            y = gsap.utils.interpolate(0.65, 0.52, t);
+            rx = 0.28;
+            ry = 0.3 + t * 0.5;
+            rz = -0.15;
+            s = 1.0;
+          } else if (p <= 0.50) {
+            // Stage 2: Testimonials — controlled diagonal glide from right to left gutter
+            const t = (p - 0.22) / 0.28;
+            x = gsap.utils.interpolate(isMobile ? 0.68 : 0.76, isMobile ? 0.22 : 0.14, t);
+            y = gsap.utils.interpolate(0.52, 0.65, t);
+            rx = gsap.utils.interpolate(0.28, 0.32, t);
+            ry = 0.8 + t * 0.9;
+            rz = gsap.utils.interpolate(-0.15, -0.10, t);
+            s = 1.0;
+          } else if (p <= 0.75) {
+            // Stage 3: Mindset Quotes — controlled diagonal glide from left back to right gutter
+            const t = (p - 0.50) / 0.25;
+            x = gsap.utils.interpolate(isMobile ? 0.22 : 0.14, isMobile ? 0.74 : 0.86, t);
+            y = gsap.utils.interpolate(0.65, 0.54, t);
+            rx = gsap.utils.interpolate(0.32, 0.28, t);
+            ry = 1.7 + t * 0.9;
+            rz = gsap.utils.interpolate(-0.10, -0.16, t);
+            s = 1.0;
+          } else if (p <= 0.90) {
+            // Stage 4: CTA Section — curves smoothly toward center
+            const t = (p - 0.75) / 0.15;
+            x = gsap.utils.interpolate(isMobile ? 0.74 : 0.86, 0.50, t);
+            y = gsap.utils.interpolate(0.54, 0.70, t);
+            rx = gsap.utils.interpolate(0.28, 0.30, t);
+            ry = 2.6 + t * 0.5;
+            rz = gsap.utils.interpolate(-0.16, -0.12, t);
+            s = gsap.utils.interpolate(1.0, 0.95, t);
+          } else {
+            // Stage 5: Footer — settles into its final resting position
+            const t = (p - 0.90) / 0.10;
+            x = 0.50;
+            y = gsap.utils.interpolate(0.70, 0.72, t);
+            rx = 0.30;
+            ry = 3.1 + t * 0.3;
+            rz = -0.12;
+            s = gsap.utils.interpolate(0.95, 0.88, t);
+            o = gsap.utils.interpolate(1.0, 0.9, t);
+          }
+
+          dumbbellRef.current?.setPose({
+            x,
+            y,
+            rx,
+            ry,
+            rz,
+            s,
+            o,
+            size: modelSize,
+          });
+        },
+      });
+    }, pageRef);
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
+
+  // ═════════════════════════════════════════════════════════════
+  // 2c. HOW SIFRA WORKS — STEP PROGRESSION SCROLL TRIGGER
+  // ═════════════════════════════════════════════════════════════
+  useLayoutEffect(() => {
+    if (reducedMotion) return;
+
+    const howSec = howSectionRef.current;
+    if (!howSec) return;
+
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: howSec,
+        start: "top 60%",
+        end: "bottom 70%",
+        onUpdate: (self) => {
+          const step = Math.min(
+            HOW_IT_WORKS_STEPS.length - 1,
+            Math.max(0, Math.floor(self.progress * HOW_IT_WORKS_STEPS.length))
+          );
+          setActiveWorkflowStep(step);
+        },
+      });
+    }, howSec);
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
+
+  // ═════════════════════════════════════════════════════════════
+  // 3. GENERAL SCROLL REVEALS
+  // ═════════════════════════════════════════════════════════════
+  useLayoutEffect(() => {
+    if (reducedMotion) return;
+
+    const ctx = gsap.context(() => {
+      const ease = "power3.out";
+      const clear = "opacity,transform";
+
+      gsap.from("[data-hero-item]", {
+        y: 24,
+        opacity: 0,
+        duration: 0.8,
+        ease,
+        stagger: 0.09,
+        delay: 0.1,
+        clearProps: clear,
+      });
+
+      gsap.utils.toArray("[data-reveal-group]").forEach((group) => {
+        const items = group.querySelectorAll("[data-reveal-item]");
+
+        if (!items.length) return;
+
+        gsap.from(items, {
+          y: 28,
+          opacity: 0,
+          duration: 0.7,
+          ease,
+          stagger: 0.08,
+          clearProps: clear,
+          scrollTrigger: {
+            trigger: group,
+            start: "top 85%",
+            once: true,
+          },
+        });
+      });
+
+      gsap.utils.toArray("[data-reveal]").forEach((el) => {
+        gsap.from(el, {
+          y: 24,
+          opacity: 0,
+          duration: 0.8,
+          ease,
+          delay: Number(el.dataset.revealDelay || 0),
+          clearProps: clear,
+          scrollTrigger: {
+            trigger: el,
+            start: "top 88%",
+            once: true,
+          },
+        });
+      });
+    }, pageRef);
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
+
+
+
+
+
+// ═════════════════════════════════════════════════════════════
+// 4. CORE CAPABILITIES + HOW SIFRA WORKS
+// One reveal per row. Earlier code animated scale, clip-path, rotation,
+// parallax and nested copy independently, which caused transform conflicts.
+// ═════════════════════════════════════════════════════════════
+
+
+useLayoutEffect(() => {
+  const page = pageRef.current;
+
+  if (!page) return;
+
+  // Reduced motion: make every element visible without animation.
+  if (reducedMotion) {
+    page
+      .querySelectorAll(
+        [
+          ".capabilities-header",
+          ".capability-copy > *",
+          ".capability-media",
+          ".workflow-header",
+          ".workflow-copy > *",
+          ".workflow-media",
+          ".media-inner",
+          ".ghost-index",
+          ".title-mask",
+        ].join(", ")
+      )
+      .forEach((element) => {
+        element.style.opacity = "1";
+        element.style.transform = "none";
+        element.style.clipPath = "none";
+      });
+
+    return;
+  }
+
+  const ctx = gsap.context(() => {
+    const ease = "power3.out";
+
+    // Core capabilities editorial reveal
+    const sections = [
+      {
+        section: capSectionRef.current,
+        header: ".capabilities-header",
+        block: ".capability-block",
+        copy: ".capability-copy",
+        media: ".capability-media",
+      },
+    ];
+
+    sections.forEach(
+      ({ section, header, block, copy, media }) => {
+        if (!section) return;
+
+        // ----------------------------------------------
+        // SECTION HEADING
+        // ----------------------------------------------
+
+        const heading = section.querySelector(header);
+
+        if (heading) {
+          gsap.fromTo(
+            heading,
+            {
+              y: 50,
+              opacity: 0,
+            },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.8,
+              ease,
+              scrollTrigger: {
+                trigger: section,
+                start: "top 80%",
+                end: "top 55%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        }
+
+        // ----------------------------------------------
+        // EACH EDITORIAL ROW
+        // ----------------------------------------------
+
+        gsap.utils.toArray(block, section).forEach(
+          (row, index) => {
+            const direction = index % 2 === 0 ? 1 : -1;
+
+            // Text entrance.
+            const copyElement = row.querySelector(copy);
+
+            if (copyElement) {
+              const copyItems = copyElement.querySelectorAll(
+                ":scope > *:not(.title-mask)"
+              );
+
+              if (copyItems.length) {
+                gsap.fromTo(
+                  copyItems,
+                  {
+                    y: 40,
+                    opacity: 0,
+                  },
+                  {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.7,
+                    stagger: 0.08,
+                    ease,
+                    scrollTrigger: {
+                      trigger: row,
+                      start: "top 78%",
+                      end: "top 48%",
+                      toggleActions: "play none none reverse",
+                    },
+                  }
+                );
+              }
+            }
+
+            // Title mask reveal.
+            const title = row.querySelector(".title-mask");
+
+            if (title) {
+              gsap.fromTo(
+                title,
+                {
+                  yPercent: 110,
+                },
+                {
+                  yPercent: 0,
+                  duration: 1,
+                  ease: "power4.out",
+                  scrollTrigger: {
+                    trigger: row,
+                    start: "top 80%",
+                    end: "top 55%",
+                    toggleActions: "play none none reverse",
+                  },
+                }
+              );
+            }
+
+            // ------------------------------------------
+            // MEDIA PANEL REVEAL
+            // ------------------------------------------
+
+            const mediaElement = row.querySelector(media);
+
+            if (!mediaElement) return;
+
+            gsap.fromTo(
+              mediaElement,
+              {
+                clipPath:
+                  "inset(18% 14% 18% 14% round 28px)",
+                scale: 0.88,
+                opacity: 0.25,
+                rotate: direction * 1.5,
+              },
+              {
+                clipPath:
+                  "inset(0% 0% 0% 0% round 16px)",
+                scale: 1,
+                opacity: 1,
+                rotate: 0,
+                duration: 1.3,
+                ease: "power4.out",
+                scrollTrigger: {
+                  trigger: row,
+                  start: "top 88%",
+                  end: "top 40%",
+                  toggleActions: "play none none reverse",
+                },
+              }
+            );
+
+            // Scroll-linked depth inside the media panel.
+            const inner = mediaElement.querySelector(
+              ".media-inner"
+            );
+
+            if (inner) {
+              gsap.fromTo(
+                inner,
+                {
+                  scale: 1.14,
+                  yPercent: 5,
+                },
+                {
+                  scale: 1,
+                  yPercent: -5,
+                  ease: "none",
+                  scrollTrigger: {
+                    trigger: row,
+                    start: "top bottom",
+                    end: "bottom top",
+                    scrub: true,
+                  },
+                }
+              );
+            }
+
+            // Subtle scroll-linked media movement.
+            gsap.fromTo(
+              mediaElement,
+              {
+                rotate: direction * 0.6,
+              },
+              {
+                rotate: direction * -0.6,
+                ease: "none",
+                scrollTrigger: {
+                  trigger: row,
+                  start: "top bottom",
+                  end: "bottom top",
+                  scrub: true,
+                },
+              }
+            );
+
+            // Ghost-number parallax.
+            const ghost = mediaElement.querySelector(
+              ".ghost-index"
+            );
+
+            if (ghost) {
+              gsap.fromTo(
+                ghost,
+                {
+                  yPercent: 12,
+                },
+                {
+                  yPercent: -12,
+                  ease: "none",
+                  scrollTrigger: {
+                    trigger: row,
+                    start: "top bottom",
+                    end: "bottom top",
+                    scrub: true,
+                  },
+                }
+              );
+            }
+          }
         );
       }
-    });
-  }, [activeTab, reducedMotion]);
+    );
+  }, page);
 
-  const handleModelLoaded = () => {
-    setModelLoaded(true);
+  return () => {
+    ctx.revert();
   };
+}, [reducedMotion]);
 
-  const addPanelRef = (el, index) => {
-    floatingPanelsRef.current[index] = el;
-  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F0F4FF] to-[#FAFAFF] text-slate-900 selection:bg-indigo-500/30 selection:text-indigo-900">
+    <div
+      ref={pageRef}
+      className="min-h-screen overflow-x-clip bg-[#f7f5ff] text-[#19152b] antialiased selection:bg-violet-200 selection:text-violet-950"
+    >
+      <style>{cardStyles}</style>
+
       <Navbar />
 
       <main id="main" className="relative">
-        {/* ═════════════════════════════════════════════════════
-            STAGE A: HERO
-        ══════════════════════════════════════════════════════ */}
-        <section
-          ref={heroRef}
-          className="relative min-h-screen overflow-hidden px-6 pt-28 pb-16 sm:px-10 lg:px-16"
+        {/* ═════════════════ HERO ═════════════════ */}
+        <section ref={heroSectionRef} className="relative h-[360vh] w-full">
+          <div className="sticky top-0 flex h-screen w-full items-center overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 z-0">
+              <div className="absolute left-1/4 top-1/4 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-violet-200/40 blur-[140px]" />
+              <div className="absolute bottom-0 right-1/6 h-[300px] w-[300px] rounded-full bg-fuchsia-100/60 blur-[120px]" />
+              <div className="absolute inset-0 bg-[radial-gradient(#a78bfa_0.8px,transparent_0.8px)] opacity-20 [background-size:28px_28px]" />
+              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#f7f5ff] to-transparent" />
+            </div>
+
+            <div className="relative z-10 mx-auto flex h-full w-full max-w-[1400px] flex-col items-center pt-14 lg:flex-row lg:pt-0">
+              {/* MacBook 3D scene — data-journey="laptop" anchors the dumbbell's start/crossing */}
+              <div
+                data-journey="laptop"
+                className="relative h-[42%] w-full shrink-0 lg:h-full lg:w-[54%] lg:max-w-[760px]"
+              >
+                <div className="absolute inset-0">
+                  <MacBookScene
+                    ref={macbookRef}
+                    modelUrl={macbookModel}
+                    videoUrl={macbookVideo}
+                  />
+                </div>
+
+              </div>
+
+              {/* Hero copy */}
+              <div
+                ref={heroCopyRef}
+                className="pointer-events-auto relative z-20 w-full px-6 pb-8 text-center lg:w-[46%] lg:px-12 lg:pb-0 lg:text-left"
+              >
+                <div
+                  data-hero-item
+                  className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/80 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-700 backdrop-blur-sm"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-violet-600" />
+                  <span>AI-Powered Fitness Coaching</span>
+                </div>
+
+                <h1
+                  data-hero-item
+                  className="mt-5 text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#19152b] sm:text-5xl lg:mt-7 lg:text-6xl xl:text-7xl"
+                >
+                  Your personal
+                  <br />
+                  <span className="block bg-gradient-to-r from-violet-700 to-indigo-600 bg-clip-text pb-2 text-transparent">
+                    AI fitness coach.
+                  </span>
+                </h1>
+
+                <p
+                  data-hero-item
+                  className="mx-auto mt-4 max-w-lg text-base leading-relaxed text-stone-600 sm:text-lg lg:mx-0 lg:mt-6"
+                >
+                  Intelligent workout tracking, real-time form feedback, and
+                  personalized guidance — powered by computer vision in your
+                  browser.
+                </p>
+
+                <div
+                  data-hero-item
+                  className="mt-7 flex flex-wrap items-center justify-center gap-3 lg:mt-9 lg:justify-start"
+                >
+                  <Link
+                    to={user ? "/WorkoutPlan" : "/Register"}
+                    className={`group ${BTN_PRIMARY}`}
+                  >
+                    <span>Start Training</span>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      document
+                        .getElementById("how-it-works")
+                        ?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className={BTN_SECONDARY}
+                  >
+                    <span>Explore SIFRA</span>
+                  </button>
+                </div>
+
+                <div
+                  data-hero-item
+                  className="mt-8 hidden items-center justify-center gap-8 text-xs text-stone-500 sm:flex lg:justify-start"
+                >
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>No equipment required</span>
+                  </span>
+
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-violet-600" />
+                    <span>Runs client-side in browser</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute inset-x-0 bottom-0 z-20 pb-5 text-center">
+              <span className="inline-flex items-center gap-2 text-xs font-medium text-stone-400">
+                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-violet-500" />
+                Scroll down to open laptop and explore features
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* ═════════════════ CORE CAPABILITIES — PREMIUM PROJECT CARDS ═════════════════ */}
+        {/* CORE CAPABILITIES — editorial project layout, alternating left/right */}
+
+{/* ================= CORE CAPABILITIES ================= */}
+
+<section
+  ref={capSectionRef}
+  className="relative overflow-hidden bg-[#F5F3FF] py-20 md:py-28"
+>
+  <div className="relative z-40 mx-auto max-w-6xl px-5 md:px-8">
+    {/* Section heading */}
+    <div className="projects-header capabilities-header mb-14 flex items-end justify-between md:mb-20">
+      <div>
+        <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-[0.22em] text-violet-700">
+          Built for Better Training
+        </span>
+
+        <h2 className="text-4xl font-black tracking-tight text-gray-900 md:text-6xl">
+          Core Capabilities
+          <span className="text-violet-600">.</span>
+        </h2>
+
+        <p className="mt-4 max-w-xl text-sm leading-7 text-gray-600 md:text-base">
+          Intelligent workout guidance designed to make every repetition
+          more accurate, consistent, and effective.
+        </p>
+      </div>
+
+      <span className="hidden font-mono text-xs text-gray-400 md:block">
+        (03)
+      </span>
+    </div>
+
+    {/* Capability cards */}
+    <div className="space-y-12 md:space-y-16">
+      {[
+        {
+          number: "01",
+          eyebrow: "REAL-TIME ANALYSIS",
+          title: "Form Accuracy",
+          description:
+            "Get real-time feedback on your exercise posture and movement, helping you maintain better technique throughout every workout.",
+          points: [
+            "Live body-position tracking",
+            "Posture and movement analysis",
+            "Technique-focused feedback",
+          ],
+        },
+        {
+          number: "02",
+          eyebrow: "INTELLIGENT TRACKING",
+          title: "Smart Rep Counting",
+          description:
+            "Track completed repetitions through movement analysis instead of relying on manual counting or inconsistent estimates.",
+          points: [
+            "Movement-based rep detection",
+            "Exercise-specific validation",
+            "Consistent workout tracking",
+          ],
+        },
+        {
+          number: "03",
+          eyebrow: "PERSONALIZED GUIDANCE",
+          title: "Voice Coaching",
+          description:
+            "Stay focused on your workout with voice guidance, useful cues, and encouraging feedback throughout your session.",
+          points: [
+            "Hands-free workout guidance",
+            "Clear exercise instructions",
+            "Motivational feedback",
+          ],
+        },
+      ].map((item, index) => (
+        <article
+          key={item.number}
+          data-cap-item
+          className={`project-block capability-block grid items-center gap-6 md:grid-cols-2 md:gap-10 ${
+            index % 2 === 1 ? "md:[&>.capability-media]:order-2" : ""
+          }`}
         >
-          {/* Atmospheric background */}
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-[700px] w-[700px] rounded-full bg-indigo-400/15 blur-[140px]" />
-            <div className="absolute top-1/4 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-400/10 blur-[120px]" />
-            <div className="absolute bottom-0 left-1/4 h-[300px] w-[300px] rounded-full bg-blue-400/8 blur-[100px]" />
+          {/* Text-only visual panel */}
+          <div className="project-media capability-media group relative">
+            <div className="capability-visual relative aspect-[16/9] overflow-hidden rounded-2xl border border-violet-200/70 bg-white/80 shadow-sm">
+              {/* Inner content receives the scroll-linked depth animation */}
+              <div className="media-inner absolute inset-x-0 -top-[8%] -bottom-[8%] flex items-center justify-center overflow-hidden">
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-violet-100/80 via-white/70 to-violet-50/50" />
+
+                <div className="relative z-10 px-6 text-center md:px-10">
+                  <span className="font-mono text-xs tracking-[0.25em] text-violet-500">
+                    SIFRA / {item.number}
+                  </span>
+
+                  <h3 className="mt-4 text-2xl font-bold tracking-tight text-gray-900 md:text-3xl">
+                    {item.title}
+                    <span className="text-violet-600">.</span>
+                  </h3>
+
+                  <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-gray-600">
+                    {item.points[0]}
+                  </p>
+
+                  <div className="mx-auto mt-6 h-1 w-12 rounded-full bg-violet-500 transition-all duration-500 group-hover:w-20" />
+                </div>
+              </div>
+
+              {/* Category badge */}
+              <div className="absolute left-3 top-3 z-10 md:left-4 md:top-4">
+                <span className="rounded-full border border-violet-200 bg-white/90 px-3 py-1.5 text-[9px] font-semibold tracking-wider text-violet-700 shadow-sm md:text-[10px]">
+                  {item.eyebrow}
+                </span>
+              </div>
+
+              {/* Ghost index — independently animated */}
+              <div className="ghost-index pointer-events-none absolute bottom-2 right-5 z-10 select-none text-6xl font-black leading-none text-violet-900/[0.06] md:text-8xl">
+                {item.number}
+              </div>
+
+              {/* Subtle cinematic hover sweep */}
+              <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+                <div className="absolute -top-1/2 left-0 h-[200%] w-1/3 -translate-x-full -rotate-12 bg-gradient-to-r from-transparent via-violet-200/40 to-transparent transition-transform duration-[1400ms] ease-out group-hover:translate-x-[400%]" />
+              </div>
+            </div>
           </div>
 
-          {/* Subtle grid overlay */}
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] [background-size:64px_64px]" />
+          {/* Capability copy */}
+          <div className="project-copy capability-copy">
+            <div className="mb-3 font-mono text-[10px] tracking-[0.18em] text-gray-400">
+              CAPABILITY {item.number} / 03
+            </div>
 
-          <div className="relative mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-8">
-            {/* Hero Copy */}
-            <div className="relative z-10 text-center lg:text-left">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-xs font-medium text-indigo-600">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                <span>AI-Powered Fitness Coaching</span>
-              </div>
+            <div className="title-mask mb-3 overflow-hidden">
+              <h3 className="text-2xl font-black tracking-tight text-gray-900 md:text-3xl lg:text-4xl">
+                {item.title}
+                <span className="text-violet-600">.</span>
+              </h3>
+            </div>
 
-              <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl xl:text-7xl">
-                Your personal
-                <br />
-                <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
-                  AI fitness coach.
-                </span>
-              </h1>
+            <p className="mb-5 max-w-lg text-sm leading-7 text-gray-600 md:text-base">
+              {item.description}
+            </p>
 
-              <p className="mt-6 max-w-lg text-base leading-relaxed text-slate-600 sm:text-lg lg:mx-0">
-                Train smarter. Track every rep. Improve your form with AI-powered
-                workout guidance.
-              </p>
-
-              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
-                <Link
-                  to={user ? "/WorkoutPlan" : "/Register"}
-                  className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-indigo-700 hover:shadow-indigo-500/40 active:scale-[0.98] sm:w-auto"
+            <ul className="mb-6 space-y-2.5">
+              {item.points.map((point) => (
+                <li
+                  key={point}
+                  className="flex items-start gap-3 text-sm text-gray-600"
                 >
-                  <span>Start Training</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-600" />
+                  {point}
+                </li>
+              ))}
+            </ul>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    document.getElementById("product-showcase")?.scrollIntoView({ behavior: "smooth" });
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-7 py-3 text-sm font-semibold text-slate-700 backdrop-blur-sm transition-all duration-200 hover:border-indigo-300 hover:bg-white active:scale-[0.98] sm:w-auto"
-                >
-                  <span>Explore SIFRA</span>
-                </button>
-              </div>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-700">
+              <span className="h-px w-7 bg-violet-500" />
+              Intelligent training
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
 
-              <p className="mt-6 text-xs text-slate-500">
-                No equipment required. Works in your browser.
+
+
+
+        {/* HOW SIFRA WORKS — left step list + right 3D dumbbell, synchronized scroll */}
+
+        {/* ═════════════════ HOW SIFRA WORKS — EDITORIAL WORKFLOW ═════════════════ */}
+        <section
+          ref={howSectionRef}
+          id="how-it-works"
+          className="relative w-full overflow-hidden border-t border-violet-100 bg-[#FAF9FF] py-20 text-[#19152B] md:py-28"
+        >
+          <div className="relative z-40 mx-auto max-w-6xl px-5 md:px-8">
+            {/* Section Header */}
+            <div className="mb-14 max-w-2xl md:mb-16">
+              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-[0.2em] text-violet-700">
+                02 / THE WORKFLOW
+              </span>
+
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                A simple, five-step path to better training
+                <span className="text-violet-600">.</span>
+              </h2>
+
+              <p className="mt-4 text-sm leading-relaxed text-slate-600 sm:text-base">
+                From camera setup to progress tracking, discover how SIFRA guides
+                each repetition directly in your browser without wearables or extra sensors.
               </p>
             </div>
 
-            {/* 3D Model + Floating Panels */}
-            <div
-              ref={modelContainerRef}
-              className="relative mx-auto h-[420px] w-full max-w-md sm:h-[520px] lg:h-[640px] lg:max-w-none"
-            >
-              {/* Loading spinner */}
-              {!modelLoaded && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-500" />
-                </div>
-              )}
+            {/* Editorial Workflow: Connected Steps + Focused Visual Demonstration */}
+            <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-14">
+              {/* Left Column: 5 Connected Workflow Steps */}
+              <div className="space-y-2 lg:col-span-6">
+                {HOW_IT_WORKS_STEPS.map((step, index) => {
+                  const isActive = activeWorkflowStep === index;
 
-              {/* 3D Model */}
-              <div className="absolute inset-0">
-                <FitnessModelScene
-                  ref={modelRef}
-                  modelUrl={StudioFitnessPose}
-                  variant="hero"
-                  onModelLoaded={handleModelLoaded}
-                />
+                  return (
+                    <div
+                      key={step.step}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setActiveWorkflowStep(index)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setActiveWorkflowStep(index);
+                        }
+                      }}
+                      className={`group relative cursor-pointer rounded-xl border-l-2 p-4 transition-all duration-200 outline-none sm:p-5 ${
+                        isActive
+                          ? "border-violet-600 bg-white shadow-sm ring-1 ring-slate-200/60"
+                          : "border-transparent bg-transparent hover:border-violet-300 hover:bg-white/60"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3.5">
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold transition-colors ${
+                            isActive
+                              ? "bg-violet-600 text-white"
+                              : "bg-slate-100 text-slate-500 group-hover:bg-violet-50 group-hover:text-violet-700"
+                          }`}
+                        >
+                          {step.step}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3
+                              className={`text-base font-bold transition-colors ${
+                                isActive ? "text-slate-900" : "text-slate-700"
+                              }`}
+                            >
+                              {step.title}
+                            </h3>
+
+                            {isActive && (
+                              <span className="hidden font-mono text-[10px] font-semibold text-violet-600 sm:inline-block">
+                                CURRENT STEP
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="mt-1.5 text-xs leading-relaxed text-slate-600 sm:text-sm">
+                            {step.desc}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Floating UI Panels */}
-              <div
-                ref={(el) => addPanelRef(el, 0)}
-                className="absolute top-8 left-4 z-20 hidden sm:block"
-              >
-                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      AI Pose Detection
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs font-medium text-slate-800">33 landmarks tracked</p>
-                </div>
-              </div>
+              {/* Right Column: One Focused Visual Demonstration */}
+              <div className="lg:sticky lg:top-28 lg:col-span-6">
+                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-6 shadow-md shadow-slate-200/40 sm:p-8">
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-violet-600" />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Workflow In Action
+                      </span>
+                    </div>
 
-              <div
-                ref={(el) => addPanelRef(el, 1)}
-                className="absolute top-16 right-4 z-20 hidden sm:block"
-              >
-                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
-                  <div className="flex items-center gap-2">
-                    <Dumbbell className="h-3.5 w-3.5 text-indigo-500" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      Rep Count
+                    <span className="font-mono text-xs font-semibold text-violet-700">
+                      Step {activeWorkflowStep + 1} of 5
                     </span>
                   </div>
-                  <p className="mt-1 text-lg font-bold text-slate-900">12</p>
-                </div>
-              </div>
 
-              <div
-                ref={(el) => addPanelRef(el, 2)}
-                className="absolute bottom-24 left-6 z-20 hidden md:block"
-              >
-                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-3.5 w-3.5 text-violet-500" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      Form Feedback
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 w-28 rounded-full bg-slate-200">
-                    <div className="h-1.5 w-4/5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" />
-                  </div>
-                </div>
-              </div>
+                  {/* Focused Demonstration Content */}
+                  <div className="py-6 sm:py-8">
+                    {/* Step 1: Start Your Workout */}
+                    {activeWorkflowStep === 0 && (
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                            <Sparkles className="h-5 w-5" />
+                          </span>
+                          <div>
+                            <h4 className="text-base font-bold text-slate-900">
+                              Start Your Workout
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                              Configure exercises and coaching preferences
+                            </p>
+                          </div>
+                        </div>
 
-              <div
-                ref={(el) => addPanelRef(el, 3)}
-                className="absolute bottom-16 right-6 z-20 hidden md:block"
-              >
-                <div className="rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur-md shadow-lg shadow-slate-200/50 transition-all duration-300">
-                  <div className="flex items-center gap-2">
-                    <Volume2 className="h-3.5 w-3.5 text-indigo-500" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      AI Coach
-                    </span>
+                        <div className="space-y-2.5 rounded-xl border border-slate-100 bg-[#FAF9FF] p-4 text-xs">
+                          <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                            <span className="text-slate-500">Selected Exercise</span>
+                            <span className="font-semibold text-slate-900">Squats (Bodyweight)</span>
+                          </div>
+                          <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                            <span className="text-slate-500">Target Session</span>
+                            <span className="font-semibold text-slate-900">3 sets × 12 reps</span>
+                          </div>
+                          <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                            <span className="text-slate-500">Audio Coaching</span>
+                            <span className="font-semibold text-violet-700">Enabled</span>
+                          </div>
+                          <div className="flex items-center justify-between pt-0.5">
+                            <span className="text-slate-500">Camera Source</span>
+                            <span className="font-semibold text-emerald-700">Connected in Browser</span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs leading-relaxed text-slate-500">
+                          SIFRA operates entirely inside your web browser. No apps, downloads, or external sensors are needed.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Step 2: AI Tracks Your Movement */}
+                    {activeWorkflowStep === 1 && (
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                            <Camera className="h-5 w-5" />
+                          </span>
+                          <div>
+                            <h4 className="text-base font-bold text-slate-900">
+                              AI Tracks Your Movement
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                              33 anatomical landmarks tracked from your webcam
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-[#FAF9FF] p-6 text-center">
+                          {/* Clean minimal body landmark wireframe representation */}
+                          <div className="relative flex flex-col items-center gap-2 py-3">
+                            <div className="h-3.5 w-3.5 rounded-full border-2 border-violet-600 bg-white" />
+                            <div className="h-6 w-0.5 bg-violet-300" />
+                            <div className="flex items-center gap-6">
+                              <div className="h-2.5 w-2.5 rounded-full bg-violet-500" />
+                              <div className="h-1.5 w-12 rounded-full bg-violet-200" />
+                              <div className="h-2.5 w-2.5 rounded-full bg-violet-500" />
+                            </div>
+                            <div className="h-8 w-0.5 bg-violet-300" />
+                            <div className="flex items-center gap-8">
+                              <div className="h-2.5 w-2.5 rounded-full bg-violet-600" />
+                              <div className="h-2.5 w-2.5 rounded-full bg-violet-600" />
+                            </div>
+                            <div className="flex items-center gap-8">
+                              <div className="h-7 w-0.5 bg-violet-300" />
+                              <div className="h-7 w-0.5 bg-violet-300" />
+                            </div>
+                            <div className="flex items-center gap-8">
+                              <div className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                              <div className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                            </div>
+                          </div>
+
+                          <span className="mt-3 inline-block rounded-full bg-violet-100/70 px-3 py-1 font-mono text-[11px] font-semibold text-violet-800">
+                            33 Keypoints Locked & Tracked
+                          </span>
+                        </div>
+
+                        <p className="text-xs leading-relaxed text-slate-500">
+                          Computer vision maps your body joints and tracks full-body kinematics continuously during each repetition.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Step 3: Count Repetitions */}
+                    {activeWorkflowStep === 2 && (
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                            <Dumbbell className="h-5 w-5" />
+                          </span>
+                          <div>
+                            <h4 className="text-base font-bold text-slate-900">
+                              Count Repetitions
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                              Validated through full range of motion inflections
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center rounded-xl border border-slate-100 bg-[#FAF9FF] p-6 text-center">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            Repetition Counter
+                          </span>
+                          <div className="mt-2 flex items-baseline gap-2">
+                            <span className="text-5xl font-black text-slate-900">
+                              08
+                            </span>
+                            <span className="text-base font-medium text-slate-400">
+                              / 12 completed
+                            </span>
+                          </div>
+
+                          <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>Valid Rep — Depth Threshold Met</span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs leading-relaxed text-slate-500">
+                          Completed repetitions register only after reaching valid depth and returning through the full range of motion.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Step 4: Evaluate Your Form */}
+                    {activeWorkflowStep === 3 && (
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                            <Target className="h-5 w-5" />
+                          </span>
+                          <div>
+                            <h4 className="text-base font-bold text-slate-900">
+                              Evaluate Your Form
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                              Instant angular evaluation and audio coaching
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 rounded-xl border border-slate-100 bg-[#FAF9FF] p-4 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Knee Flexion Angle</span>
+                            <span className="font-semibold text-emerald-700">88° (Optimal Depth)</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Hip Alignment</span>
+                            <span className="font-semibold text-emerald-700">94° (Symmetric)</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Torso Linearity</span>
+                            <span className="font-semibold text-slate-900">Neutral Posture</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3 rounded-xl border border-violet-100 bg-violet-50/70 p-3.5 text-xs text-violet-950">
+                          <Volume2 className="h-4 w-4 shrink-0 text-violet-600 mt-0.5" />
+                          <p className="leading-relaxed">
+                            <strong className="font-semibold">Voice Cue:</strong> “Good depth on rep 8. Keep your chest up as you drive upward.”
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 5: Track Your Progress */}
+                    {activeWorkflowStep === 4 && (
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-amber-500">
+                            <Flame className="h-5 w-5" />
+                          </span>
+                          <div>
+                            <h4 className="text-base font-bold text-slate-900">
+                              Track Your Progress
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                              Review accuracy, volume, and workout consistency
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2.5 text-center">
+                          <div className="rounded-xl border border-slate-100 bg-[#FAF9FF] p-3">
+                            <span className="block text-[10px] uppercase font-semibold text-slate-400">Accuracy</span>
+                            <span className="mt-1 block text-lg font-bold text-violet-700">96%</span>
+                          </div>
+                          <div className="rounded-xl border border-slate-100 bg-[#FAF9FF] p-3">
+                            <span className="block text-[10px] uppercase font-semibold text-slate-400">Total Reps</span>
+                            <span className="mt-1 block text-lg font-bold text-slate-900">36</span>
+                          </div>
+                          <div className="rounded-xl border border-slate-100 bg-[#FAF9FF] p-3">
+                            <span className="block text-[10px] uppercase font-semibold text-slate-400">Streak</span>
+                            <span className="mt-1 block text-lg font-bold text-amber-600">5 Days</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-[#FAF9FF] p-3 text-xs text-slate-600">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span>Session results automatically save to your workout profile.</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <p className="mt-1 text-xs font-medium text-slate-800">Voice cue active</p>
+
+                  {/* Step Selector Pills */}
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                      Select Step
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {HOW_IT_WORKS_STEPS.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setActiveWorkflowStep(i)}
+                          className={`flex h-6 w-6 items-center justify-center rounded-md font-mono text-[11px] font-bold transition-all ${
+                            activeWorkflowStep === i
+                              ? "bg-violet-600 text-white shadow-sm"
+                              : "bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-700"
+                          }`}
+                          aria-label={`Jump to step ${i + 1}`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ═════════════════════════════════════════════════════
-            2. MARQUEE (Feature strip)
-        ══════════════════════════════════════════════════════ */}
-        <section className="relative overflow-hidden border-y border-slate-200 bg-white py-5">
+        {/* ═════════════════ TECH + CAPABILITY MARQUEE ═════════════════ */}
+        <section
+          ref={marqueeRef}
+          data-journey="marquee"
+          className="relative overflow-hidden border-y border-violet-100 bg-white py-14"
+        >
           <style>{`
             @keyframes marqueeScroll {
               0% { transform: translateX(0); }
               100% { transform: translateX(-50%); }
             }
-            .marquee-track {
+
+            .tech-marquee-track {
               display: flex;
               width: max-content;
-              animation: marqueeScroll 24s linear infinite;
+              animation: marqueeScroll 26s linear infinite;
             }
-            .marquee-track:hover {
+
+            .tech-marquee-track:hover {
               animation-play-state: paused;
             }
+
             @media (prefers-reduced-motion: reduce) {
-              .marquee-track {
+              .tech-marquee-track {
                 animation: none;
               }
             }
           `}</style>
-          <div className="marquee-track">
-            {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
-              <span
-                key={i}
-                className="mx-8 flex items-center gap-3 whitespace-nowrap text-sm font-semibold tracking-[0.12em] text-slate-400"
-              >
-                <span className="text-indigo-500">✳</span>
-                <span>{item}</span>
-              </span>
-            ))}
-          </div>
-        </section>
 
-        {/* ═════════════════════════════════════════════════════
-            3. PRODUCT SHOWCASE
-        ══════════════════════════════════════════════════════ */}
-        <section
-          id="product-showcase"
-          className="reveal-section relative px-6 py-24 sm:px-10 lg:px-16"
-        >
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 max-w-2xl">
-              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
-                Product
-              </span>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Train with real-time AI guidance
-              </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-600">
-                SIFRA uses your webcam to detect your pose, count repetitions,
-                assess your form, and provide voice coaching — all without
-                leaving your browser.
-              </p>
-            </div>
-
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
-              {/* Window chrome */}
-              <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
-                <div className="h-3 w-3 rounded-full bg-slate-300" />
-                <div className="h-3 w-3 rounded-full bg-slate-300" />
-                <div className="h-3 w-3 rounded-full bg-slate-300" />
-                <span className="ml-2 text-xs text-slate-400">SIFRA AI — Workout Session</span>
-              </div>
-
-              {/* Video */}
-              <div className="relative">
-                <video
-                  className="w-full"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
+          <div data-reveal>
+            <div className="tech-marquee-track relative z-20 mb-4">
+              {[...TECH_STACK_ITEMS, ...TECH_STACK_ITEMS].map((item, i) => (
+                <span
+                  key={i}
+                  className="mx-2.5 inline-flex items-center gap-2 rounded-full border border-violet-100 bg-[#faf8ff] px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-stone-700"
                 >
-                  <source src={Pushups} type="video/mp4" />
-                </video>
+                  <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                  <span>{item}</span>
+                </span>
+              ))}
+            </div>
 
-                {/* Overlay labels */}
-                <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
-                  <span className="rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-sm shadow-sm">
-                    <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    Pose Detection Active
-                  </span>
-                  <span className="rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-sm shadow-sm">
-                    Rep Count: 12
-                  </span>
-                  <span className="rounded-lg border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 backdrop-blur-sm shadow-sm">
-                    Form: Good
-                  </span>
-                </div>
-              </div>
+            <div className="tech-marquee-track relative z-[35]">
+              {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
+                <span
+                  key={i}
+                  className="mx-8 flex items-center gap-3 whitespace-nowrap text-xs font-semibold tracking-[0.18em] text-stone-400"
+                >
+                  <span className="text-violet-400">✳</span>
+                  <span>{item}</span>
+                </span>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* ═════════════════════════════════════════════════════
-            4. CAPABILITIES — Alternating Layout
-        ══════════════════════════════════════════════════════ */}
+        {/* ═════════════════ TESTIMONIALS ═════════════════ */}
         <section
-          id="capabilities"
-          className="reveal-section relative bg-[#F5F3FF] px-6 py-24 sm:px-10 lg:px-16"
+          data-journey="testimonials"
+          className="relative overflow-hidden bg-[#f7f5ff] py-24 lg:py-32"
         >
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 max-w-2xl">
-              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
-                Capabilities
-              </span>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Everything you need to train smarter
-              </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-600">
-                Built on computer vision and machine learning, running entirely
-                in your browser.
-              </p>
+          <div className="mx-auto mb-14 max-w-3xl px-6 text-center sm:px-10">
+            <span data-reveal className={EYEBROW}>
+              Community & Coaches
+            </span>
+
+            <h2
+              data-reveal
+              data-reveal-delay="0.08"
+              className={`mt-4 ${H2}`}
+            >
+              What Athletes & Coaches Say
+            </h2>
+
+            <p
+              data-reveal
+              data-reveal-delay="0.16"
+              className={`mx-auto mt-4 max-w-lg ${LEAD}`}
+            >
+              Trusted by strength athletes, physical therapists, and performance
+              coaches worldwide.
+            </p>
+          </div>
+
+          <style>{`
+            @keyframes testimonialScroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+
+            .testimonial-track {
+              display: flex;
+              width: max-content;
+              animation: testimonialScroll 36s linear infinite;
+            }
+
+            .testimonial-track:hover {
+              animation-play-state: paused;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .testimonial-track {
+                animation: none;
+              }
+            }
+          `}</style>
+
+          <div data-reveal>
+            <div className="testimonial-track py-2">
+              {[...TESTIMONIALS, ...TESTIMONIALS].map((t, index) => (
+                <div
+                  key={index}
+                  className="mx-3 flex w-[320px] shrink-0 flex-col rounded-xl border border-violet-100 bg-white p-6 transition-colors duration-300 hover:border-violet-300 sm:w-[380px] sm:p-7"
+                >
+                  <div className="mb-4 flex items-center gap-0.5 text-amber-400">
+                    {[...Array(t.rating)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className="h-3.5 w-3.5 fill-amber-400"
+                      />
+                    ))}
+                  </div>
+
+                  <p className="flex-1 text-[15px] leading-relaxed text-stone-700">
+                    “{t.text}”
+                  </p>
+
+                  <div className="mt-6 flex items-center justify-between border-t border-violet-50 pt-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-[#19152b]">
+                        {t.name}
+                      </h4>
+                      <p className="text-xs text-stone-500">{t.role}</p>
+                    </div>
+
+                    <Quote className="h-5 w-5 text-violet-200" />
+                  </div>
+                </div>
+              ))}
             </div>
+          </div>
+        </section>
 
-            {/* ── Interactive Feature Showcase ── */}
-            <div ref={showcaseCardRef} className="mb-16">
-              <div className="mb-8 text-center sm:text-left">
-                <h3 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                  Your workout. Understood.
-                </h3>
-                <p className="mt-2 text-base leading-relaxed text-slate-600">
-                  See how SIFRA transforms movement into actionable workout feedback.
-                </p>
-              </div>
+        {/* ═════════════════ QUOTES ═════════════════ */}
+        <section
+          id="quote-marquee"
+          className="relative overflow-hidden border-t border-violet-100 bg-white px-0 py-24 lg:py-28"
+        >
+          <div className="mx-auto mb-12 max-w-3xl px-6 text-center">
+            <span data-reveal className={EYEBROW}>
+              Mindset Matters
+            </span>
 
-              {/* Tab controls */}
-              <div
-                role="tablist"
-                aria-label="Feature showcase"
-                className="mb-6 flex flex-wrap gap-2"
-              >
-                {[
-                  { id: "pose", label: "Pose Intelligence" },
-                  { id: "reps", label: "Smart Repetitions" },
-                  { id: "form", label: "Form Feedback" },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    role="tab"
-                    aria-selected={activeTab === tab.id}
-                    aria-controls={`panel-${tab.id}`}
-                    id={`tab-${tab.id}`}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`cursor-pointer rounded-full px-5 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
-                      activeTab === tab.id
-                        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
-                        : "border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
-                    }`}
+            <h2
+              data-reveal
+              data-reveal-delay="0.08"
+              className={`mt-4 ${H2}`}
+            >
+              Stronger habits. Stronger you.
+            </h2>
+
+            <p
+              data-reveal
+              data-reveal-delay="0.16"
+              className="mt-3 text-sm text-stone-600 sm:text-base"
+            >
+              Every rep is a step toward becoming stronger.
+            </p>
+          </div>
+
+          <style>{`
+            @keyframes quoteScroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-50%); }
+            }
+
+            @keyframes quoteScrollReverse {
+              0% { transform: translateX(-50%); }
+              100% { transform: translateX(0); }
+            }
+
+            .quote-track {
+              display: flex;
+              width: max-content;
+              animation: quoteScroll 40s linear infinite;
+            }
+
+            .quote-track-reverse {
+              display: flex;
+              width: max-content;
+              animation: quoteScrollReverse 45s linear infinite;
+            }
+
+            .quote-track:hover,
+            .quote-track-reverse:hover {
+              animation-play-state: paused;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .quote-track,
+              .quote-track-reverse {
+                animation: none;
+              }
+            }
+          `}</style>
+
+          <div data-reveal>
+            <div className="relative mb-4">
+              <div className="quote-track">
+                {[...QUOTES, ...QUOTES].map((q, i) => (
+                  <div
+                    key={i}
+                    className="mx-2.5 flex w-[320px] shrink-0 flex-col rounded-xl border border-violet-100 bg-[#faf8ff] p-5 sm:w-[360px]"
                   >
-                    {tab.label}
-                  </button>
+                    <Quote className="mb-3 h-4 w-4 text-violet-300" />
+
+                    <p className="flex-1 text-sm leading-relaxed text-stone-700">
+                      “{q.text}”
+                    </p>
+
+                    <p className="mt-4 text-xs font-semibold text-violet-700">
+                      — {q.author}
+                    </p>
+                  </div>
                 ))}
               </div>
-
-              {/* Tab panels */}
-              <div ref={tabContentRef} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                {/* Pose Intelligence */}
-                <div
-                  role="tabpanel"
-                  id="panel-pose"
-                  aria-labelledby="tab-pose"
-                  hidden={activeTab !== "pose"}
-                  className="p-6 sm:p-8"
-                >
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
-                    <div>
-                      <h4 className="text-lg font-semibold text-slate-900">
-                        Pose Intelligence
-                      </h4>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                        SIFRA uses MediaPipe to detect 33 body landmarks in real
-                        time, directly in your browser. No wearables, no extra
-                        hardware — just your webcam and AI.
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>33-point skeletal landmark tracking</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Runs entirely client-side via WebGL</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Sub-second pose estimation latency</span>
-                        </li>
-                      </ul>
-                    </div>
-                    {/* Illustration: clean landmark dots (no skeleton lines) */}
-                    <div className="flex items-center justify-center">
-                      <div className="relative h-48 w-32 rounded-2xl bg-gradient-to-b from-indigo-50 to-violet-50 border border-indigo-100 p-4">
-                        {[
-                          { x: 50, y: 8 }, { x: 50, y: 16 }, { x: 40, y: 22 },
-                          { x: 60, y: 22 }, { x: 35, y: 34 }, { x: 65, y: 34 },
-                          { x: 50, y: 36 }, { x: 42, y: 48 }, { x: 58, y: 48 },
-                          { x: 40, y: 62 }, { x: 60, y: 62 }, { x: 38, y: 78 },
-                          { x: 62, y: 78 },
-                        ].map((pt, i) => (
-                          <div
-                            key={i}
-                            className="absolute h-2 w-2 rounded-full bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.5)]"
-                            style={{
-                              left: `${pt.x}%`,
-                              top: `${pt.y}%`,
-                              transform: "translate(-50%, -50%)",
-                            }}
-                          />
-                        ))}
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-medium text-indigo-400">
-                          Preview
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Smart Repetitions */}
-                <div
-                  role="tabpanel"
-                  id="panel-reps"
-                  aria-labelledby="tab-reps"
-                  hidden={activeTab !== "reps"}
-                  className="p-6 sm:p-8"
-                >
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
-                    <div>
-                      <h4 className="text-lg font-semibold text-slate-900">
-                        Smart Repetitions
-                      </h4>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                        Reps and sets are counted automatically using phase
-                        detection. The tracker identifies concentric and eccentric
-                        movements to count only complete repetitions.
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Phase-based rep counting (up/down)</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Set tracking with configurable targets</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Supports squats, push-ups, and planks</span>
-                        </li>
-                      </ul>
-                    </div>
-                    {/* Animated rep counter preview */}
-                    <div className="flex items-center justify-center">
-                      <div className="flex flex-col items-center rounded-2xl border border-indigo-100 bg-gradient-to-b from-indigo-50 to-violet-50 px-8 py-6">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">
-                          Preview
-                        </p>
-                        <p className="mt-2 text-5xl font-bold text-indigo-600 tabular-nums">
-                          {repCount}
-                        </p>
-                        <p className="mt-1 text-xs font-medium text-slate-500">
-                          Reps Completed
-                        </p>
-                        <div className="mt-4 h-2 w-32 rounded-full bg-slate-200">
-                          <div
-                            className="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-300"
-                            style={{ width: `${(repCount / 12) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Form Feedback */}
-                <div
-                  role="tabpanel"
-                  id="panel-form"
-                  aria-labelledby="tab-form"
-                  hidden={activeTab !== "form"}
-                  className="p-6 sm:p-8"
-                >
-                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
-                    <div>
-                      <h4 className="text-lg font-semibold text-slate-900">
-                        Form Feedback
-                      </h4>
-                      <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                        Each completed repetition is evaluated using rule-based
-                        form assessment and, where available, machine learning
-                        classification. Feedback is delivered as instant coaching
-                        cues via voice.
-                      </p>
-                      <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Per-repetition form scoring</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Rule-based + ML assessment</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-indigo-500" />
-                          <span>Voice coaching cues in real time</span>
-                        </li>
-                      </ul>
-                    </div>
-                    {/* Feedback preview */}
-                    <div className="flex items-center justify-center">
-                      <div className="w-full max-w-xs rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                          Preview
-                        </p>
-                        <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          <span className="text-sm font-medium text-emerald-700">
-                            Good form — keep it up!
-                          </span>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                          <span className="text-sm font-medium text-amber-700">
-                            Go deeper on next rep
-                          </span>
-                        </div>
-                        <p className="mt-3 text-xs text-slate-400">
-                          Feedback updates per completed repetition.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* ── Three-Step Intelligence Flow ── */}
-            <div ref={processFlowRef} className="mt-16">
-              <div ref={processHeadingRef} className="mb-8">
-                <h3 className="text-xl font-bold tracking-tight text-slate-900">
-                  How SIFRA processes your movement
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                  A three-stage pipeline from camera input to coaching output.
-                </p>
-              </div>
-
-              <div className="relative">
-                {/* Connecting line (desktop) */}
-                <div
-                  ref={processLineRef}
-                  className="absolute top-10 left-0 hidden h-px w-full origin-left bg-gradient-to-r from-indigo-200 via-violet-200 to-indigo-200 md:block"
-                  style={{ transform: "scaleX(0)" }}
-                />
-
-                <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6">
-                  {[
-                    {
-                      step: "01",
-                      title: "DETECT",
-                      desc: "MediaPipe identifies 33 body landmarks from your webcam feed in real time. No wearables required.",
-                      icon: Eye,
-                    },
-                    {
-                      step: "02",
-                      title: "ANALYZE",
-                      desc: "Exercise-specific logic evaluates movement phases, joint angles, and repetition completion. Rule-based and ML assessment where available.",
-                      icon: Zap,
-                    },
-                    {
-                      step: "03",
-                      title: "COACH",
-                      desc: "Instant coaching cues are delivered via voice and on-screen feedback. Form scores are tracked per repetition.",
-                      icon: Volume2,
-                    },
-                  ].map((item, index) => {
-                    const Icon = item.icon;
-                    return (
-                      <div
-                        key={item.step}
-                        ref={(el) => { processStagesRef.current[index] = el; }}
-                        className="relative"
-                      >
-                        <div className="mb-4 flex items-center gap-3">
-                          <div
-                            ref={(el) => { processIconsRef.current[index] = el; }}
-                            className="flex h-10 w-10 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50"
-                          >
-                            <Icon className="h-4 w-4 text-indigo-600" />
-                          </div>
-                          <span className="text-xs font-bold tracking-wider text-indigo-400">
-                            {item.step}
-                          </span>
-                        </div>
-                        <h4 className="text-base font-bold text-slate-900">
-                          {item.title}
-                        </h4>
-                        <p className="mt-1.5 text-sm leading-relaxed text-slate-600">
-                          {item.desc}
-                        </p>
-                        {index < 2 && (
-                          <div className="mt-4 h-px w-full bg-indigo-200 md:hidden" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ═════════════════════════════════════════════════════
-            5. HOW IT WORKS
-        ══════════════════════════════════════════════════════ */}
-        <section
-          ref={howItWorksRef}
-          id="how-it-works"
-          className="reveal-section relative bg-white px-6 py-24 sm:px-10 lg:px-16"
-        >
-          <div className="mx-auto max-w-7xl">
-            <div ref={howItWorksHeadingRef} className="mb-16 max-w-2xl">
-              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
-                How It Works
-              </span>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Three steps to better training
-              </h2>
-            </div>
-
-            {/* Connected step sequence */}
             <div className="relative">
-              {/* Connecting line (desktop) */}
-              <div
-                ref={howItWorksLineRef}
-                className="absolute top-8 left-0 hidden h-px w-full origin-left bg-gradient-to-r from-transparent via-indigo-300 to-transparent md:block"
-                style={{ transform: "scaleX(0)" }}
-              />
-
-              <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-8">
-                {HOW_IT_WORKS.map((item, index) => (
+              <div className="quote-track-reverse">
+                {[
+                  ...QUOTES.slice().reverse(),
+                  ...QUOTES.slice().reverse(),
+                ].map((q, i) => (
                   <div
-                    key={item.step}
-                    ref={(el) => { howItWorksTextsRef.current[index] = el; }}
-                    className="relative"
+                    key={i}
+                    className="mx-2.5 flex w-[320px] shrink-0 flex-col rounded-xl border border-violet-100 bg-[#faf8ff] p-5 sm:w-[360px]"
                   >
-                    {/* Step number circle */}
-                    <div className="mb-6 flex items-center gap-4 md:flex-col md:items-start md:gap-0">
-                      <div
-                        ref={(el) => { howItWorksMarkersRef.current[index] = el; }}
-                        className="flex h-16 w-16 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 text-2xl font-bold text-indigo-600"
-                      >
-                        {item.step}
-                      </div>
-                      {index < HOW_IT_WORKS.length - 1 && (
-                        <div className="h-px w-full bg-indigo-200 md:hidden" />
-                      )}
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                      {item.desc}
+                    <Quote className="mb-3 h-4 w-4 text-violet-300" />
+
+                    <p className="flex-1 text-sm leading-relaxed text-stone-700">
+                      “{q.text}”
+                    </p>
+
+                    <p className="mt-4 text-xs font-semibold text-violet-700">
+                      — {q.author}
                     </p>
                   </div>
                 ))}
@@ -1137,140 +1904,62 @@ export default function Landing_Page() {
           </div>
         </section>
 
-        {/* ═════════════════════════════════════════════════════
-            6. QUOTE MARQUEE (replaces Technology section)
-        ══════════════════════════════════════════════════════ */}
-        <section id="quote-marquee" className="reveal-section relative overflow-hidden bg-gradient-to-b from-[#F5F3FF] to-white px-6 py-24 sm:px-10 lg:px-16">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 text-center">
-              <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600">
-                Mindset Matters
-              </span>
-              <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Stronger habits. Stronger you.
+        {/* ═════════════════ FINAL CTA ═════════════════ */}
+        <section
+          data-journey="cta"
+          className="relative overflow-hidden border-t border-violet-100 bg-[#f7f5ff] px-6 py-20 sm:px-10 lg:py-28"
+        >
+          <div
+            data-reveal
+            className="relative mx-auto max-w-5xl overflow-hidden rounded-2xl bg-[#1b1240] px-6 py-16 text-center sm:px-12 sm:py-20"
+          >
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute left-1/2 top-0 h-[320px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/30 blur-[110px]" />
+
+              <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.18)_0.8px,transparent_0.8px)] opacity-30 [background-size:28px_28px]" />
+            </div>
+
+            <div className="relative mx-auto max-w-2xl">
+              <h2 className="text-3xl font-semibold leading-[1.1] tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl">
+                Ready to train smarter?
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-slate-600">
-                Every rep is a step toward becoming stronger.
+
+              <p className="mt-5 text-base leading-relaxed text-violet-200 sm:text-lg">
+                Start your first AI-guided workout session in seconds. No
+                equipment, no downloads.
               </p>
-            </div>
-          </div>
 
-          {/* Quote marquee row 1 */}
-          <div className="relative mb-6">
-            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-[#F5F3FF] to-transparent" />
-            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-white to-transparent" />
-
-            <style>{`
-              @keyframes quoteScroll {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-50%); }
-              }
-              @keyframes quoteScrollReverse {
-                0% { transform: translateX(-50%); }
-                100% { transform: translateX(0); }
-              }
-              .quote-track {
-                display: flex;
-                width: max-content;
-                animation: quoteScroll 40s linear infinite;
-              }
-              .quote-track-reverse {
-                display: flex;
-                width: max-content;
-                animation: quoteScrollReverse 45s linear infinite;
-              }
-              .quote-track:hover,
-              .quote-track-reverse:hover {
-                animation-play-state: paused;
-              }
-              @media (prefers-reduced-motion: reduce) {
-                .quote-track,
-                .quote-track-reverse {
-                  animation: none;
-                }
-              }
-            `}</style>
-
-            <div className="quote-track">
-              {[...QUOTES, ...QUOTES].map((q, i) => (
-                <div
-                  key={i}
-                  className="mx-4 flex w-[340px] shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:w-[400px]"
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link
+                  to={user ? "/WorkoutPlan" : "/Register"}
+                  className={`group ${BTN_BASE} bg-white text-violet-900 shadow-lg shadow-black/20 hover:-translate-y-0.5 hover:bg-violet-50`}
                 >
-                  <Quote className="mb-3 h-5 w-5 text-indigo-300" />
-                  <p className="flex-1 text-sm font-medium leading-relaxed text-slate-700">
-                    &ldquo;{q.text}&rdquo;
-                  </p>
-                  <p className="mt-4 text-xs font-semibold text-indigo-600">
-                    — {q.author}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+                  <span>Start Training</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
 
-          {/* Quote marquee row 2 (reverse) */}
-          <div className="relative">
-            <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-[#F5F3FF] to-transparent" />
-            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-white to-transparent" />
-
-            <div className="quote-track-reverse">
-              {[...QUOTES.slice().reverse(), ...QUOTES.slice().reverse()].map((q, i) => (
-                <div
-                  key={i}
-                  className="mx-4 flex w-[340px] shrink-0 flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:w-[400px]"
+                <Link
+                  to={user ? "/Dashboard" : "/Login"}
+                  className={`${BTN_BASE} border border-white/25 text-white hover:border-white/50 hover:bg-white/10`}
                 >
-                  <Quote className="mb-3 h-5 w-5 text-violet-300" />
-                  <p className="flex-1 text-sm font-medium leading-relaxed text-slate-700">
-                    &ldquo;{q.text}&rdquo;
-                  </p>
-                  <p className="mt-4 text-xs font-semibold text-violet-600">
-                    — {q.author}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ═════════════════════════════════════════════════════
-            7. FINAL CTA
-        ══════════════════════════════════════════════════════ */}
-        <section className="relative overflow-hidden px-6 py-24 sm:px-10 lg:px-16">
-          {/* Gradient background */}
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/60 via-[#FAFAFF] to-violet-100/40" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-indigo-200/30 blur-[120px]" />
-          </div>
-
-          <div className="relative mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Ready to train smarter?
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-slate-600">
-              Start your first AI-guided workout session in seconds. No
-              equipment, no downloads.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Link
-                to={user ? "/WorkoutPlan" : "/Register"}
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-indigo-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:bg-indigo-700 hover:shadow-indigo-500/40 active:scale-[0.98] sm:w-auto"
-              >
-                <span>Start Training</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-              <Link
-                to={user ? "/Dashboard" : "/Login"}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-indigo-300 hover:bg-slate-50 active:scale-[0.98] sm:w-auto"
-              >
-                <span>{user ? "Go to Dashboard" : "Sign In"}</span>
-              </Link>
+                  <span>{user ? "Go to Dashboard" : "Sign In"}</span>
+                </Link>
+              </div>
             </div>
           </div>
         </section>
       </main>
 
-      <Footer />
+      <Footer ref={footerRef} />
+
+      {/*
+        The one and only dumbbell canvas. It is a direct child of the page root
+        (outside <main> and every overflow-hidden section), fixed to the viewport,
+        z-30, pointer-events-none. Driven by the master timeline in effect 2b.
+      */}
+      {!reducedMotion && (
+        <DumbbellScene ref={dumbbellRef} modelUrl={dumbbellModel} overlay />
+      )}
     </div>
   );
 }

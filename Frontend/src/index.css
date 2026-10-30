@@ -96,6 +96,8 @@ select:focus-visible {
   }
 }
 
+
+
 /* Clean Custom Scrollbar */
 ::-webkit-scrollbar {
 display: none;

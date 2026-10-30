@@ -1,10 +1,10 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 
-const Footer = () => {
+const Footer = forwardRef((props, ref) => {
   return (
-    <footer className="w-full border-t border-slate-200 bg-white text-slate-600">
+    <footer ref={ref} className="w-full border-t border-slate-200 bg-white text-slate-600">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4 lg:gap-12">
           {/* Brand Col */}
@@ -108,7 +108,7 @@ const Footer = () => {
         </div>
       </div>
     </footer>
-  );
-};
+  )
+});
 
 export default Footer;
