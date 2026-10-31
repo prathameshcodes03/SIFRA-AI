@@ -1,7 +1,5 @@
 import Footer from "../components/Footer";
 import AppShell from "../components/Dashboard/AppShell";
-import AccuracyCard from "../components/Dashboard/AccuracyCard";
-import WorkoutStreak from "../components/Dashboard/WorkoutStreak";
 import RecentSessions from "../components/Dashboard/RecentSessions";
 import WeeklyActivity from "../components/Dashboard/WeeklyActivity";
 import ContinueWorkout from "../components/Dashboard/ContinueWorkout";
@@ -33,11 +31,11 @@ const DashboardSkeleton = () => (
       ))}
     </div>
     <div className="grid gap-5 lg:grid-cols-2">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
+      <div className="sifra-card animate-pulse">
         <div className="h-5 w-32 rounded bg-slate-200" />
         <div className="mt-4 h-16 rounded-xl bg-slate-200" />
       </div>
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
+      <div className="sifra-card animate-pulse">
         <div className="h-5 w-32 rounded bg-slate-200" />
         <div className="mt-4 flex gap-2">
           {[1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -46,7 +44,7 @@ const DashboardSkeleton = () => (
         </div>
       </div>
     </div>
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
+    <div className="sifra-card animate-pulse">
       <div className="h-5 w-32 rounded bg-slate-200" />
       <div className="mt-4 space-y-3">
         {[1, 2, 3].map((i) => (
@@ -131,7 +129,7 @@ const Dashboard = () => {
         Skip to main content
       </a>
       {hasError && (
-        <div role="alert" aria-live="assertive" className="mb-5 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div role="alert" aria-live="assertive" className="sifra-banner sifra-banner-error mb-5 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 shrink-0" />
           <span className="flex-1">{statsError || workoutsError}</span>
           <button

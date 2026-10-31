@@ -8,6 +8,8 @@ const Landing_Page = lazy(() => import("./pages/Landing_Page"));
 const NotFound     = lazy(() => import("./pages/NotFound"));
 const Login        = lazy(() => import("./pages/Login"));
 const Register     = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
 const Dashboard    = lazy(() => import("./pages/Dashboard"));
 const Profile      = lazy(() => import("./pages/Profile"));
 const Workout      = lazy(() => import("./pages/Workout"));
@@ -46,6 +48,8 @@ function App() {
 
           <Route path="/Login"        element={<Login />} />
           <Route path="/Register"     element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password"  element={<ResetPassword />} />
 
           {/* Protected — require auth */}
           <Route path="/Dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

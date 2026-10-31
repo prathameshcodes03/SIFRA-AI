@@ -27,7 +27,7 @@ let token;
 const request = (method, path, body) =>
   new Promise((resolve, reject) => {
     const payload = body === undefined ? null : JSON.stringify(body);
-    const headers = { Cookie: `token=${token}` };
+    const headers = { Cookie: `token=${token}`, Origin: "http://localhost:5173" };
     if (payload) {
       headers["Content-Type"] = "application/json";
       headers["Content-Length"] = Buffer.byteLength(payload);
@@ -145,7 +145,7 @@ test("another user's workout is still refused", async () => {
         port: basePort,
         path: `/api/workouts/${other.id}`,
         method: "DELETE",
-        headers: { Cookie: `token=${foreignToken}` },
+        headers: { Cookie: `token=${foreignToken}`, Origin: "http://localhost:5173" },
       },
       (r) => {
         let data = "";
@@ -157,5 +157,7 @@ test("another user's workout is still refused", async () => {
     req.end();
   });
 
-  assert.equal(res.status, 403);
+  // With session-revocation checks, a forged JWT for a non-existent user is
+  // rejected at the auth layer (401) rather than the controller (403).
+  assert.equal(res.status, 401);
 });

@@ -46,7 +46,7 @@ const WeeklyActivity = ({ workouts = [], loading = false }) => {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
+      <div className="sifra-card animate-pulse">
         <div className="h-5 w-36 rounded bg-slate-200" />
         <div className="mt-4 flex gap-2">
           {[1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -58,7 +58,7 @@ const WeeklyActivity = ({ workouts = [], loading = false }) => {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="sifra-card">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">

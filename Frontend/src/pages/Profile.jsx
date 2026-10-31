@@ -186,7 +186,7 @@ const Profile = () => {
           Skip to main content
         </a>
         <div className="space-y-6 max-w-4xl mx-auto animate-pulse">
-          <div className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:p-8">
+          <div className="flex flex-col items-center gap-6 sifra-card sm:flex-row sm:p-8">
             <div className="h-28 w-28 shrink-0 rounded-full bg-slate-200 sm:h-32 sm:w-32" />
             <div className="flex-1 space-y-3">
               <div className="h-6 w-40 rounded bg-slate-200" />
@@ -194,7 +194,7 @@ const Profile = () => {
               <div className="h-6 w-32 rounded-full bg-slate-200" />
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="sifra-card sm:p-8">
             <div className="mb-4 h-5 w-48 rounded bg-slate-200" />
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -238,17 +238,15 @@ const Profile = () => {
           <div
             role={statusMessage.type === "error" ? "alert" : "status"}
             aria-live={statusMessage.type === "error" ? "assertive" : "polite"}
-            className={`rounded-xl border p-4 text-sm font-medium ${
-              statusMessage.type === "error"
-                ? "border-rose-200 bg-rose-50 text-rose-700"
-                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            className={`sifra-banner ${
+              statusMessage.type === "error" ? "sifra-banner-error" : "sifra-banner-success"
             }`}
           >
             {statusMessage.text}
           </div>
         )}
         {/* Profile Header Banner */}
-        <section className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:p-8">
+        <section className="flex flex-col items-center gap-6 sifra-card sm:flex-row sm:p-8">
           {/* Avatar with Camera Overlay */}
           <div className="relative shrink-0">
             <button
@@ -307,7 +305,7 @@ const Profile = () => {
         </section>
 
         {/* Personal Metrics Form Card */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="sifra-card sm:p-8">
           <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h2 className="text-base font-bold text-slate-900">
@@ -347,7 +345,7 @@ const Profile = () => {
                   value={formData.fullName}
                   onChange={handleChange}
                   aria-label="Full Name"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                  className="w-full sifra-input sm:w-80"
                 />
               ) : (
                 <span className="font-semibold text-slate-900">{user.fullName}</span>
@@ -368,7 +366,7 @@ const Profile = () => {
                   value={formData.age}
                   onChange={handleChange}
                   aria-label="Age"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                  className="w-full sifra-input sm:w-80"
                 />
               ) : (
                 <span className="font-semibold text-slate-900">{user.age} years</span>
@@ -383,7 +381,7 @@ const Profile = () => {
                   value={formData.gender}
                   onChange={handleChange}
                   aria-label="Gender"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                  className="w-full sifra-input sm:w-80"
                 >
                   <option value="MALE">Male</option>
                   <option value="FEMALE">Female</option>
@@ -404,7 +402,7 @@ const Profile = () => {
                   value={formData.weight}
                   onChange={handleChange}
                   aria-label="Weight in kilograms"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
+                  className="w-full sifra-input sm:w-80"
                 />
               ) : (
                 <span className="font-semibold text-slate-900">{user.weight} kg</span>

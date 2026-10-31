@@ -215,7 +215,7 @@ const createWorkout = async (req, res) => {
       workout,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
     return res.status(500).json({
       success: false,
@@ -310,7 +310,7 @@ const completeWorkout = async (req, res) => {
       workout,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
     return res.status(500).json({
       success: false,
@@ -361,7 +361,7 @@ const getWorkoutStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
     return res.status(500).json({
       success: false,
@@ -387,7 +387,7 @@ const getAllWorkouts = async (req, res) => {
       workouts,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
     return res.status(500).json({
       success: false,
@@ -452,7 +452,7 @@ const updateWorkout = async (req, res) => {
       workout: updatedWorkout,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
     return res.status(500).json({
       success: false,
@@ -506,7 +506,7 @@ const deleteWorkout = async (req, res) => {
       message: "Workout deleted successfully.",
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
 
     return res.status(500).json({
       success: false,

@@ -7,7 +7,7 @@ const ContinueWorkout = ({ workouts = [], loading = false }) => {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-pulse">
+      <div className="sifra-card animate-pulse">
         <div className="h-5 w-40 rounded bg-slate-200" />
         <div className="mt-4 h-16 rounded-xl bg-slate-200" />
       </div>
@@ -20,7 +20,7 @@ const ContinueWorkout = ({ workouts = [], loading = false }) => {
 
   if (plan.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="sifra-card">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
             <ClipboardList className="h-5 w-5" />
@@ -63,7 +63,7 @@ const ContinueWorkout = ({ workouts = [], loading = false }) => {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="sifra-card">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
           <Play className="h-5 w-5" />

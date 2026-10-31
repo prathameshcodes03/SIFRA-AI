@@ -50,7 +50,7 @@ const RecentSessions = ({ workouts = [], loading = false, error = null }) => {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="sifra-card">
         <div className="mb-4 h-5 w-40 rounded bg-slate-200 animate-pulse" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -77,7 +77,7 @@ const RecentSessions = ({ workouts = [], loading = false, error = null }) => {
 
   if (completed.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="sifra-card">
         <h3 className="text-base font-bold text-slate-900">Recent Sessions</h3>
         <p className="mt-2 text-sm text-slate-500">
           Your completed workout sessions will appear here after your first session.
@@ -87,7 +87,7 @@ const RecentSessions = ({ workouts = [], loading = false, error = null }) => {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="sifra-card">
       <h3 className="text-base font-bold text-slate-900">Recent Sessions</h3>
       <p className="mt-1 text-xs text-slate-500">
         Your last {completed.length} completed workout{completed.length === 1 ? "" : "s"}

@@ -18,7 +18,7 @@ const TodayWorkout = () => {
   const completedCount = planWorkouts.filter((w) => w.completed).length;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="sifra-card">
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900">Today&apos;s Workout Queue</h2>

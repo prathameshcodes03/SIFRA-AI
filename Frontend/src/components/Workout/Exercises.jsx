@@ -59,7 +59,7 @@ const Exercises = () => {
   const presets = ["Squat", "Pushup", "Plank"];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="sifra-card">
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900">Workout Plan Builder</h2>
@@ -104,7 +104,7 @@ const Exercises = () => {
             placeholder="e.g. Squat"
             value={exerciseName}
             onChange={(e) => setExerciseName(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white"
+            className="w-full sifra-input"
           />
         </div>
 
@@ -118,7 +118,7 @@ const Exercises = () => {
             placeholder="3"
             value={sets}
             onChange={(e) => setSets(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white"
+            className="w-full sifra-input"
           />
         </div>
 
@@ -132,7 +132,7 @@ const Exercises = () => {
             placeholder="10"
             value={reps}
             onChange={(e) => setReps(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-indigo-500 focus:bg-white"
+            className="w-full sifra-input"
           />
         </div>
       </div>
@@ -151,7 +151,7 @@ const Exercises = () => {
       </button>
 
       {actionError && (
-        <div role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+        <div role="alert" className="sifra-banner sifra-banner-error mt-3">
           <span className="flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             <span>{actionError}</span>
@@ -160,7 +160,7 @@ const Exercises = () => {
       )}
 
       {actionSuccess && (
-        <div role="status" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+        <div role="status" className="sifra-banner sifra-banner-success mt-3">
           {actionSuccess}
         </div>
       )}
