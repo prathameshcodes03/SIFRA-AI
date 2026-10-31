@@ -17,7 +17,7 @@ if (!brevoApiKey) {
 if (!senderEmail) {
   console.error("❌ EMAIL_SENDER is not configured.");
 } else {
-  console.log("✅ EMAIL_SENDER:", senderEmail);
+  console.log("✅ EMAIL_SENDER configured.");
 }
 
 // Create Brevo client
@@ -197,7 +197,6 @@ const sendOtpEmail = async (toEmail, otp) => {
     // ==========================================
 
     console.log("✅ OTP email sent through Brevo HTTP API");
-    console.log("📩 Brevo response:", response);
 
     return {
       success: true,
@@ -222,9 +221,59 @@ const sendOtpEmail = async (toEmail, otp) => {
 };
 
 // ==========================================
+// SEND PASSWORD RESET EMAIL
+// ==========================================
+
+const sendPasswordResetEmail = async (toEmail, resetUrl) => {
+  try {
+    if (!client) {
+      return { success: false, message: "Email service is not configured." };
+    }
+    if (!senderEmail) {
+      return { success: false, message: "EMAIL_SENDER is not configured." };
+    }
+    if (!toEmail || !resetUrl) {
+      return { success: false, message: "Recipient and reset URL are required." };
+    }
+
+    const response = await client.transactionalEmails.sendTransacEmail({
+      sender: { name: "Sifra.AI", email: senderEmail },
+      to: [{ email: toEmail }],
+      subject: "Reset your Sifra.AI password",
+      htmlContent: `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>Sifra.AI Password Reset</title></head>
+        <body style="margin:0;padding:0;background-color:#0f172a;font-family:Arial,Helvetica,sans-serif;">
+          <div style="max-width:500px;margin:40px auto;padding:35px;background-color:#111827;border-radius:18px;color:#ffffff;">
+            <h1 style="margin:0 0 15px 0;font-size:30px;">Sifra.AI</h1>
+            <p style="color:#cbd5e1;font-size:16px;line-height:1.6;">
+              We received a request to reset your password. Click the button below to set a new password. This link expires in 15 minutes.
+            </p>
+            <div style="margin:30px 0;text-align:center;">
+              <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background-color:#4F46E5;color:#ffffff;text-decoration:none;border-radius:10px;font-weight:600;">Reset Password</a>
+            </div>
+            <p style="color:#94a3b8;font-size:13px;line-height:1.6;">
+              If you did not request this, you can safely ignore this email. Your password will remain unchanged.
+            </p>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    return { success: true, message: "Email sent." };
+  } catch (error) {
+    console.error("PASSWORD RESET EMAIL ERROR:", error?.message || error);
+    return { success: false, message: "Failed to send reset email." };
+  }
+};
+
+// ==========================================
 // EXPORT
 // ==========================================
 
 module.exports = {
   sendOtpEmail,
+  sendPasswordResetEmail,
 };

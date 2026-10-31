@@ -7,6 +7,7 @@ const profileRoutes = require("./Routes/profile.routes");
 const formPredictionRoutes = require("./Routes/formPrediction.routes");
 
 const voiceRoutes = require("./Routes/voiceRoutes");
+const { csrfProtection } = require("./Middlewares/csrf.middleware");
 
 
 
@@ -30,6 +31,7 @@ app.use(
 );
 
 
+app.use(csrfProtection);
 app.use("/api/voice", voiceRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
@@ -37,5 +39,21 @@ app.use("/api/workouts", workoutRoutes);
 app.use("/api/workout", formPredictionRoutes);
 
 
+
+app.get("/api/health", async (req, res) => {
+  try {
+    const { prisma } = require("./data/db");
+    await prisma.$queryRaw`SELECT 1`;
+    return res.status(200).json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return res.status(503).json({
+      status: "unhealthy",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 module.exports = app;

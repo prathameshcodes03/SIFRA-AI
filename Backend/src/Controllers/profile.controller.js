@@ -61,9 +61,11 @@ const updateProfile = async (req, res) => {
 
     if (
       !fullName ||
-      !age ||
+      age === undefined ||
+      age === null ||
       !gender ||
-      weight === undefined
+      weight === undefined ||
+      weight === null
     ) {
       return res.status(400).json({
         success: false,
@@ -71,16 +73,45 @@ const updateProfile = async (req, res) => {
       });
     }
 
+    const trimmedName = String(fullName).trim();
+
+    if (!trimmedName || trimmedName.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name must be between 1 and 100 characters.",
+      });
+    }
+
+    const normalizedGender = String(gender).trim().toUpperCase();
+    if (!["MALE", "FEMALE", "OTHER"].includes(normalizedGender)) {
+      return res.status(400).json({
+        success: false,
+        message: "Gender must be Male, Female, or Other.",
+      });
+    }
+
     const numericAge = Number(age);
     const numericWeight = Number(weight);
 
     if (
-      !Number.isFinite(numericAge) ||
-      !Number.isFinite(numericWeight)
+      !Number.isInteger(numericAge) ||
+      numericAge < 10 ||
+      numericAge > 100
     ) {
       return res.status(400).json({
         success: false,
-        message: "Age and weight must be valid numbers.",
+        message: "Age must be an integer between 10 and 100.",
+      });
+    }
+
+    if (
+      !Number.isFinite(numericWeight) ||
+      numericWeight < 20 ||
+      numericWeight > 300
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Weight must be a number between 20 and 300 kg.",
       });
     }
 
@@ -90,9 +121,9 @@ const updateProfile = async (req, res) => {
       },
 
       data: {
-        fullName: fullName.trim(),
+        fullName: trimmedName,
         age: numericAge,
-        gender,
+        gender: normalizedGender,
         weight: numericWeight,
       },
 
@@ -136,11 +167,6 @@ const uploadProfileImage = async (req, res) => {
         message: "No image uploaded.",
       });
     }
-
-    console.log(
-      "PROFILE IMAGE RECEIVED:",
-      req.file.originalname
-    );
 
     const result = await imagekit.upload({
       file: req.file.buffer,

@@ -9,6 +9,8 @@ const {
   loginUser,
   logoutUser,
   getCurrentUser,
+  forgotPassword,
+  resetPassword,
 } = require("../Controllers/auth.controller");
 
 const {
@@ -18,6 +20,13 @@ const {
   protectRoute,
 } = require("../Middlewares/auth.middleware");
 
+const {
+  loginLimiter,
+  sendOtpLimiter,
+  verifyOtpLimiter,
+  registerLimiter,
+} = require("../Middlewares/rateLimiter");
+
 // ==========================================
 // AUTH & OTP
 // ==========================================
@@ -25,6 +34,7 @@ const {
 // SEND OTP
 router.post(
   "/send-otp",
+  sendOtpLimiter,
   validateSendOTP,
   sendOTP
 );
@@ -32,12 +42,14 @@ router.post(
 // VERIFY OTP
 router.post(
   "/verify-otp",
+  verifyOtpLimiter,
   verifyOTPController
 );
 
 // REGISTER
 router.post(
   "/register",
+  registerLimiter,
   validateRegisterUser,
   registerUser
 );
@@ -45,6 +57,7 @@ router.post(
 // LOGIN
 router.post(
   "/login",
+  loginLimiter,
   validateLoginUser,
   loginUser
 );
@@ -60,6 +73,19 @@ router.get(
   "/me",
   protectRoute,
   getCurrentUser
+);
+
+// FORGOT PASSWORD
+router.post(
+  "/forgot-password",
+  sendOtpLimiter,
+  forgotPassword
+);
+
+// RESET PASSWORD
+router.post(
+  "/reset-password",
+  resetPassword
 );
 
 module.exports = router;

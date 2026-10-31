@@ -1,142 +1,81 @@
 const crypto = require("crypto");
-
-// ==========================================
-// OTP STORE
-// ==========================================
-
-// Temporary in-memory OTP storage
-const otpStore = new Map();
+const { prisma } = require("../data/db");
 
 // ==========================================
 // CONFIGURATION
 // ==========================================
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-
 const COOLDOWN_MS = 60 * 1000; // 60 seconds
-
 const MAX_ATTEMPTS = 5;
 
+const otpSecret = process.env.OTP_SECRET || process.env.JWT_SECRET || "sifra-otp-secret";
+
 // ==========================================
-// HASH OTP
+// HASH OTP (HMAC-SHA256)
 // ==========================================
 
 const hashOTP = (otp) => {
   return crypto
-    .createHash("sha256")
+    .createHmac("sha256", otpSecret)
     .update(String(otp).trim())
     .digest("hex");
 };
 
 // ==========================================
-// CLEANUP EXPIRED OTPs
-// ==========================================
-
-const cleanupInterval = setInterval(() => {
-
-  const now = Date.now();
-
-  for (const [email, data] of otpStore.entries()) {
-
-    if (data.expiresAt < now) {
-      otpStore.delete(email);
-    }
-
-  }
-
-}, 5 * 60 * 1000);
-
-// Don't keep Node process alive just because of this timer
-if (cleanupInterval.unref) {
-  cleanupInterval.unref();
-}
-
-// ==========================================
 // CHECK COOLDOWN
 // ==========================================
 
-const checkCooldown = (email) => {
+const checkCooldown = async (email) => {
+  const normalizedEmail = email.toLowerCase().trim();
 
-  const normalizedEmail =
-    email.toLowerCase().trim();
+  const existing = await prisma.otpCode.findFirst({
+    where: { email: normalizedEmail, consumed: false },
+    orderBy: { createdAt: "desc" },
+  });
 
-  const existing =
-    otpStore.get(normalizedEmail);
-
-  // No previous OTP
   if (!existing || !existing.lastSentAt) {
-
-    return {
-      allowed: true,
-      remainingSeconds: 0,
-    };
-
+    return { allowed: true, remainingSeconds: 0 };
   }
 
-  const elapsed =
-    Date.now() - existing.lastSentAt;
+  const elapsed = Date.now() - new Date(existing.lastSentAt).getTime();
 
-  // Still inside cooldown
   if (elapsed < COOLDOWN_MS) {
-
-    const remainingSeconds =
-      Math.ceil(
-        (COOLDOWN_MS - elapsed) / 1000
-      );
-
-    return {
-      allowed: false,
-      remainingSeconds,
-    };
-
+    const remainingSeconds = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+    return { allowed: false, remainingSeconds };
   }
 
-  // Cooldown finished
-  return {
-    allowed: true,
-    remainingSeconds: 0,
-  };
+  return { allowed: true, remainingSeconds: 0 };
 };
 
 // ==========================================
 // GENERATE AND STORE OTP
 // ==========================================
 
-const generateAndStoreOTP = (email) => {
+const generateAndStoreOTP = async (email) => {
+  const normalizedEmail = email.toLowerCase().trim();
 
-  const normalizedEmail =
-    email.toLowerCase().trim();
+  const otp = crypto.randomInt(100000, 1000000).toString();
+  const hashedOtp = hashOTP(otp);
+  const now = new Date();
 
-  // Generate secure 6-digit OTP
-  const otp =
-    crypto
-      .randomInt(100000, 1000000)
-      .toString();
+  // Invalidate any previous unconsumed OTPs for this email.
+  await prisma.otpCode.updateMany({
+    where: { email: normalizedEmail, consumed: false },
+    data: { consumed: true },
+  });
 
-  // Hash OTP before storing
-  const hashedOtp =
-    hashOTP(otp);
-
-  const now = Date.now();
-
-  // Store OTP information
-  otpStore.set(
-    normalizedEmail,
-    {
+  await prisma.otpCode.create({
+    data: {
+      email: normalizedEmail,
       hashedOtp,
-
-      expiresAt:
-        now + OTP_EXPIRY_MS,
-
-      lastSentAt:
-        now,
-
+      expiresAt: new Date(now.getTime() + OTP_EXPIRY_MS),
+      lastSentAt: now,
       attempts: 0,
-    }
-  );
+      consumed: false,
+    },
+  });
 
-  // Return plain OTP
-  // This is sent through mail.service.js
   return otp;
 };
 
@@ -144,129 +83,86 @@ const generateAndStoreOTP = (email) => {
 // VERIFY OTP
 // ==========================================
 
-const verifyOTP = (
-  email,
-  inputOtp,
-  consume = false
-) => {
+const verifyOTP = async (email, inputOtp, consume = false) => {
+  const normalizedEmail = email.toLowerCase().trim();
 
-  const normalizedEmail =
-    email.toLowerCase().trim();
-
-  const entry =
-    otpStore.get(normalizedEmail);
-
-  // ========================================
-  // NO OTP FOUND
-  // ========================================
+  const entry = await prisma.otpCode.findFirst({
+    where: { email: normalizedEmail, consumed: false },
+    orderBy: { createdAt: "desc" },
+  });
 
   if (!entry) {
-
-    return {
-      valid: false,
-      message:
-        "No OTP was requested for this email or it has expired.",
-    };
-
+    return { valid: false, message: "No OTP was requested for this email or it has expired." };
   }
 
-  // ========================================
-  // OTP EXPIRED
-  // ========================================
-
-  if (Date.now() > entry.expiresAt) {
-
-    otpStore.delete(normalizedEmail);
-
-    return {
-      valid: false,
-      message:
-        "OTP has expired. Please request a new one.",
-    };
-
+  if (Date.now() > new Date(entry.expiresAt).getTime()) {
+    await prisma.otpCode.update({
+      where: { id: entry.id },
+      data: { consumed: true },
+    });
+    return { valid: false, message: "OTP has expired. Please request a new one." };
   }
-
-  // ========================================
-  // TOO MANY ATTEMPTS
-  // ========================================
 
   if (entry.attempts >= MAX_ATTEMPTS) {
-
-    otpStore.delete(normalizedEmail);
-
-    return {
-      valid: false,
-      message:
-        "Too many failed attempts. Please request a new OTP.",
-    };
-
+    await prisma.otpCode.update({
+      where: { id: entry.id },
+      data: { consumed: true },
+    });
+    return { valid: false, message: "Too many failed attempts. Please request a new OTP." };
   }
 
-  // ========================================
-  // HASH INPUT OTP
-  // ========================================
+  const inputHash = hashOTP(inputOtp);
 
-  const inputHash =
-    hashOTP(inputOtp);
-
-  // ========================================
-  // COMPARE HASHES
-  // ========================================
-
-  const isMatch =
-    crypto.timingSafeEqual(
-      Buffer.from(
-        entry.hashedOtp,
-        "hex"
-      ),
-
-      Buffer.from(
-        inputHash,
-        "hex"
-      )
+  let isMatch = false;
+  try {
+    isMatch = crypto.timingSafeEqual(
+      Buffer.from(entry.hashedOtp, "hex"),
+      Buffer.from(inputHash, "hex")
     );
-
-  // ========================================
-  // INVALID OTP
-  // ========================================
+  } catch (e) {
+    isMatch = false;
+  }
 
   if (!isMatch) {
-
-    entry.attempts += 1;
-
-    const remaining =
-      MAX_ATTEMPTS - entry.attempts;
-
-    return {
-      valid: false,
-      message:
-        `Invalid OTP. ${remaining} attempts remaining.`,
-    };
-
+    await prisma.otpCode.update({
+      where: { id: entry.id },
+      data: { attempts: { increment: 1 } },
+    });
+    const remaining = MAX_ATTEMPTS - (entry.attempts + 1);
+    return { valid: false, message: `Invalid OTP. ${remaining} attempts remaining.` };
   }
-
-  // ========================================
-  // VALID OTP
-  // ========================================
 
   if (consume) {
-
-    otpStore.delete(
-      normalizedEmail
-    );
-
+    // Atomic consume: only succeeds if not already consumed.
+    const updated = await prisma.otpCode.updateMany({
+      where: { id: entry.id, consumed: false },
+      data: { consumed: true },
+    });
+    if (updated.count === 0) {
+      return { valid: false, message: "OTP has already been used." };
+    }
   }
 
-  return {
-    valid: true,
-    message:
-      "OTP verified successfully.",
-  };
+  return { valid: true, message: "OTP verified successfully." };
 };
 
 // ==========================================
-// EXPORT
+// CLEANUP EXPIRED
 // ==========================================
+
+const cleanupExpired = async () => {
+  try {
+    await prisma.otpCode.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+  } catch (e) {
+    // ignore
+  }
+};
+
+// Periodic cleanup (unref so it doesn't keep process alive)
+const cleanupInterval = setInterval(cleanupExpired, 5 * 60 * 1000);
+if (cleanupInterval.unref) cleanupInterval.unref();
 
 module.exports = {
   checkCooldown,

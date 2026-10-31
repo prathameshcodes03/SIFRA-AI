@@ -63,10 +63,17 @@ const validateRegisterUser = (req, res, next) => {
       });
     }
 
-    if (password.length < 6) {
+    if (typeof password !== "string" || password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 6 characters long.",
+        message: "Password must be at least 8 characters long.",
+      });
+    }
+
+    if (password.length > 72) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at most 72 characters long.",
       });
     }
 
@@ -134,7 +141,9 @@ const validateLoginUser = (req, res, next) => {
   }
 };
 
-const protectRoute = (req, res, next) => {
+const { prisma } = require("../data/db");
+
+const protectRoute = async (req, res, next) => {
   try {
     const token = req.cookies.token;
 
@@ -147,8 +156,27 @@ const protectRoute = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded;
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, tokenVersion: true },
+    });
 
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token",
+      });
+    }
+
+    const tokenVersion = decoded.tv === undefined ? 0 : decoded.tv;
+    if (tokenVersion !== (user.tokenVersion ?? 0)) {
+      return res.status(401).json({
+        success: false,
+        message: "Session invalidated. Please log in again.",
+      });
+    }
+
+    req.user = decoded;
     next();
   } catch (error) {
     return res.status(401).json({

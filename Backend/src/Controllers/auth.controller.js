@@ -85,7 +85,7 @@ const sendOTP = async (req, res) => {
     // CHECK OTP COOLDOWN
     // ==========================================
 
-    const cooldown = checkCooldown(normalizedEmail);
+    const cooldown = await checkCooldown(normalizedEmail);
 
     if (!cooldown.allowed) {
       return res.status(429).json({
@@ -99,7 +99,7 @@ const sendOTP = async (req, res) => {
     // GENERATE OTP
     // ==========================================
 
-    const otp = generateAndStoreOTP(normalizedEmail);
+    const otp = await generateAndStoreOTP(normalizedEmail);
 
     // ==========================================
     // SEND OTP EMAIL
@@ -157,7 +157,7 @@ const verifyOTPController = async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    const result = verifyOTP(
+    const result = await verifyOTP(
       normalizedEmail,
       otp,
       false
@@ -215,7 +215,7 @@ const registerUser = async (req, res) => {
     // VERIFY AND CONSUME OTP
     // ==========================================
 
-    const otpResult = verifyOTP(
+    const otpResult = await verifyOTP(
       normalizedEmail,
       otp,
       true
@@ -303,15 +303,7 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    console.log(
-      "LOGIN: request reached login controller"
-    );
-
     const { email, password } = req.body;
-
-    console.log("LOGIN: email received", {
-      email,
-    });
 
     if (!email || !password) {
       return res.status(400).json({
@@ -324,10 +316,6 @@ const loginUser = async (req, res) => {
     const normalizedEmail =
       email.toLowerCase().trim();
 
-    console.log(
-      "LOGIN: user lookup started"
-    );
-
     const user = await prisma.user.findUnique({
       where: {
         email: normalizedEmail,
@@ -335,34 +323,15 @@ const loginUser = async (req, res) => {
     });
 
     if (!user) {
-      console.log(
-        "LOGIN: user not found"
-      );
-
       return res.status(401).json({
         success: false,
         message: "Invalid Credentials",
       });
     }
 
-    console.log("LOGIN: user found", {
-      userId: user.id,
-    });
-
-    console.log(
-      "LOGIN: password comparison started"
-    );
-
     const isMatch = await bcrypt.compare(
       password,
       user.password
-    );
-
-    console.log(
-      "LOGIN: password comparison result",
-      {
-        isMatch,
-      }
     );
 
     if (!isMatch) {
@@ -376,14 +345,11 @@ const loginUser = async (req, res) => {
     // JWT
     // ==========================================
 
-    console.log(
-      "LOGIN: JWT generation started"
-    );
-
     const token = jwt.sign(
       {
         id: user.id,
         email: user.email,
+        tv: user.tokenVersion ?? 0,
       },
       process.env.JWT_SECRET,
       {
@@ -398,25 +364,14 @@ const loginUser = async (req, res) => {
     // COOKIE
     // ==========================================
 
-    console.log(
-      "LOGIN: cookie creation started"
-    );
-
     res.cookie("token", token, {
       ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    console.log("LOGIN: response sent", {
-      status: 200,
-      userId: user.id,
-    });
-
     return res.status(200).json({
       success: true,
       message: "Login Successful",
-
-      token,
 
       user: userData,
     });
@@ -618,6 +573,185 @@ const updateProfile = async (req, res) => {
   }
 };
 
+
+
+// ==========================================
+// EXPORT CONTROLLERS
+// ==========================================
+
+// ==========================================
+// FORGOT PASSWORD
+// ==========================================
+
+const crypto = require("crypto");
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format.",
+      });
+    }
+
+    const genericResponse = {
+      success: true,
+      message: "If an account exists for that email, a password reset link has been sent.",
+    };
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      return res.status(200).json(genericResponse);
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+    // Invalidate previous tokens
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, used: false },
+      data: { used: true },
+    });
+
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        used: false,
+      },
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    const { sendPasswordResetEmail } = require("../Services/mail.service");
+    await sendPasswordResetEmail(normalizedEmail, resetUrl);
+
+    return res.status(200).json(genericResponse);
+  } catch (error) {
+    console.error("FORGOT PASSWORD ERROR:", error?.message || error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+// ==========================================
+// RESET PASSWORD
+// ==========================================
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Token and password are required.",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long.",
+      });
+    }
+
+    if (password.length > 72) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at most 72 characters long.",
+      });
+    }
+
+    if (Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at most 72 bytes.",
+      });
+    }
+
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match.",
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const record = await prisma.passwordResetToken.findFirst({
+      where: { tokenHash, used: false },
+    });
+
+    if (!record) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token.",
+      });
+    }
+
+    if (Date.now() > new Date(record.expiresAt).getTime()) {
+      await prisma.passwordResetToken.update({
+        where: { id: record.id },
+        data: { used: true },
+      });
+      return res.status(400).json({
+        success: false,
+        message: "Reset token has expired.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Atomic update: consume token + update password + bump token version.
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: record.userId },
+        data: { password: hashedPassword, tokenVersion: { increment: 1 } },
+      }),
+      prisma.passwordResetToken.update({
+        where: { id: record.id },
+        data: { used: true },
+      }),
+    ]);
+
+    // Invalidate any other outstanding tokens for this user.
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: record.userId, used: false },
+      data: { used: true },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password has been reset successfully. Please log in.",
+    });
+  } catch (error) {
+    console.error("RESET PASSWORD ERROR:", error?.message || error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
 // ==========================================
 // EXPORT CONTROLLERS
 // ==========================================
@@ -631,4 +765,6 @@ module.exports = {
   getCurrentUser,
   getProfile,
   updateProfile,
+  forgotPassword,
+  resetPassword,
 };
