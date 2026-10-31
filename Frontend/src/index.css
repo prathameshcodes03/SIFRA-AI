@@ -1,5 +1,149 @@
 @import "tailwindcss";
 
+/*
+ * SIFRA design tokens.
+ * Single source of truth for colors, radii and shadows used across the app.
+ */
+:root {
+  --sifra-primary: #4F46E5;
+  --sifra-primary-hover: #4338CA;
+  --sifra-bg: #FAFAFC;
+  --sifra-bg-secondary: #F7F5FF;
+  --sifra-text: #0F172A;
+  --sifra-text-secondary: #475569;
+  --sifra-text-muted: #64748B;
+  --sifra-border: #E2E8F0;
+  --sifra-success: #10B981;
+  --sifra-error: #F43F5E;
+  --sifra-warning: #F59E0B;
+  --sifra-radius-card: 1rem;
+  --sifra-radius-button: 0.75rem;
+  --sifra-radius-input: 0.75rem;
+  --sifra-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --sifra-shadow-button: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* Reusable design-system primitives */
+.sifra-card {
+  background: #ffffff;
+  border: 1px solid var(--sifra-border);
+  border-radius: var(--sifra-radius-card);
+  box-shadow: var(--sifra-shadow-card);
+  padding: 1.5rem;
+}
+
+.sifra-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--sifra-radius-button);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
+  cursor: pointer;
+}
+
+.sifra-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sifra-btn-primary {
+  background: var(--sifra-primary);
+  color: #ffffff;
+  border: 1px solid var(--sifra-primary);
+}
+
+.sifra-btn-primary:hover:not(:disabled) {
+  background: var(--sifra-primary-hover);
+  border-color: var(--sifra-primary-hover);
+}
+
+.sifra-btn-secondary {
+  background: #ffffff;
+  color: var(--sifra-text-secondary);
+  border: 1px solid var(--sifra-border);
+}
+
+.sifra-btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  color: var(--sifra-text);
+}
+
+.sifra-btn-danger {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.sifra-btn-danger:hover:not(:disabled) {
+  background: #ffe4e6;
+}
+
+.sifra-input {
+  width: 100%;
+  border-radius: var(--sifra-radius-input);
+  border: 1px solid var(--sifra-border);
+  background: #f8fafc;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--sifra-text);
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.sifra-input::placeholder {
+  color: var(--sifra-text-muted);
+}
+
+.sifra-input:focus {
+  outline: none;
+  border-color: var(--sifra-primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.sifra-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #F1F5F9;
+  box-shadow: none;
+}
+
+.sifra-banner {
+  border-radius: var(--sifra-radius-input);
+  border: 1px solid var(--sifra-border);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.sifra-banner-success {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.sifra-banner-error {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #9f1239;
+}
+
+.sifra-banner-warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.sifra-skeleton {
+  background: #e2e8f0;
+  border-radius: 0.5rem;
+  animation: sifra-pulse 1.5s ease-in-out infinite;
+}
+
 @theme {
   --breakpoint-xs: 23rem;
   --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
