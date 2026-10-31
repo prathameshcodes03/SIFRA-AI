@@ -881,7 +881,7 @@ const Camerafeed = ({
   const isHold = canonicalExercise === "plank";
 
   return (
-    <div className="relative mx-auto aspect-video min-h-[15rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-lg sm:min-h-[24rem]">
+    <div className="relative mx-auto aspect-video min-h-[11rem] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-lg sm:min-h-[24rem]" role="region" aria-label="Live camera workout feed with pose tracking">
       {cameraOn ? (
         <>
           <Webcam
@@ -898,6 +898,7 @@ const Camerafeed = ({
           <canvas
             ref={canvasRef}
             className="absolute top-0 left-0 h-full w-full pointer-events-none"
+            aria-label="Camera feed showing real-time pose tracking"
           />
 
           {/* Live Biomechanical Telemetry Overlay */}
@@ -927,14 +928,14 @@ const Camerafeed = ({
 
             <span className="rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-1.5 font-mono text-xs font-medium text-slate-200 shadow-md backdrop-blur-md">
               Score:{" "}
-              <strong className="text-indigo-400">
+              <strong className="text-indigo-400" aria-live="polite">
                 {liveAccuracy === null ? "--" : `${liveAccuracy}%`}
               </strong>
             </span>
 
             {/* Rep/Set Progress */}
             {!exerciseCompleted && (
-              <span className="rounded-xl border border-indigo-500/40 bg-indigo-950/80 px-3 py-1.5 font-mono text-xs font-medium text-indigo-200 shadow-md backdrop-blur-md">
+              <span className="rounded-xl border border-indigo-500/40 bg-indigo-950/80 px-3 py-1.5 font-mono text-xs font-medium text-indigo-200 shadow-md backdrop-blur-md" aria-live="polite">
                 {isHold
                   ? `Hold ${completedReps}/${reps}s`
                   : `Set ${currentSet}/${sets} • Rep ${completedReps}/${reps}`}

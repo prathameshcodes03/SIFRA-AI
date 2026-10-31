@@ -484,7 +484,8 @@ export default function Landing_Page() {
         trigger: heroSec,
         start: "top top",
         end: "bottom bottom",
-        scrub: 0.8,
+        scrub: 0.4,
+        invalidateOnRefresh: true,
         onUpdate: (self) => {
           const progress = self.progress;
 
@@ -504,20 +505,22 @@ export default function Landing_Page() {
             });
           }
 
+          // Lid opens naturally over the first 26% of scroll
           const openProgress = gsap.utils.clamp(
             0,
             1,
             progress / 0.26
           );
 
+          // Smooth 360° circular rotation around Y-axis synchronized with scroll
           let rotYProgress = 0;
-
-          if (progress >= 0.65 && progress <= 0.88) {
-            rotYProgress = (progress - 0.65) / 0.23;
-          } else if (progress > 0.88) {
+          if (progress >= 0.38 && progress <= 0.86) {
+            rotYProgress = (progress - 0.38) / 0.48;
+          } else if (progress > 0.86) {
             rotYProgress = 1;
           }
 
+          // Exit transition begins after circular showcase completes
           const exitProgress =
             progress >= 0.88 ? (progress - 0.88) / 0.12 : 0;
 
@@ -565,7 +568,8 @@ export default function Landing_Page() {
         start: "top 85%",
         endTrigger: footer,
         end: "bottom bottom",
-        scrub: 0.8,
+        scrub: 0.4,
+        invalidateOnRefresh: true,
         onLeaveBack: () => {
           dumbbellRef.current?.setPose({ o: 0 });
         },
@@ -638,7 +642,7 @@ export default function Landing_Page() {
             ry = 3.1 + t * 0.3;
             rz = -0.12;
             s = gsap.utils.interpolate(0.95, 0.88, t);
-            o = gsap.utils.interpolate(1.0, 0.9, t);
+            o = gsap.utils.interpolate(1.0, 0, t);
           }
 
           dumbbellRef.current?.setPose({
@@ -672,6 +676,7 @@ export default function Landing_Page() {
         trigger: howSec,
         start: "top 60%",
         end: "bottom 70%",
+        invalidateOnRefresh: true,
         onUpdate: (self) => {
           const step = Math.min(
             HOW_IT_WORKS_STEPS.length - 1,
@@ -1016,14 +1021,19 @@ useLayoutEffect(() => {
       <style>{cardStyles}</style>
 
       <Navbar />
-
-      <main id="main" className="relative">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          Skip to main content
+        </a>
+        <main id="main" tabIndex={-1} className="relative">
         {/* ═════════════════ HERO ═════════════════ */}
         <section ref={heroSectionRef} className="relative h-[360vh] w-full">
           <div className="sticky top-0 flex h-screen w-full items-center overflow-hidden">
             <div className="pointer-events-none absolute inset-0 z-0">
-              <div className="absolute left-1/4 top-1/4 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-violet-200/40 blur-[140px]" />
-              <div className="absolute bottom-0 right-1/6 h-[300px] w-[300px] rounded-full bg-fuchsia-100/60 blur-[120px]" />
+              <div className="absolute left-0 top-1/4 h-[240px] w-[240px] -translate-x-1/2 rounded-full bg-violet-200/40 blur-[140px] md:left-1/4 md:top-1/4 md:h-[480px] md:w-[480px] md:-translate-x-1/2 md:rounded-full md:bg-violet-200/40 md:blur-[140px]" aria-hidden="true" />
+              <div className="absolute bottom-0 right-0 h-[200px] w-[200px] rounded-full bg-fuchsia-100/60 blur-[120px] md:right-1/6 md:h-[300px] md:w-[300px] md:rounded-full md:bg-fuchsia-100/60 md:blur-[120px]" aria-hidden="true" />
               <div className="absolute inset-0 bg-[radial-gradient(#a78bfa_0.8px,transparent_0.8px)] opacity-20 [background-size:28px_28px]" />
               <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#f7f5ff] to-transparent" />
             </div>
@@ -1062,7 +1072,6 @@ useLayoutEffect(() => {
                   className="mt-5 text-4xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#19152b] sm:text-5xl lg:mt-7 lg:text-6xl xl:text-7xl"
                 >
                   Your personal
-                  <br />
                   <span className="block bg-gradient-to-r from-violet-700 to-indigo-600 bg-clip-text pb-2 text-transparent">
                     AI fitness coach.
                   </span>

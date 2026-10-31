@@ -39,6 +39,18 @@ const DumbbellScene = forwardRef(
     const dirtyRef = useRef(true);
     const [hasError, setHasError] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
+    const reducedMotionRef = useRef(
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        : false
+    );
+    useEffect(() => {
+      if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const handler = (e) => { reducedMotionRef.current = e.matches; };
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
+    }, []);
 
     // Keep the latest callback without rebuilding the renderer when the parent re-renders.
     useEffect(() => {
@@ -49,6 +61,9 @@ const DumbbellScene = forwardRef(
       ref,
       () => ({
         setPose(next) {
+          // Under reduced motion, ignore pose updates entirely so the scene stays
+          // stable (hidden) and no motion is introduced.
+          if (reducedMotionRef.current) return;
           const pose = poseRef.current;
           for (const key in next) {
             if (key in DEFAULT_POSE && Number.isFinite(next[key])) pose[key] = next[key];
@@ -201,8 +216,21 @@ const DumbbellScene = forwardRef(
       const resizeObserver = new ResizeObserver(onResize);
       resizeObserver.observe(container);
 
+      const handleVisibility = () => {
+        if (document.hidden) {
+          if (reqId) {
+            cancelAnimationFrame(reqId);
+            reqId = 0;
+          }
+        } else if (!disposed && !reqId) {
+          reqId = requestAnimationFrame(frame);
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibility);
+
       return () => {
         disposed = true;
+        document.removeEventListener("visibilitychange", handleVisibility);
         resizeObserver.disconnect();
         if (reqId) cancelAnimationFrame(reqId);
         scene.traverse((obj) => {

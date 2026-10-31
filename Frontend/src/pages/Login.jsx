@@ -34,9 +34,8 @@ const Login = () => {
 
     try {
       const loginResponse = await api.post("/api/auth/login", formData);
-      const currentUserResponse = await api.get("/api/auth/me");
 
-      login(currentUserResponse.data.user, loginResponse.data.token);
+      login(loginResponse.data.user, loginResponse.data.token);
       setMessage(loginResponse.data.message || "Login successful! Redirecting...");
       setIsError(false);
       navigate("/Dashboard");
@@ -52,6 +51,9 @@ const Login = () => {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col justify-between overflow-hidden font-sans text-slate-900 bg-[#FAFAFC] selection:bg-indigo-500 selection:text-white">
+      <a href="#login-main" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        Skip to main content
+      </a>
       {/* Background Video (Brighter Visibility) */}
       <video
         className="absolute inset-0 h-full w-full object-cover brightness-105"
@@ -87,7 +89,7 @@ const Login = () => {
       </header>
 
       {/* Main Form Center Card */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-12">
+      <main id="login-main" tabIndex={-1} className="relative z-10 flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           {/* Frosted Glass Card */}
           <div className="backdrop-blur-2xl bg-white/90 border border-white shadow-2xl shadow-slate-900/10 rounded-3xl p-8 sm:p-9 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -105,7 +107,7 @@ const Login = () => {
 
             {/* Error / Feedback Banner */}
             {message && (
-              <div className={`mb-6 p-3.5 rounded-xl border text-xs font-medium flex items-start gap-2.5 backdrop-blur-md animate-in fade-in duration-200 ${
+              <div id="login-message" role="alert" aria-live="assertive" className={`mb-6 p-3.5 rounded-xl border text-xs font-medium flex items-start gap-2.5 backdrop-blur-md animate-in fade-in duration-200 ${
                 isError 
                   ? "bg-rose-50 border-rose-200 text-rose-800" 
                   : "bg-emerald-50 border-emerald-200 text-emerald-800"
@@ -135,6 +137,8 @@ const Login = () => {
                     name="email"
                     placeholder="athlete@example.com"
                     value={formData.email}
+                    aria-invalid={isError}
+                    aria-describedby={isError ? "login-message" : undefined}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
                     }
@@ -157,6 +161,8 @@ const Login = () => {
                     name="password"
                     placeholder="••••••••"
                     value={formData.password}
+                    aria-invalid={isError}
+                    aria-describedby={isError ? "login-message" : undefined}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
                     }
@@ -165,6 +171,8 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-pressed={showPassword}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

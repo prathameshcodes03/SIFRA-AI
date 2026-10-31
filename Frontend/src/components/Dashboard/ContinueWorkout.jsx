@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Play, ClipboardList, CheckCircle2 } from "lucide-react";
 import { selectPlanWorkouts } from "../../exercises/workoutPlan";
 
@@ -75,19 +75,15 @@ const ContinueWorkout = ({ workouts = [], loading = false }) => {
           </p>
         </div>
       </div>
-      <button
-        onClick={() =>
-          navigate(
-            `/Workout?exercise=${encodeURIComponent(
-              nextExercise.exercise.toLowerCase()
-            )}&workoutId=${nextExercise.id}&sets=${nextExercise.sets}&reps=${nextExercise.reps}`
-          )
-        }
+      <Link
+        to={`/Workout?exercise=${encodeURIComponent(
+          nextExercise.exercise.toLowerCase()
+        )}&workoutId=${nextExercise.id}&sets=${nextExercise.sets}&reps=${nextExercise.reps}`}
         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]"
       >
         <span>Start Exercise</span>
         <Play className="h-4 w-4 fill-white" />
-      </button>
+      </Link>
     </div>
   );
 };

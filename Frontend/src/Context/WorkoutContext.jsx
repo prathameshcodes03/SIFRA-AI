@@ -37,6 +37,8 @@ export const WorkoutProvider = ({ children }) => {
     } catch (error) {
       console.error("FETCH STATS ERROR:", error);
       setStatsError("Unable to load workout statistics. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -71,15 +73,17 @@ export const WorkoutProvider = ({ children }) => {
 
   const addWorkout = async (exercise, sets, reps) => {
     try {
-      await api.post("/api/workouts", {
+      const res = await api.post("/api/workouts", {
         exercise,
         sets,
         reps,
       });
 
       await refreshAll();
+      return res.data;
     } catch (error) {
       console.error("ADD WORKOUT ERROR:", error);
+      throw error;
     }
   };
 
@@ -116,10 +120,12 @@ export const WorkoutProvider = ({ children }) => {
 
   const deleteWorkout = async (id) => {
     try {
-      await api.delete(`/api/workouts/${id}`);
+      const res = await api.delete(`/api/workouts/${id}`);
       await refreshAll();
+      return res.data;
     } catch (error) {
       console.error("DELETE WORKOUT ERROR:", error);
+      throw error;
     }
   };
   /**

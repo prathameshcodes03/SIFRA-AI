@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useWorkout } from "../../Context/WorkoutContext";
-import { Dumbbell, Plus, Trash2, Layers, CheckCircle } from "lucide-react";
+import { Dumbbell, Plus, Trash2, Layers, CheckCircle, AlertCircle } from "lucide-react";
+
+const SUPPORTED_EXERCISES = ["squat", "pushup", "plank"];
 
 const Exercises = () => {
   const { planWorkouts, addWorkout, deleteWorkout } = useWorkout();
@@ -8,15 +10,50 @@ const Exercises = () => {
   const [exerciseName, setExerciseName] = useState("");
   const [sets, setSets] = useState("");
   const [reps, setReps] = useState("");
+  const [invalidExercise, setInvalidExercise] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
 
   const addExercise = async () => {
     if (!exerciseName || !sets || !reps) return;
 
-    await addWorkout(exerciseName, sets, reps);
+    const normalized = exerciseName.trim().toLowerCase();
+    if (!SUPPORTED_EXERCISES.includes(normalized)) {
+      setInvalidExercise(exerciseName.trim());
+      return;
+    }
+    setInvalidExercise("");
+    setActionError("");
+    setActionSuccess("");
 
-    setExerciseName("");
-    setSets("");
-    setReps("");
+    setSubmitting(true);
+    try {
+      await addWorkout(exerciseName.trim(), sets, reps);
+      setActionSuccess("Exercise added to your plan.");
+      setExerciseName("");
+      setSets("");
+      setReps("");
+    } catch (error) {
+      setActionError(
+        error?.response?.data?.message || "Could not add exercise. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await deleteWorkout(id);
+      setActionSuccess("Exercise removed from your plan.");
+    } catch (error) {
+      setActionError(
+        error?.response?.data?.message || "Could not remove exercise. Please try again."
+      );
+    }
   };
 
   const presets = ["Squat", "Pushup", "Plank"];
@@ -102,12 +139,43 @@ const Exercises = () => {
 
       <button
         onClick={addExercise}
-        disabled={!exerciseName || !sets || !reps}
+        disabled={!exerciseName || !sets || !reps || submitting}
         className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.99]"
       >
-        <Plus className="h-4 w-4" />
-        <span>Add Exercise to Plan</span>
+        {submitting ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+        ) : (
+          <Plus className="h-4 w-4" />
+        )}
+        <span>{submitting ? "Adding..." : "Add Exercise to Plan"}</span>
       </button>
+
+      {actionError && (
+        <div role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          <span className="flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            <span>{actionError}</span>
+          </span>
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div role="status" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+          {actionSuccess}
+        </div>
+      )}
+
+      {invalidExercise && (
+        <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          <span className="flex items-center gap-1.5">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              "{invalidExercise}" is not supported. Choose Squat, Pushup, or
+              Plank.
+            </span>
+          </span>
+        </div>
+      )}
 
       {/* Exercise List */}
       <div className="mt-6 space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
@@ -128,17 +196,18 @@ const Exercises = () => {
             <div
               key={item.id}
               className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition hover:bg-slate-100/70"
+              aria-label={`${item.exercise}, ${item.sets} sets, ${item.reps} repetitions${item.completed ? ', completed today' : ''}`}
             >
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
                   <Dumbbell className="h-4 w-4" />
                 </div>
 
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 capitalize">
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-slate-900 capitalize truncate">
                     {item.exercise}
                   </h4>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 truncate">
                     {item.sets} Sets • {item.reps} Reps
                     {item.completed ? " • Done today" : ""}
                   </p>
@@ -150,7 +219,7 @@ const Exercises = () => {
                   plan. Only an outstanding exercise can be deleted. */}
               {!item.completed && (
                 <button
-                  onClick={() => deleteWorkout(item.id)}
+                  onClick={() => handleDelete(item.id)}
                   title="Remove exercise"
                   className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                 >

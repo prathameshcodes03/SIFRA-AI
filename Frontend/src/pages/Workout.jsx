@@ -21,11 +21,17 @@ const Workout = () => {
   const navigate = useNavigate();
   const { activeWorkout, workouts } = useWorkout();
 
-  const exercise =
-    (searchParams.get("exercise") || activeWorkout?.exercise || "squat").toLowerCase();
+  const VALID_EXERCISES = ["squat", "pushup", "plank"];
+
+  const rawExercise = (searchParams.get("exercise") || activeWorkout?.exercise || "").toLowerCase();
+  const exercise = VALID_EXERCISES.includes(rawExercise) ? rawExercise : "";
   const workoutId = searchParams.get("workoutId") || activeWorkout?.id || null;
-  const sets = Number(searchParams.get("sets") || activeWorkout?.sets || 3);
-  const reps = Number(searchParams.get("reps") || activeWorkout?.reps || 10);
+  const rawSets = Number(searchParams.get("sets") || activeWorkout?.sets || 3);
+  const rawReps = Number(searchParams.get("reps") || activeWorkout?.reps || 10);
+  const sets = Number.isFinite(rawSets) && rawSets > 0 ? Math.floor(rawSets) : 0;
+  const reps = Number.isFinite(rawReps) && rawReps > 0 ? Math.floor(rawReps) : 0;
+
+  const isInvalid = !exercise || sets <= 0 || reps <= 0;
 
   /**
    * The next exercise of THIS session, or null when the session is done.
@@ -93,8 +99,36 @@ const Workout = () => {
       onMessage: setCurrentMessage,
     });
 
+  if (isInvalid) {
+    return (
+      <AppShell footer={<Footer />}>
+        <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+          Skip to main content
+        </a>
+        <div className="mx-auto w-full max-w-4xl">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
+            <h2 className="text-lg font-bold text-rose-700">Invalid workout configuration</h2>
+            <p className="mt-2 text-sm text-rose-600">
+              The exercise, sets, or reps provided are not supported. Please choose a valid
+              exercise (Squat, Pushup, or Plank) and positive set/rep counts.
+            </p>
+            <button
+              onClick={() => navigate("/WorkoutPlan")}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+            >
+              Go to Workout Plan
+            </button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell footer={<Footer />}>
+      <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        Skip to main content
+      </a>
       <div className="mx-auto w-full max-w-4xl space-y-4">
         {/* Active Exercise Header Card */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

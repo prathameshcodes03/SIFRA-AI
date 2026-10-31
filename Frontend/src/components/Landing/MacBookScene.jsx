@@ -60,6 +60,30 @@ const MacBookScene = forwardRef(function MacBookScene(
     let disposed = false;
     let animationId = null;
     let resizeObserver = null;
+
+    // Respect the user's motion preference and react to changes.
+    const reducedMotionQuery =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)")
+        : null;
+    let reducedMotion = reducedMotionQuery ? reducedMotionQuery.matches : false;
+    const onMotionChange = (event) => {
+      reducedMotion = event.matches;
+    };
+    reducedMotionQuery?.addEventListener("change", onMotionChange);
+
+    // Pause the render loop while the tab is hidden to save CPU/GPU.
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+      } else if (!disposed && !animationId) {
+        animationId = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     let model = null;
     let lid = null;
     // Lid hinge angles (radians about the lid node's X axis). The lid node's origin
@@ -137,7 +161,8 @@ const MacBookScene = forwardRef(function MacBookScene(
       video.muted = true;
       video.defaultMuted = true;
       video.playsInline = true;
-      video.preload = "auto";
+      // Lazy-load: don't fetch the (large) video until playback is actually requested.
+      video.preload = "none";
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
       s.video = video;
@@ -167,9 +192,14 @@ const MacBookScene = forwardRef(function MacBookScene(
       };
       video.addEventListener("loadedmetadata", fitVideo);
       video.addEventListener("loadeddata", fitVideo);
+      const onVideoError = () => {
+        console.error("MacBook screen video failed to load:", video.error);
+      };
+      video.addEventListener("error", onVideoError);
       s.cleanupVideo = () => {
         video.removeEventListener("loadedmetadata", fitVideo);
         video.removeEventListener("loadeddata", fitVideo);
+        video.removeEventListener("error", onVideoError);
       };
     }
 
@@ -327,24 +357,40 @@ const MacBookScene = forwardRef(function MacBookScene(
 
     const animate = () => {
       if (disposed || !s.isMounted) return;
+      if (document.hidden) {
+        animationId = requestAnimationFrame(animate);
+        return;
+      }
       if (s.masterGroup) {
         // Hide the laptop once its final scroll exit completes. Visibility is
         // reversible, so scrolling upward brings it back into the same scene.
         s.masterGroup.visible = s.exitProgress < 0.985;
 
+        // Skip rendering work while the model is fully exited.
+        if (!s.masterGroup.visible) {
+          animationId = requestAnimationFrame(animate);
+          return;
+        }
+
+        const lerpFactor = reducedMotion ? 1 : 0.1;
         // 0 = lid closed, 1 = lid open. Keep the lid at its closed pose on load.
         const targetLid = THREE.MathUtils.lerp(LID_CLOSED, lidOpen, s.openProgress);
-        currentLidRotation += (targetLid - currentLidRotation) * 0.1;
+        currentLidRotation += (targetLid - currentLidRotation) * lerpFactor;
         if (s.lidNode) s.lidNode.rotation.x = currentLidRotation;
 
         // 0 = closed, 1 = open (follows the actual lid, so lift and tilt ease with it)
-        const openAmount = THREE.MathUtils.clamp(currentLidRotation / lidOpen, 0, 1);
-        // Seen from slightly above while closed (shows the lid top cleanly), easing
-        // to the straight-on view as the lid opens.
-        s.masterGroup.rotation.x = TILT_X + CLOSED_TILT_EXTRA * (1 - openAmount);
+        const openAmount = THREE.MathUtils.clamp(
+          lidOpen === 0 ? 0 : currentLidRotation / lidOpen,
+          0,
+          1
+        );
+        // Under reduced motion keep a stable tilt (no closed-extra tilt animation).
+        s.masterGroup.rotation.x = reducedMotion
+          ? TILT_X
+          : TILT_X + CLOSED_TILT_EXTRA * (1 - openAmount);
 
-        const targetRotY = s.rotYProgress * Math.PI * 2;
-        currentRotationY += (targetRotY - currentRotationY) * 0.09;
+        const targetRotY = reducedMotion ? 0 : s.rotYProgress * Math.PI * 2;
+        currentRotationY += (targetRotY - currentRotationY) * (reducedMotion ? 1 : 0.09);
         s.masterGroup.rotation.y = currentRotationY;
         // Keep the laptop inside the visible area horizontally: limit the requested
         // slide to the room left after accounting for the model's current yaw and
@@ -362,17 +408,23 @@ const MacBookScene = forwardRef(function MacBookScene(
           const maxSlide = Math.max(0, halfVisible - (halfW * camZ) / nearDist);
           targetSlideX = THREE.MathUtils.clamp(s.slideX, -maxSlide, maxSlide);
         }
-        currentSlideX += (targetSlideX - currentSlideX) * 0.08;
+        currentSlideX += (targetSlideX - currentSlideX) * (reducedMotion ? 1 : 0.08);
         s.masterGroup.position.x = currentSlideX;
         const targetY = BASE_Y + s.exitProgress * 0.9;
-        currentY += (targetY - currentY) * 0.09;
+        currentY += (targetY - currentY) * (reducedMotion ? 1 : 0.09);
         const scale = baseScale();
         // Shrink to nothing as it exits, then hide it completely.
         const targetScale = scale * Math.max(0.001, 1 - s.exitProgress);
-        const nextScale = s.masterGroup.scale.x + (targetScale - s.masterGroup.scale.x) * 0.09;
+        const nextScale =
+          s.masterGroup.scale.x + (targetScale - s.masterGroup.scale.x) * (reducedMotion ? 1 : 0.09);
         s.masterGroup.scale.setScalar(nextScale);
-        const liftY = fit ? fit.closedLift * (1 - openAmount) * nextScale : 0;
-        s.masterGroup.position.y = currentY + liftY + Math.sin(performance.now() * 0.0011) * 0.011;
+        const liftY = reducedMotion
+          ? 0
+          : fit
+          ? fit.closedLift * (1 - openAmount) * nextScale
+          : 0;
+        const floatTerm = reducedMotion ? 0 : Math.sin(performance.now() * 0.0011) * 0.011;
+        s.masterGroup.position.y = currentY + liftY + floatTerm;
       }
       renderer.render(scene, camera);
       animationId = requestAnimationFrame(animate);
@@ -394,6 +446,8 @@ const MacBookScene = forwardRef(function MacBookScene(
       s.isMounted = false;
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      reducedMotionQuery?.removeEventListener("change", onMotionChange);
       resizeObserver?.disconnect();
       s.cleanupVideo?.();
       if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
@@ -402,9 +456,17 @@ const MacBookScene = forwardRef(function MacBookScene(
       videoTexture?.dispose();
       pmrem?.dispose();
       renderer.dispose();
+      try { renderer.forceContextLoss(); } catch { /* ignore */ }
       if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
       scene.traverse((object) => {
-        if (object.isMesh) object.geometry?.dispose();
+        if (object.isMesh) {
+          object.geometry?.dispose();
+          const mats = Array.isArray(object.material) ? object.material : [object.material];
+          mats.filter(Boolean).forEach((m) => {
+            Object.values(m).forEach((v) => v && v.isTexture && v.dispose && v.dispose());
+            m.dispose && m.dispose();
+          });
+        }
       });
       s.video = null;
       s.videoTexture = null;

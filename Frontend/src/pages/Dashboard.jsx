@@ -79,7 +79,7 @@ const KpiCard = ({ icon, label, value, accent = "indigo" }) => {
         </div>
         <span className="text-xs font-medium text-slate-500">{label}</span>
       </div>
-      <p className="mt-2 font-mono text-2xl font-bold text-slate-900">{value}</p>
+      <p className="mt-2 font-mono text-2xl font-bold text-slate-900" aria-label={`${value} ${label}`}>{value}</p>
     </div>
   );
 };
@@ -114,6 +114,9 @@ const Dashboard = () => {
   if (loading) {
     return (
       <AppShell footer={<Footer />}>
+        <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+          Skip to main content
+        </a>
         <DashboardSkeleton />
       </AppShell>
     );
@@ -124,6 +127,9 @@ const Dashboard = () => {
 
   return (
     <AppShell footer={<Footer />}>
+      <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        Skip to main content
+      </a>
       {hasError && (
         <div role="alert" aria-live="assertive" className="mb-5 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           <AlertCircle className="h-5 w-5 shrink-0" />

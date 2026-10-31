@@ -26,6 +26,7 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [statusMessage, setStatusMessage] = useState({ type: "", text: "" });
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -73,6 +74,7 @@ const Profile = () => {
 
   const handleImageClick = () => {
     if (uploadingImage) return;
+    setStatusMessage({ type: "", text: "" });
     fileInputRef.current?.click();
   };
 
@@ -81,13 +83,13 @@ const Profile = () => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file.");
+      setStatusMessage({ type: "error", text: "Please select an image file." });
       e.target.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be less than 5 MB.");
+      setStatusMessage({ type: "error", text: "Image size must be less than 5 MB." });
       e.target.value = "";
       return;
     }
@@ -114,7 +116,10 @@ const Profile = () => {
       }
     } catch (error) {
       console.error("PROFILE IMAGE UPLOAD ERROR:", error);
-      alert(error.response?.data?.message || "Failed to upload profile image.");
+      setStatusMessage({
+        type: "error",
+        text: error.response?.data?.message || "Failed to upload profile image.",
+      });
     } finally {
       setUploadingImage(false);
       e.target.value = "";
@@ -122,11 +127,13 @@ const Profile = () => {
   };
 
   const handleEdit = () => {
+    setStatusMessage({ type: "", text: "" });
     setEditMode(true);
   };
 
   const handleCancel = () => {
     setEditMode(false);
+    setStatusMessage({ type: "", text: "" });
     setFormData({
       fullName: user?.fullName || "",
       age: user?.age ?? "",
@@ -136,6 +143,7 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
+    setStatusMessage({ type: "", text: "" });
     try {
       setSaving(true);
       const response = await api.put("/api/profile", {
@@ -158,10 +166,14 @@ const Profile = () => {
           updateUser(updatedUser);
         }
         setEditMode(false);
+        setStatusMessage({ type: "success", text: "Profile updated successfully." });
       }
     } catch (error) {
       console.error("PROFILE UPDATE ERROR:", error);
-      alert(error.response?.data?.message || "Failed to update profile.");
+      setStatusMessage({
+        type: "error",
+        text: error.response?.data?.message || "Failed to update profile.",
+      });
     } finally {
       setSaving(false);
     }
@@ -170,6 +182,9 @@ const Profile = () => {
   if (loading) {
     return (
       <AppShell footer={<Footer />}>
+        <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+          Skip to main content
+        </a>
         <div className="space-y-6 max-w-4xl mx-auto animate-pulse">
           <div className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:p-8">
             <div className="h-28 w-28 shrink-0 rounded-full bg-slate-200 sm:h-32 sm:w-32" />
@@ -215,7 +230,23 @@ const Profile = () => {
 
   return (
     <AppShell footer={<Footer />}>
+      <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-indigo-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        Skip to main content
+      </a>
       <div className="space-y-6 max-w-4xl mx-auto">
+        {statusMessage.text && (
+          <div
+            role={statusMessage.type === "error" ? "alert" : "status"}
+            aria-live={statusMessage.type === "error" ? "assertive" : "polite"}
+            className={`rounded-xl border p-4 text-sm font-medium ${
+              statusMessage.type === "error"
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            {statusMessage.text}
+          </div>
+        )}
         {/* Profile Header Banner */}
         <section className="flex flex-col items-center gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:p-8">
           {/* Avatar with Camera Overlay */}
@@ -224,6 +255,7 @@ const Profile = () => {
               type="button"
               onClick={handleImageClick}
               disabled={uploadingImage}
+              aria-label="Change profile photo"
               className="group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-indigo-100 bg-indigo-50 shadow-sm transition hover:scale-105 hover:border-indigo-400 sm:h-32 sm:w-32"
             >
               <img
@@ -246,6 +278,7 @@ const Profile = () => {
               type="file"
               accept="image/png,image/jpeg,image/jpg,image/webp"
               onChange={handleImageChange}
+              aria-label="Upload profile image"
               className="hidden"
             />
           </div>
@@ -313,6 +346,7 @@ const Profile = () => {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
+                  aria-label="Full Name"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
                 />
               ) : (
@@ -333,6 +367,7 @@ const Profile = () => {
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
+                  aria-label="Age"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
                 />
               ) : (
@@ -347,6 +382,7 @@ const Profile = () => {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
+                  aria-label="Gender"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
                 >
                   <option value="MALE">Male</option>
@@ -367,6 +403,7 @@ const Profile = () => {
                   step="0.5"
                   value={formData.weight}
                   onChange={handleChange}
+                  aria-label="Weight in kilograms"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:bg-white sm:w-80"
                 />
               ) : (
@@ -381,6 +418,7 @@ const Profile = () => {
               <button
                 onClick={handleSave}
                 disabled={saving}
+                aria-busy={saving}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:opacity-50"
               >
                 <Save size={16} />
@@ -402,7 +440,7 @@ const ProfileRow = ({ icon: Icon, label, children }) => {
         <span>{label}</span>
       </div>
 
-      <div className="text-sm">{children}</div>
+      <div className="min-w-0 text-sm">{children}</div>
     </div>
   );
 };

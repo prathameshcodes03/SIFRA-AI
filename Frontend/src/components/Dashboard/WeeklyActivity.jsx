@@ -71,13 +71,13 @@ const WeeklyActivity = ({ workouts = [], loading = false }) => {
         </span>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-2">
+      <div className="mt-4 flex items-center justify-between gap-1">
         {activeDays.map((day, i) => {
           const isToday = isSameDay(day.date, today);
           return (
-            <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
+            <div key={i} className="flex flex-col items-center gap-1">
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-lg text-xs font-bold transition-all duration-300 ${
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-all duration-300 ${
                   day.active
                     ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
                     : isToday

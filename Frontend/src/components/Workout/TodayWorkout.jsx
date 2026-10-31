@@ -66,9 +66,9 @@ const TodayWorkout = () => {
                   <Dumbbell className="h-5 w-5" />
                 </div>
 
-                <div>
+                <div className="min-w-0" aria-label={`${exercise.exercise}, ${exercise.sets} sets, ${exercise.reps} repetitions${exercise.completed ? ', completed today' : ''}`}>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold capitalize text-slate-900">
+                    <h3 className="text-sm font-bold capitalize text-slate-900 truncate">
                       {exercise.exercise}
                     </h3>
                     {exercise.completed && (
@@ -79,7 +79,7 @@ const TodayWorkout = () => {
                     )}
                   </div>
 
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 truncate">
                     Target: {exercise.sets} Sets • {exercise.reps} Reps
                   </p>
                 </div>
