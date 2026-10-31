@@ -35,7 +35,7 @@ const Login = () => {
     try {
       const loginResponse = await api.post("/api/auth/login", formData);
 
-      login(loginResponse.data.user, loginResponse.data.token);
+      login(loginResponse.data.user);
       setMessage(loginResponse.data.message || "Login successful! Redirecting...");
       setIsError(false);
       navigate("/Dashboard");
@@ -107,7 +107,7 @@ const Login = () => {
 
             {/* Error / Feedback Banner */}
             {message && (
-              <div id="login-message" role="alert" aria-live="assertive" className={`mb-6 p-3.5 rounded-xl border text-xs font-medium flex items-start gap-2.5 backdrop-blur-md animate-in fade-in duration-200 ${
+              <div id="login-message" role="alert" aria-live="assertive" className={`sifra-banner mb-6 flex items-start gap-2.5 backdrop-blur-md animate-in fade-in duration-200 ${
                 isError 
                   ? "bg-rose-50 border-rose-200 text-rose-800" 
                   : "bg-emerald-50 border-emerald-200 text-emerald-800"
@@ -178,6 +178,12 @@ const Login = () => {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
+                  Forgot password?
+                </Link>
               </div>
 
               <button

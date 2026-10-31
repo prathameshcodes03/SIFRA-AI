@@ -27,6 +27,7 @@ const Register = () => {
     fullName: "",
     email: "",
     password: "",
+    confirmPassword: "",
     age: "",
     gender: "",
     weight: "",
@@ -107,10 +108,26 @@ const Register = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (formData.password.length < 8) {
       setStatusMessage({
         type: "error",
-        text: "Password must be at least 6 characters long.",
+        text: "Password must be at least 8 characters long.",
+      });
+      return;
+    }
+
+    if (formData.password.length > 72) {
+      setStatusMessage({
+        type: "error",
+        text: "Password must be at most 72 characters long.",
+      });
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setStatusMessage({
+        type: "error",
+        text: "Passwords do not match.",
       });
       return;
     }
@@ -220,11 +237,7 @@ const Register = () => {
         otp: formData.otp.trim(),
       };
 
-      const response = await api.post("/api/auth/register", payload);
-
-      if (response.data?.token) {
-        localStorage.setItem("token", response.data.token);
-      }
+      await api.post("/api/auth/register", payload);
 
       setStatusMessage({
         type: "success",
@@ -324,7 +337,7 @@ const Register = () => {
 
             {/* Status / Error Alert */}
             {statusMessage.text && (
-              <div id="register-status" role="alert" aria-live="assertive" className={`mb-5 p-3.5 rounded-xl border text-xs font-medium flex items-start gap-2.5 backdrop-blur-md animate-in fade-in duration-200 ${
+              <div id="register-status" role="alert" aria-live="assertive" className={`sifra-banner mb-5 flex items-start gap-2.5 backdrop-blur-md animate-in fade-in duration-200 ${
                 statusMessage.type === "error" 
                   ? "bg-rose-50 border-rose-200 text-rose-800" 
                   : "bg-emerald-50 border-emerald-200 text-emerald-800"
@@ -408,6 +421,26 @@ const Register = () => {
                   <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Encrypted with secure hash protocols</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      required
+                      type="password"
+                      name="confirmPassword"
+                      placeholder="Re-enter your password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all"
+                    />
                   </div>
                 </div>
 
