@@ -71,7 +71,10 @@ async def model_lifespan(app):
 
 
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
 import os
+import secrets
 
 app = FastAPI(
     title="SIFRA Form Prediction API",
@@ -101,8 +104,33 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-ML-Service-Secret"],
 )
+
+# Shared secret for authenticating backend-to-ML service requests.
+# The Express backend sends ML_SERVICE_SECRET as X-ML-Service-Secret on every
+# /predict call. Without a valid secret the service returns HTTP 401.
+ML_SERVICE_SECRET = os.environ.get("ML_SERVICE_SECRET", "")
+
+
+@app.middleware("http")
+async def validate_ml_service_secret(request: Request, call_next):
+    # Allow CORS preflight and health checks without authentication.
+    if request.method == "OPTIONS" or request.url.path == "/health":
+        return await call_next(request)
+
+    # If no secret is configured, skip authentication (local development only).
+    if not ML_SERVICE_SECRET:
+        return await call_next(request)
+
+    provided = request.headers.get("x-ml-service-secret", "")
+    if not secrets.compare_digest(provided, ML_SERVICE_SECRET):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Unauthorized: invalid or missing ML service secret."},
+        )
+
+    return await call_next(request)
 
 
 @app.get("/health")

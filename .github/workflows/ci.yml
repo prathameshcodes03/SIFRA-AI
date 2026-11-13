@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sifra_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sifra_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sifra_test
+      JWT_SECRET: test-jwt-secret-do-not-use-in-production
+      ML_SERVICE_URL: http://localhost:8000
+      NODE_ENV: test
+      BREVO_API_KEY: test-brevo-key
+      EMAIL_SENDER: test@example.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: Backend
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: Backend
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+        working-directory: Backend
+      - name: Run backend tests
+        run: npm test
+        working-directory: Backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: Frontend
+      - name: Run frontend tests
+        run: npm test
+        working-directory: Frontend
+      - name: Run frontend lint
+        run: npm run lint
+        working-directory: Frontend
+      - name: Run frontend production build
+        run: npm run build
+        working-directory: Frontend
+
+  ml-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install ML dependencies
+        run: pip install -r requirements.txt
+        working-directory: ml-model
+      - name: Install pytest
+        run: pip install pytest
+        working-directory: ml-model
+      - name: Validate Python syntax
+        run: python -m py_compile api/main.py predict.py
+        working-directory: ml-model
+      - name: Run ML tests
+        run: python -m pytest tests/ -q
+        working-directory: ml-model

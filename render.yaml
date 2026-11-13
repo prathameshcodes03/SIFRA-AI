@@ -1,4 +1,6 @@
+
 services:
+  # 1. Frontend - React/Vite
   - type: web
     runtime: static
     name: sifra-ai-1
@@ -13,6 +15,7 @@ services:
         source: /*
         destination: /index.html
 
+  # 2. ML Model - Python/FastAPI
   - type: web
     runtime: python
     name: sifra-ai-rtho
@@ -20,18 +23,57 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ML_SERVICE_SECRET
+        sync: false
 
+  # 3. Backend - Node.js/Express
   - type: web
     runtime: node
     name: sifra-ai
     rootDir: Backend
     plan: free
-    buildCommand: npm ci && npx prisma generate
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
+
+      - key: DATABASE_URL
+        sync: false
+
+      - key: DIRECT_DATABASE_URL
+        sync: false
+
+      - key: JWT_SECRET
+        sync: false
+
       - key: ML_SERVICE_URL
         value: https://sifra-ai-rtho.onrender.com
+
+      - key: ML_SERVICE_SECRET
+        sync: false
+
+      - key: FRONTEND_URL
+        value: https://sifra-ai-1.onrender.com
+
+      - key: BREVO_API_KEY
+        sync: false
+
+      - key: EMAIL_SENDER
+        sync: false
+
+      - key: IMAGEKIT_PRIVATE_KEY
+        sync: false
+
+      - key: IMAGEKIT_PUBLIC_KEY
+        sync: false
+
+      - key: IMAGEKIT_URL_ENDPOINT
+        sync: false
+
+      - key: ELEVENLABS_API_KEY
+        sync: false
+
+      - key: ELEVENLABS_VOICE_ID
+        sync: false

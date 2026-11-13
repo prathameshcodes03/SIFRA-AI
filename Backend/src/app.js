@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const express = require("express");
 const helmet = require("helmet");
 const authRoutes = require("./Routes/auth.routes");
@@ -12,6 +13,7 @@ const { csrfProtection } = require("./Middlewares/csrf.middleware");
 
 
 const app = express();
+app.disable("x-powered-by");
 const allowedOrigins = [
   "http://localhost:5173",
   "https://sifra-ai-1.onrender.com",
@@ -93,6 +95,31 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// Structured request logging with correlation ID
+app.use((req, res, next) => {
+  const requestId = req.headers["x-request-id"] || crypto.randomUUID();
+  res.set("x-request-id", requestId);
+  const startTime = process.hrtime.bigint();
+
+  res.on("finish", () => {
+    const durationMs = Number(process.hrtime.bigint() - startTime) / 1_000_000;
+    console.log(
+      JSON.stringify({
+        level: "info",
+        requestId,
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs: Math.round(durationMs * 100) / 100,
+        ip: req.ip,
+        userAgent: req.get("user-agent") || null,
+      })
+    );
+  });
+
+  next();
+});
+
 app.use(
   cors({
     origin: allowedOrigins,
@@ -107,6 +134,31 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/workout", formPredictionRoutes);
 
+// Centralized error handler - must be last middleware
+app.use((err, req, res, next) => {
+  const requestId = req.headers["x-request-id"] || res.get("x-request-id") || "unknown";
+  const statusCode = err.statusCode || 500;
+
+  console.error(
+    JSON.stringify({
+      level: "error",
+      requestId,
+      method: req.method,
+      path: req.path,
+      statusCode,
+      error: err.name || "Error",
+      message: isProduction ? "Internal Server Error" : err.message,
+      ...(isProduction ? {} : { stack: err.stack }),
+    })
+  );
+
+  res.status(statusCode).json({
+    success: false,
+    message: isProduction ? "Internal Server Error" : err.message,
+    ...(isProduction ? {} : { error: err.name, stack: err.stack }),
+    ...(requestId ? { requestId } : {}),
+  });
+});
 
 app.get("/api/health", async (req, res) => {
   try {

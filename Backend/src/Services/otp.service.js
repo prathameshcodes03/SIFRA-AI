@@ -9,7 +9,7 @@ const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const COOLDOWN_MS = 60 * 1000; // 60 seconds
 const MAX_ATTEMPTS = 5;
 
-const otpSecret = process.env.OTP_SECRET || process.env.JWT_SECRET || "sifra-otp-secret";
+const otpSecret = process.env.OTP_SECRET || process.env.JWT_SECRET;
 
 // ==========================================
 // HASH OTP (HMAC-SHA256)

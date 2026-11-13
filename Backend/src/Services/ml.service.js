@@ -55,11 +55,19 @@ const requestFormPredictionDetailed = async (features) => {
   );
 
   try {
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    // Forward the shared secret to the ML service for authentication.
+    const mlSecret = process.env.ML_SERVICE_SECRET;
+    if (mlSecret) {
+      headers["X-ML-Service-Secret"] = mlSecret;
+    }
+
     const response = await fetch(getPredictionUrl(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(features),
       signal: abortController.signal,
     });

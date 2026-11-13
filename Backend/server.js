@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const app = require("./src/app");
 const PORT = process.env.PORT || 3000;
-const { connectDB } = require("./src/data/db");
+const { connectDB, prisma } = require("./src/data/db");
 
 const REQUIRED_SECRETS = ["DATABASE_URL", "JWT_SECRET"];
 const OPTIONAL_SECRETS = [
@@ -10,7 +10,10 @@ const OPTIONAL_SECRETS = [
   "BREVO_API_KEY",
   "IMAGEKIT_PRIVATE_KEY",
   "ML_SERVICE_URL",
+  "ML_SERVICE_SECRET",
 ];
+
+let server;
 
 async function startServer() {
   try {
@@ -36,7 +39,7 @@ async function startServer() {
 
     await connectDB();
 
-    app.listen(PORT, "0.0.0.0", () => {
+    server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (err) {
@@ -50,3 +53,23 @@ async function startServer() {
 }
 
 startServer();
+
+// Graceful shutdown
+const shutdown = async (signal) => {
+  console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+  if (server) {
+    server.close(() => {
+      console.log("HTTP server closed.");
+    });
+  }
+  try {
+    await prisma.$disconnect();
+    console.log("Database client disconnected.");
+  } catch (err) {
+    console.error("Error disconnecting database:", err.message);
+  }
+  process.exit(0);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

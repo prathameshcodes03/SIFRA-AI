@@ -32,12 +32,14 @@ router.post("/coaching", voiceLimiter, async (req, res) => {
     return res.send(audioBuffer);
 
   } catch (error) {
-    console.error("Voice Coaching Error:", error);
+    console.error("Voice Coaching Error:", {
+      name: error.name,
+      message: error.message,
+    });
 
     return res.status(500).json({
       success: false,
       message: "Failed to generate voice coaching",
-      error: error.message,
     });
   }
 });
