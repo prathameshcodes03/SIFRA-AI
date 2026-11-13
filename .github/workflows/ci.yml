@@ -25,6 +25,7 @@ jobs:
           - 5432:5432
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sifra_test
+      DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sifra_test
       JWT_SECRET: test-jwt-secret-do-not-use-in-production
       ML_SERVICE_URL: http://localhost:8000
       NODE_ENV: test
