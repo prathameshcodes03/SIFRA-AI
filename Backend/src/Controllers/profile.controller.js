@@ -1,5 +1,5 @@
 const { prisma } = require("../data/db");
-const imagekit = require("../Services/imagekit.service");
+const { getImageKit } = require("../Services/imagekit.service");
 
 // ==========================================
 // GET PROFILE
@@ -168,7 +168,7 @@ const uploadProfileImage = async (req, res) => {
       });
     }
 
-    const result = await imagekit.upload({
+    const result = await getImageKit().upload({
       file: req.file.buffer,
       fileName: `profile-${req.user.id}-${Date.now()}`,
       folder: "/sifra/profile-images",
