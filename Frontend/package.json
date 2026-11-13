@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --import ./tests/loader.js --test \"tests/*.test.js\""
+    "test": "node --import ./tests/loader.js --test tests/*.test.js"
   },
   "dependencies": {
     "@mediapipe/drawing_utils": "^0.3.1675466124",
