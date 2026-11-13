@@ -71,6 +71,7 @@ async def model_lifespan(app):
 
 
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 app = FastAPI(
     title="SIFRA Form Prediction API",
@@ -78,12 +79,29 @@ app = FastAPI(
     lifespan=model_lifespan,
 )
 
+# The ML service is invoked by the Express backend (server-to-server), not by
+# the browser directly. CORS is a browser security mechanism and is not needed
+# for backend-to-backend calls. Restrict browser origins to only trusted
+# frontend/backend URLs; default to allowing only localhost in development and
+# no browser origins in production.
+_raw_origins = os.environ.get("ML_CORS_ORIGINS", "")
+if _raw_origins.strip():
+    _cors_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+else:
+    # Development fallback: allow localhost. Production must set ML_CORS_ORIGINS
+    # explicitly; otherwise no browser origins are allowed.
+    _cors_origins = (
+        ["http://localhost:5173"]
+        if os.environ.get("NODE_ENV") != "production"
+        else []
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 

@@ -1,4 +1,5 @@
 const express = require("express");
+const helmet = require("helmet");
 const authRoutes = require("./Routes/auth.routes");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
@@ -10,7 +11,6 @@ const voiceRoutes = require("./Routes/voiceRoutes");
 const { csrfProtection } = require("./Middlewares/csrf.middleware");
 
 
-
 const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
@@ -18,18 +18,87 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
+const isProduction = process.env.NODE_ENV === "production";
+
 app.set("trust proxy", 1);
+
+// ==========================================
+// HTTP SECURITY HEADERS (Helmet)
+// ==========================================
+
+// Base Content Security Policy. The SPA loads Google Fonts and Font Awesome
+// from CDNs, and MediaPipe loads its WASM model from Google storage and
+// jsDelivr. `style-src` includes 'unsafe-inline' because Tailwind utility
+// classes and React inline styles are injected as inline styles at runtime.
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-eval'"],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+        "https://cdnjs.cloudflare.com",
+      ],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "https://ik.imagekit.io",
+        "https://ik.imagekit.io/",
+      ],
+      connectSrc: [
+        "'self'",
+        "https://storage.googleapis.com",
+        "https://cdn.jsdelivr.net",
+      ],
+      mediaSrc: ["'self'"],
+      workerSrc: ["'self'", "blob:"],
+      frameSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      objectSrc: ["'none'"],
+      manifestSrc: ["'self'"],
+    },
+    ...(!isProduction
+      ? {
+          connectSrc: [
+            "'self'",
+            "https://storage.googleapis.com",
+            "https://cdn.jsdelivr.net",
+            "ws:",
+            "wss:",
+          ],
+        }
+      : {}),
+  }),
+);
+
+app.use(helmet.referrerPolicy({ policy: "strict-origin-when-cross-origin" }));
+app.use(helmet.xContentTypeOptions());
+app.use(helmet.frameguard({ action: "sameorigin" }));
+app.use(
+  helmet.hsts({
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  }),
+);
+
+app.use(
+  helmet.permittedCrossDomainPolicies({ permittedPolicies: "by-content-type" }),
+);
+
 app.use(express.json());
 app.use(cookieParser());
 
 app.use(
   cors({
     origin: allowedOrigins,
-
     credentials: true,
   }),
 );
-
 
 app.use(csrfProtection);
 app.use("/api/voice", voiceRoutes);
@@ -37,7 +106,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/workout", formPredictionRoutes);
-
 
 
 app.get("/api/health", async (req, res) => {

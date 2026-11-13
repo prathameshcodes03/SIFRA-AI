@@ -4,11 +4,33 @@ const app = require("./src/app");
 const PORT = process.env.PORT || 3000;
 const { connectDB } = require("./src/data/db");
 
+const REQUIRED_SECRETS = ["DATABASE_URL", "JWT_SECRET"];
+const OPTIONAL_SECRETS = [
+  "ELEVENLABS_API_KEY",
+  "BREVO_API_KEY",
+  "IMAGEKIT_PRIVATE_KEY",
+  "ML_SERVICE_URL",
+];
+
 async function startServer() {
   try {
-    if (!process.env.DATABASE_URL || !process.env.JWT_SECRET) {
+    const missing = REQUIRED_SECRETS.filter((key) => !process.env[key]);
+    if (missing.length > 0) {
       throw new Error(
-        "DATABASE_URL and JWT_SECRET must be configured before the server can start.",
+        `Required environment variables not configured: ${missing.join(
+          ", ",
+        )}. The server cannot start without these secrets.`,
+      );
+    }
+
+    const missingOptional = OPTIONAL_SECRETS.filter(
+      (key) => !process.env[key],
+    );
+    if (missingOptional.length > 0) {
+      console.warn(
+        `CONFIG NOTICE: Optional environment variables not set: ${missingOptional.join(
+          ", ",
+        )}. Related features will be unavailable.`,
       );
     }
 

@@ -5,6 +5,9 @@ services:
     rootDir: Frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://sifra-ai.onrender.com
     routes:
       - type: rewrite
         source: /*
@@ -12,7 +15,7 @@ services:
 
   - type: web
     runtime: python
-    name: sifra-ai-ml
+    name: sifra-ai-rtho
     rootDir: ml-model
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -20,16 +23,15 @@ services:
 
   - type: web
     runtime: node
-    name: sifra-ai-backend
+    name: sifra-ai
     rootDir: Backend
     plan: free
-    buildCommand: npm install && npx prisma generate
+    buildCommand: npm ci && npx prisma generate
     startCommand: npm start
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: PORT
         value: 3000
       - key: ML_SERVICE_URL
-        fromService:
-          type: web
-          name: sifra-ai-ml
-          property: host
+        value: https://sifra-ai-rtho.onrender.com

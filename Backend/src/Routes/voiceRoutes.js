@@ -6,9 +6,11 @@ const {
   generateSpeech,
 } = require("../Services/elevenLabsService");
 
+const { voiceLimiter } = require("../Middlewares/rateLimiter");
 
-// POST /api/voice/coaching
-router.post("/coaching", async (req, res) => {
+
+// POST /api/voice/coaching — rate-limited to protect ElevenLabs credits.
+router.post("/coaching", voiceLimiter, async (req, res) => {
   try {
     const { text } = req.body;
 

@@ -1,17 +1,20 @@
 import axios from "axios";
 
 /**
- * PRODUCTION BACKEND: https://sifra-ai.onrender.com
+ * API base URL resolution.
  *
- * This is the live Express service. The previously hardcoded
- * https://sifra-ai-backend.onrender.com does NOT resolve - Render answers
- * "no-server" - so falling back to it silently breaks every API call whenever
- * VITE_API_URL is absent or points at localhost.
+ * `VITE_API_URL` is the single source of truth for the backend URL in every
+ * environment. It must be set to the production backend's public URL when
+ * deployed (e.g. the Render backend service URL). There is no hardcoded
+ * production hostname, so a missing or misconfigured `VITE_API_URL` fails
+ * loudly instead of silently sending requests to the wrong host.
+ *
+ * Local development defaults to http://localhost:3000 when `VITE_API_URL` is
+ * unset or points at a Render host.
  */
-const PRODUCTION_API_URL = "https://sifra-ai.onrender.com";
 
 // Automatically route API requests to localhost:3000 when developing locally,
-// and to the production Render URL when deployed.
+// and to the configured VITE_API_URL when deployed.
 const resolveBaseURL = () => {
   // Optional access keeps this module importable outside Vite (unit tests),
   // where `import.meta.env` does not exist. Vite always defines it in builds.
@@ -22,19 +25,33 @@ const resolveBaseURL = () => {
       window.location.hostname === "127.0.0.1");
 
   if (isLocal) {
-    // If running on local dev server, connect to local Express server
-    return envUrl && !envUrl.includes("onrender.com")
-      ? envUrl
-      : "http://localhost:3000";
+    // Local development: explicit VITE_API_URL wins; otherwise default to
+    // the local Express backend. Ignore onrender.com values locally so a
+    // stale env var doesn't redirect dev traffic to production.
+    if (envUrl && !envUrl.includes("onrender.com")) {
+      return envUrl;
+    }
+    return "http://localhost:3000";
   }
 
-  // In production, if envUrl is a localhost URL (misconfigured), fall back to
-  // the production backend URL that matches the CORS-allowed origin.
-  if (envUrl && (envUrl.includes("localhost") || envUrl.includes("127.0.0.1"))) {
-    return PRODUCTION_API_URL;
+  // Production: VITE_API_URL must be explicitly configured. No silent fallback
+  // to a hardcoded hostname, which previously risked pointing at a non-existent
+  // service and breaking every API call.
+  if (!envUrl) {
+    return "";
   }
 
-  return envUrl || PRODUCTION_API_URL;
+  // Reject localhost loopback values in production (misconfigured env).
+  if (envUrl.includes("localhost") || envUrl.includes("127.0.0.1")) {
+    return "";
+  }
+
+  // Ensure the URL includes a protocol so axios can resolve it.
+  if (!/^https?:\/\//i.test(envUrl)) {
+    return `https://${envUrl}`;
+  }
+
+  return envUrl;
 };
 
 /**
