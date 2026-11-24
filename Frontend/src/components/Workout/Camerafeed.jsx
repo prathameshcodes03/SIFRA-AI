@@ -31,7 +31,6 @@ import {
   resolveFormCoaching,
   isLabelForExercise,
   CORRECT_LABEL_BY_EXERCISE,
-  MIN_RELIABLE_VISIBILITY,
   POSE_UNRELIABLE,
 } from "../../exercises/coaching";
 import { isWithinModelSupport } from "../../exercises/modelSupport";
@@ -40,6 +39,10 @@ import {
   createVisibilityWarningController,
   VISIBILITY_FAILURE_REASONS,
 } from "../../exercises/visibilityWarning";
+import {
+  POSE_VISIBILITY,
+  createPoseVisibilityController,
+} from "../../exercises/poseVisibility";
 import { assessSquatForm } from "../../exercises/formAssessment";
 import { createSquatRepSummary } from "../../exercises/squatRepSummary";
 import { createCoachDiagnostics } from "../../utils/diagnostics";
@@ -136,6 +139,9 @@ const Camerafeed = ({
   // Edge-triggered camera-visibility warning. Held in a ref so that re-renders,
   // effect restarts and prediction responses can never reset its cooldown.
   const visibilityWarningRef = useRef(null);
+  // Visibility state machine: PERSON_DETECTED / PARTIALLY_VISIBLE / NOT_DETECTED.
+  // Gates all exercise analysis on a confirmed, reliable pose.
+  const poseVisibilityRef = useRef(null);
   // EMA-smoothed knee angle from the rep tracker: the movement evidence the
   // squat assessment needs, available without waiting for any prediction.
   const smoothedKneeAngleRef = useRef(null);
@@ -154,6 +160,7 @@ const Camerafeed = ({
     });
     gateRef.current = createCoachingGate();
     visibilityWarningRef.current = createVisibilityWarningController();
+    poseVisibilityRef.current = createPoseVisibilityController();
     squatRepRef.current = createSquatRepSummary();
     predictionGuardRef.current = createLatestOnlyGuard();
     formCueRef.current = createFormCueGate();
@@ -219,6 +226,7 @@ const Camerafeed = ({
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       if (setFlashTimerRef.current) clearTimeout(setFlashTimerRef.current);
       visibilityWarningRef.current?.reset();
+      poseVisibilityRef.current?.reset();
       disposePoseDetector();
     };
   }, [cameraAttempt, cameraOn]);
@@ -241,6 +249,7 @@ const Camerafeed = ({
     // A new exercise must not inherit the previous one's warning cooldown or
     // smoothed movement history.
     visibilityWarningRef.current?.reset();
+    poseVisibilityRef.current?.reset();
     smoothedKneeAngleRef.current = null;
     squatRepRef.current?.reset();
     formCueRef.current?.reset();
@@ -396,6 +405,7 @@ const Camerafeed = ({
   useEffect(() => {
     if (!cameraOn) {
       visibilityWarningRef.current?.reset();
+      poseVisibilityRef.current?.reset();
       return undefined;
     }
 
@@ -670,10 +680,26 @@ const Camerafeed = ({
 
         if (!landmarks) {
           // Nobody (or nothing) in frame at all.
+          const visibility = poseVisibilityRef.current.update({
+            reliability: 0,
+            hasPose: false,
+            hasFeatures: false,
+          });
+
           checkVisibility({
             reliable: false,
             reason: VISIBILITY_FAILURE_REASONS.NO_POSE,
           });
+
+          // Person not detected: abandon any motion in progress so recovery
+          // cannot complete a repetition nobody performed.
+          if (visibility.isNotDetected || visibility.isPartiallyVisible) {
+            trackerRef.current?.abandonMotion();
+            pendingRepRef.current = null;
+            squatRepRef.current?.reset();
+          }
+
+          setCameraStatus(CAMERA_STATUS.WAITING_FOR_POSE);
         } else {
           const drawingUtils = new DrawingUtils(ctx);
           drawingUtils.drawLandmarks(landmarks, {
@@ -683,45 +709,59 @@ const Camerafeed = ({
 
           const features = extractExerciseFeatures(landmarks, exercise);
           const reliability = getPoseReliability(landmarks);
-          const reliable = reliability >= MIN_RELIABLE_VISIBILITY;
+          const hasFeatures = Boolean(features);
 
-          if (features && reliable) {
+          const visibility = poseVisibilityRef.current.update({
+            reliability,
+            hasPose: true,
+            hasFeatures,
+          });
+
+          if (visibility.isFullyVisible) {
             setCameraStatus((current) =>
               current === CAMERA_STATUS.TRACKING
                 ? current
                 : CAMERA_STATUS.TRACKING,
             );
-          }
-
-          checkVisibility(
-            features
-              ? { reliable, reason: VISIBILITY_FAILURE_REASONS.LOW_VISIBILITY }
-              : {
-                  reliable: false,
-                  reason: VISIBILITY_FAILURE_REASONS.MISSING_POINTS,
-                }
-          );
-
-          // 1) Rep / set counting: every frame, purely local. Untouched by the
-          //    warning cooldown so counters stay responsive.
-          if (features && !completionSentRef.current) {
-            updateRepsFromFeatures(features, Date.now(), reliable);
-          }
-
-          // 2) Form classification: throttled, and deliberately NOT awaited so
-          //    a slow network call can never stall the camera loop.
-          const now = performance.now();
-          if (
-            features &&
-            now - lastPredictionTimeRef.current > PREDICT_INTERVAL_MS &&
-            !predictionInFlightRef.current &&
-            !completionSentRef.current
-          ) {
-            lastPredictionTimeRef.current = now;
-            predictionInFlightRef.current = true;
-            handlePrediction(features, reliable, reliability).catch(() => {
-              predictionInFlightRef.current = false;
+            checkVisibility({ reliable: true });
+          } else {
+            setCameraStatus(CAMERA_STATUS.WAITING_FOR_POSE);
+            checkVisibility({
+              reliable: false,
+              reason: visibility.isPartiallyVisible
+                ? VISIBILITY_FAILURE_REASONS.LOW_VISIBILITY
+                : VISIBILITY_FAILURE_REASONS.MISSING_POINTS,
             });
+
+            // Person not fully visible: stop all exercise analysis, abandon
+            // any motion in progress, and clear stale rep data so false
+            // feedback and rep counts cannot be produced from unreliable
+            // landmarks.
+            trackerRef.current?.abandonMotion();
+            pendingRepRef.current = null;
+            squatRepRef.current?.reset();
+          }
+
+          // Only analyze when the person is fully detected and visible.
+          if (visibility.isFullyVisible && features && !completionSentRef.current) {
+            // 1) Rep / set counting: every frame, purely local. Untouched by the
+            //    warning cooldown so counters stay responsive.
+            updateRepsFromFeatures(features, Date.now(), true);
+
+            // 2) Form classification: throttled, and deliberately NOT awaited so
+            //    a slow network call can never stall the camera loop.
+            const now = performance.now();
+            if (
+              now - lastPredictionTimeRef.current > PREDICT_INTERVAL_MS &&
+              !predictionInFlightRef.current &&
+              !completionSentRef.current
+            ) {
+              lastPredictionTimeRef.current = now;
+              predictionInFlightRef.current = true;
+              handlePrediction(features, true, reliability).catch(() => {
+                predictionInFlightRef.current = false;
+              });
+            }
           }
         }
       }
@@ -736,6 +776,7 @@ const Camerafeed = ({
       // Camera stopped (or exercise changed): drop any armed warning so a new
       // session never inherits an old cooldown.
       visibilityWarningRef.current?.reset();
+      poseVisibilityRef.current?.reset();
     };
     // onFormFeedback is read through feedbackHandlerRef so that a parent
     // re-render cannot tear down and re-arm the camera loop.
@@ -835,6 +876,7 @@ const Camerafeed = ({
     trackerRef.current?.reset();
     gateRef.current?.reset();
     visibilityWarningRef.current?.reset();
+    poseVisibilityRef.current?.reset();
     smoothedKneeAngleRef.current = null;
     squatRepRef.current?.reset();
     formCueRef.current?.reset();
